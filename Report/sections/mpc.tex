@@ -1,0 +1,8 @@
+The dynamic model is used to define a MPC problem to compute the optimal stepping positions for save nagivation and locomotion. The LIP-MPC is defined as:
+\begin{align*}
+    &J^* = \min_{u_{0:N-1}} \sum_{k=1}^{N}[(p_{x_{k}} - g_{x})^2+(p_{y_{k}} - g_{y})^2]
+    \\ \text{s. t} \quad
+    &x_{k+1} = A_{L}x_{k} + B_{L}u_{k} \qquad
+    c_{l} \le c(x_{k}, u_{k}) \le c_{u}
+\end{align*}
+Minimizing the cost function means that the robot is moving towards the goal position. This problem is subject to the satisfaction of the robot's dynamics and the kinematics and path constraints. The kinematics and path constraints are captured in $c(x_{k}, u_{k})$ and they are often nonlinear. This nonlinearity is related to presence of the heading angle $\theta_{k}$. These constraints are linearized by pre-computing the turning rates $\bar{\omega}_{k}$ for all the horizon length, in order to have them fixed in the MPC calculation.

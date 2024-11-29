@@ -1,0 +1,67 @@
+This reduced model assumes that during the motion the Center of Mass (CoM) will have a constant height H.
+\begin{equation}
+    \dot{v}_{x} = \frac{g}{H}(p_{x} - f_{x})
+    \qquad
+    \dot{v}_{y} = \frac{g}{H}(p_{y} - f_{y})
+\end{equation}
+With $(p_{x}, p_{y})$ we denote the position of the CoM and with $(v_{x}, v_{y})$ its velocity with respect to the $x$-axis and $y$-axis. The stance foot position, which is the position in which both feets are in contact with the ground, is denoted with $(f_{x}, f_{y})$.
+
+Given the position $(p_{x_{k}}, p_{y_{k}})$ and velocities $(v_{x_{k}}, v_{y_{k}})$ of the CoM at the $k$-th step, the closed-form solutions of the step-to-step discrete dynamics can be written as follows :
+\begin{equation}
+    \begin{bmatrix}
+        p_{x_{k+1}} \\
+        v_{x_{k+1}}
+    \end{bmatrix}
+    = A_{d}
+    \begin{bmatrix}
+        p_{x_{k}} \\
+        v_{x_{k}}
+    \end{bmatrix}
+    + B_{d} f_{x_{k}}
+    \qquad
+    \begin{bmatrix}
+        p_{y_{k+1}} \\
+        v_{y_{k+1}}
+    \end{bmatrix}
+    = A_{d}
+    \begin{bmatrix}
+        p_{y_{k}} \\
+        v_{y_{k}}
+    \end{bmatrix}
+    + B_{d} f_{y_{k}}
+\end{equation}
+
+Where $\beta = \sqrt{\frac{g}{H}}$ and the two matrices are:
+\begin{equation}
+    A_{d} = 
+    \begin{bmatrix}
+        cosh(\beta T) & \frac{sinh(\beta T)}{\beta} \\
+        \beta sinh(\beta T) & cosh(\beta T)
+    \end{bmatrix}
+    \qquad
+    B_{d} = 
+    \begin{bmatrix}
+        1 - cosh(\beta T) & - \beta sinh(\beta T)
+    \end{bmatrix}
+\end{equation}
+By defining the state of our system as $x = [p_{x}, v_{x}, p_{y}, v_{y}, \theta]^T \in \mathbb{R}^5$ and the control input as $u = [f_{x}, f_{y}, \omega]^T \in \mathbb{R}^3$, where $\theta$ is the heading angle and $\omega$ is its turning rate, the step-to-step dynamics of the 3D-LIP model is written as follows:
+\begin{equation}
+    x_{k+1} = A_{L}x_{k} + B_{L}u_{k}
+\end{equation}
+
+Where the two matrices are defined as follows:
+\begin{equation}
+    A_{L} = 
+    \begin{bmatrix}
+        A_{d} & 0 & 0 \\
+        0 & A_{d} & 0 \\
+        0 & 0 & 1
+    \end{bmatrix}
+    \qquad
+    B_{d} = 
+    \begin{bmatrix}
+        B_{d} & 0 & 0 \\
+        0 & B_{d} & 0 \\
+        0 & 0 & T
+    \end{bmatrix}
+\end{equation}

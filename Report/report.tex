@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{wrapfig}
 \usepackage{subfiles}
+\usepackage{amssymb}
 \usepackage[usenames,dvipsnames]{color}
 \usepackage{amsmath}
 
@@ -16,11 +17,13 @@
 
 %%% BEGIN DOCUMENT
 \begin{document}
+\setlength{\parindent}{0pt}
 
 \maketitle
 \tableofcontents
 \section{Introduction} \subfile{sections/introduction.tex}
-
+\section{3D LIP Model} \subfile{sections/lip.tex}
+\section{Model Predictive Control} \subfile{sections/mpc.tex}
 \section{Conclusion} \subfile{sections/conclusion.tex}
 
 \end{document}
