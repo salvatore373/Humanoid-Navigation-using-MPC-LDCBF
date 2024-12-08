@@ -39,7 +39,11 @@ class HumanoidLip:
         self.stance_state = np.array([r_stance_x, r_stance_y], dtype=float)
 
         # python list since we don't need to perform computations on it
-        self.state_history = [initial_state]
+        self.state_history = [self.state]
+
+    def position_history(self):
+        positions = [[h[0], h[2]] for h in self.state_history]
+        return positions
 
     def dynamics(self):
         # computing acceleration
@@ -62,3 +66,39 @@ class HumanoidLip:
 
         # appending state
         self.state_history.append(self.state)
+
+
+# ===== CONTROLLER =====
+# TODO
+
+
+# ===== SIMULATION =====
+initial_state = [0.0, 0.0, 0.0, 0.0, 0.0]  # at origin with 0 velocity and 0 angle
+goal_position = [10.0, 10.0]
+
+# FIXME: maybe not needed with a while(True)
+#  but not sure if is the right way
+time_horizon = 100
+
+# Initialize the robot
+robot = HumanoidLip(initial_state, goal_position)
+
+# Simulation loop
+for _ in range(time_horizon):
+    # TODO: apply control
+    robot.dynamics()
+
+# Extract robot trajectory
+trajectory = np.array(robot.position_history())
+
+# Plot the results
+plt.figure(figsize=(10, 10))
+plt.plot(trajectory[:, 0], trajectory[:, 1], label="Robot Trajectory", marker='o')
+plt.scatter(*goal_position, color='green', label="Goal Position", s=100)
+plt.scatter(initial_state[0], initial_state[1], color='blue', label="Start Position", s=100)
+plt.xlabel("X Position")
+plt.ylabel("Y Position")
+plt.title("Trajectory toward goal")
+plt.legend()
+plt.grid()
+plt.show()
