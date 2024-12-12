@@ -51,7 +51,7 @@ class DifferentialDrive():
     
         # add later Runge Kutta
 
-    def mpc(self, sampling_time):
+    def mpc(self, goal, sampling_time):
         # N : horizon for the MPC
         # N_simul : simulation time
 
@@ -70,7 +70,7 @@ class DifferentialDrive():
         x0 = optim_prob.parameter(self.n) # this is the initial state parameter which will be specified later (useful for MPC) with optim_prob.set_value(x0, value)
         # definitions of constraints for our MPC problem
         optim_prob.subject_to(X[:,0] == x0) # initial condition constraint
-        optim_prob.subject_to(X[:,self.N] == (2, 3, cs.pi)) # final condition constraint
+        optim_prob.subject_to(X[:,self.N] == goal) # final condition constraint
         for k in range(self.N):
             optim_prob.subject_to(X[:,k+1] == X[:,k] + sampling_time*self.integration(X[:,k], U[:,k])) # related to integration: xk+1 = xk + sampling_time*f()
         optim_prob.minimize(cs.sumsqr(U)) # cost function
@@ -81,7 +81,7 @@ class DifferentialDrive():
             optim_prob.set_value(x0, x[:, k]) # now the initial condition of the step is the current state
             print(x0)
             solution = optim_prob.solve()
-            u[:,k] = solution.value(U[:,0])
+            u[:,k] = solution.value(U[:,0]) # get the first control action from your predictions
             u_pred = solution.value(U)
             x_pred = solution.value(X)
             optim_prob.set_initial(X, x_pred)
@@ -92,8 +92,10 @@ class DifferentialDrive():
         print('Average computation time: ', np.mean(iter_time) * 1000, ' ms')
         return x
 
-diff = DifferentialDrive(n=3, m=2, N=100, N_simul=200)
-x = diff.mpc(sampling_time=0.01)
+diff = DifferentialDrive(n=3, m=2, N=100, N_simul=300)
+goal = (2, 3, cs.pi)
+x = diff.mpc(goal, sampling_time=0.01)
 diff.plot(state=[1, 2, -cs.pi/2])
 plt.plot(x[0,:], x[1,:])
+plt.plot(goal[0], goal[1], marker='o')
 plt.show()

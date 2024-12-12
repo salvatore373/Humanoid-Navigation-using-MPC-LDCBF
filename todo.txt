@@ -1,0 +1,18 @@
+SIMULATION:
+1. Fix random obstacles generation
+2. Differential animation
+3. Humanoid animation
+4. Error plots
+
+MPC:
+1. Adjust cost function and check everything makes sense
+2. Apply the same approach to the Humanoid Model
+3. Add specific Humanoid Constraints
+
+CONTROL BARRIER FUNCTION:
+1. Implementation
+2. Visualization
+
+PLANNING:
+1. Global plan 
+2. Subgoals
