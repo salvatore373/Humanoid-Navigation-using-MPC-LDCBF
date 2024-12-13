@@ -3,16 +3,17 @@ import numpy as np
 
 # np.random.seed(45)
 obstacles = np.random.randint(-100, 100, (2, 5))
-origin = [0, 0]
+origin = [-30, 30]
 
 for obs in obstacles.transpose():
     # origin-to-obstacle line: ax+by=c
     plt.plot([origin[0], obs[0]], [origin[1], obs[1]], 'black')
 
     # normal line -> a(-y) + b(x) = c
+    robot_to_obstacle_vector = (obs[0]-origin[0], obs[1]-origin[1])
     plt.axline(
         (obs[0], obs[1]),
-        (-obs[1]+obs[0], obs[0]+obs[1]),
+        (-(obs[1]+origin[0])+obs[0], obs[0]+origin[1]+obs[1]),
         color="black", linestyle=(0, (5, 5)))
 
     # filling gray area
