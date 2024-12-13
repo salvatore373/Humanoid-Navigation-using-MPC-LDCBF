@@ -2,14 +2,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 
-# np.random.seed(45)
 obstacles = np.random.randint(-100, 100, (2, 5))
-# origin = [-30, 30]
 origin_positions = [[-30 + i, 30 - i] for i in range(-20, 21)]
+origin_history = []
 
 # to plot the current frame
 def update(frame):
     origin = origin_positions[frame]
+    # origin_history = origin_positions[max(1, frame-10):frame]
+    if frame%10 == 0:
+        origin_history.append(origin)
     plt.cla()
 
     for obs in obstacles.transpose():
@@ -70,8 +72,14 @@ def update(frame):
 
     # plot all obstacles
     plt.scatter(obstacles[0], obstacles[1], color='cyan')
+
     # plot origin
     plt.scatter(origin[0], origin[1], color='red', s=500)
+
+    # plot origin history
+    for i, h in enumerate(origin_history):
+        plt.scatter(h[0], h[1], color='red', s=500, alpha=i * 0.1)
+
     # set boundaries and equal aspect
     plt.xlim(-100, 100)
     plt.ylim(-100, 100)
@@ -80,5 +88,5 @@ def update(frame):
 
 fig, ax = plt.subplots()
 ani = FuncAnimation(fig, update, frames=len(origin_positions), interval=200)
-ani.save('cbf_animation.gif', writer='ffmpeg')
+ani.save('../Assets/Animations/cbf_animation.gif', writer='ffmpeg')
 plt.show()
