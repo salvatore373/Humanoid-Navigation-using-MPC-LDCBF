@@ -19,8 +19,11 @@ def CreateStartAndGoal(start, goal):
     plt.plot(goal[0], goal[1], marker="o", color="royalblue", label="end")
     return 0
 
-def CreateConvexObstacle(n, start, goal):
+def CreateConvexObstacle(start, goal):
+    # num of random_points inside a single obstacle
+    n = np.random.randint(3, 10)
 
+    # get vertices of an obstacle
     rnd_points = RandomPoints(min=1, max=20, n=n)
     
     # this can be done more efficiently
@@ -30,10 +33,15 @@ def CreateConvexObstacle(n, start, goal):
         rnd_points.remove(goal)
     
     hull = ConvexHull(rnd_points) # create a convex hull that contains the n random points
-    vertices=[]
-    for simplex in hull.simplices:
-        vertices+=list(simplex)
     return rnd_points[hull.vertices]
+
+def IsIntersected(current_poly, poly_list):
+    for p in poly_list:
+        if current_poly.intersection(p):
+            return True
+    return False
+
+
 
 num_obs = 30
 poly_list = []
@@ -42,20 +50,36 @@ goal = RandomPoints(min=15, max=21, n=1)[0]
 CreateStartAndGoal(start,goal)
 
 for j in range(0, num_obs):
-    n = np.random.randint(3, 10) # num of random_points inside an obstacle
-    vertices = CreateConvexObstacle(n, start, goal)
-    poly_list.append(Polygon(*map(Point, vertices)))
-    plt.fill(vertices[:,0], vertices[:,1], 'k', alpha=0.3)
+    vertices = CreateConvexObstacle(start, goal)
+    poly = Polygon(*map(Point, vertices))
 
-# print(poly_list)
+    # skip whether start or goal fall inside a polygon
+    if poly.encloses_point(start) or poly.encloses_point(goal):
+        continue
+
+    # skip if current poly intersect with at least one other poly
+    if IsIntersected(poly, poly_list):
+        continue
+
+    poly_list.append(poly)
+    plt.fill(vertices[:,0], vertices[:,1], 'k', alpha=0.3)
+    # break
+
+
 plt.legend()
 plt.show()
 
+
+
+
+
 # TODO 
-# delete obstacle if an intersection occurs (not a good idea to merge since it's not s)
-# handle the presence of start and goal during the creation of the obstacle (we are not completely robust right now)
+# DONE - delete obstacle if an intersection occurs (not a good idea to merge since it's not s)
+# DONE - handle the presence of start and goal during the creation of the obstacle (we are not completely robust right now)
 # handle the orientation
 # differential drive representation
 # check if something can be done more efficiently
 # test everything with a simple differential drive
 # if everything works correctly implement humanoid model
+
+# do we want a flag to create also non-convex polygons?
