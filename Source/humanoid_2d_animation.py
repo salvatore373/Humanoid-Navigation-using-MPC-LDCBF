@@ -16,7 +16,7 @@ start = np.array([start[0], start[1], np.deg2rad(np.rad2deg(start[2])%360)])
 goal = np.random.randint(-10, 10, (3, 1))
 goal = np.array([goal[0], goal[1], np.deg2rad(np.rad2deg(goal[2])%360)])
 
-step_size = 2
+step_size = 3
 foot_distance = 1
 
 left_foot = np.array([
