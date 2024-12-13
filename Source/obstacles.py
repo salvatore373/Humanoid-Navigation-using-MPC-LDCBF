@@ -63,7 +63,6 @@ for j in range(0, num_obs):
 
     poly_list.append(poly)
     plt.fill(vertices[:,0], vertices[:,1], 'k', alpha=0.3)
-    # break
 
 
 plt.legend()

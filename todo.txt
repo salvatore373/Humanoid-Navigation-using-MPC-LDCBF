@@ -1,7 +1,7 @@
 SIMULATION:
 1. Fix random obstacles generation (D)
 2. Differential animation (S)
-3. Humanoid animation 
+3. Humanoid animation (D)
 4. Error plots (plots + animation) (S)
 5. Range Finder Simulation (E)
 6. Control Barrier Function Visualization (D)
