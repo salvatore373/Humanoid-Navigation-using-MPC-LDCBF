@@ -1,18 +1,20 @@
 SIMULATION:
-1. Fix random obstacles generation
-2. Differential animation
-3. Humanoid animation
-4. Error plots
+1. Fix random obstacles generation (D)
+2. Differential animation (S)
+3. Humanoid animation 
+4. Error plots (plots + animation) (S)
+5. Range Finder Simulation (E)
+6. Control Barrier Function Visualization (D)
 
 MPC:
-1. Adjust cost function and check everything makes sense
-2. Apply the same approach to the Humanoid Model
-3. Add specific Humanoid Constraints
+1. Adjust cost function and check everything makes sense (E)
+2. Control Barrier Function implementation  
+3. Apply the same approach to the Humanoid Model (E)
+4. Add specific Humanoid Constraints
 
-CONTROL BARRIER FUNCTION:
-1. Implementation
-2. Visualization
-
-PLANNING:
-1. Global plan 
-2. Subgoals
+BONUS:
+1. RRT*
+2. Localization 
+3. Global plan 
+4. Subgoals
+5. 3D simulation
