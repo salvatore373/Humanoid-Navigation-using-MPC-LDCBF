@@ -1,92 +1,145 @@
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 
-obstacles = np.random.randint(-100, 100, (2, 5))
-origin_positions = [[-30 + i, 30 - i] for i in range(-20, 21)]
-origin_history = []
 
-# to plot the current frame
-def update(frame):
-    origin = origin_positions[frame]
-    # origin_history = origin_positions[max(1, frame-10):frame]
-    if frame%10 == 0:
-        origin_history.append(origin)
-    plt.cla()
+class CBFAnimationHelper:
+    # Assuming that the plot is a square, the minimum and maximum value that x and y coordinated can have
+    MIN_COORD = -100
+    MAX_COORD = +100
 
-    for obs in obstacles.transpose():
-        # origin-to-obstacle line: ax+by=c
-        plt.plot([origin[0], obs[0]], [origin[1], obs[1]], 'black')
-
-        # normal line -> a(-y) + b(x) = c
-        robot_to_obstacle_vector = (obs[0]-origin[0], obs[1]-origin[1])
-        plt.axline(
-            (obs[0], obs[1]),
-            (-(obs[1]+origin[0])+obs[0], obs[0]+origin[1]+obs[1]),
-            color="black", linestyle=(0, (5, 5)))
-
-        # filling gray area
+    def __init__(self, obstacles, origin_positions, fig=None, ax=None):
         """
-            y = m*x + b
-            m = (y_2-y_1)/(x_2-x_1)
-            b = y
+        Initializes a new instance of the utility to show the animation regarding control barrier functions.
+
+        :param obstacles: The position of the cells of the grid containing obstacles.
+        :param origin_positions: The positions of the point to move in each frame of the animation
+        :param fig: The first element returned by plt.subplots(). If either fig or axis is not provided, a new one
+        is created.
+        :param ax: The second element returned by plt.subplots(). If either fig or axis is not provided, a new one
+        is created.
         """
-        if obs[0] - origin[0] != 0:
-            robot_obstacle_slope = (obs[1] - origin[1]) / (obs[0] - origin[0])
-            normal_slope = -1/robot_obstacle_slope
-            # obs[0] & obs[1] are whatever points lying in normal line
-            normal_intercept = obs[1] - normal_slope * obs[0]
-        elif obs[1] - origin[1] == 0:
-            robot_obstacle_slope = 0
-            normal_slope = np.inf
+        if fig is not None and ax is not None:
+            self.fig = fig
+            self.ax = ax
         else:
-            normal_slope = None
-            robot_obstacle_slope = np.inf
+            self.fig, self.ax = plt.subplots()
+        self.obstacles = obstacles
+        self.origin_positions = origin_positions
 
+        # The list containing some of the positions of the origin in the frames that have already been displayed
+        self.origin_history = []
 
-        x = np.linspace(-200, 200, 4000)
-        # horizontal case
-        if robot_obstacle_slope == 0:
-            if obs[0] > origin[0]:
-                plt.fill_betweenx(x, obs[0], 200, color='gray', alpha=0.5)
+        # The total number of frames in the animation
+        self.num_frames = len(origin_positions)
+
+    def show_animation(self, path_to_gif: str, interval: int = 200):
+        """
+        Shows the animation regarding control barrier functions and saves it at save_path.
+        :param path_to_gif: The path to the GIF file where the animation will be saved.
+        :param interval: Delay between frames in milliseconds.
+        """
+        ani = FuncAnimation(self.fig, self._update, frames=self.num_frames, interval=interval)
+        ani.save(path_to_gif, writer='ffmpeg')
+        plt.show()
+
+    def _update(self, frame: int):
+        """
+        Updates the canvas to display the state corresponding to the given frame number.
+
+        :param frame: The number of the frame whom state has to be represented.
+        """
+        # Get the position of the origin (red point) in this frame
+        origin = self.origin_positions[frame]
+        # origin_history = origin_positions[max(1, frame-10):frame]
+        # Periodically store the current position of the origin
+        if frame % 10 == 0:
+            self.origin_history.append(origin)
+
+        # Clear the canvas
+        plt.cla()
+
+        for obs in self.obstacles.transpose():
+            # Plot the line from the origin this obstacle
+            plt.plot([origin[0], obs[0]], [origin[1], obs[1]], 'black')  # origin-to-obstacle line: ax+by=c
+
+            # Plot the line normal to the line from the origin this obstacle
+            robot_to_obstacle_vector = (obs[0] - origin[0], obs[1] - origin[1])  # normal line: a(-y) + b(x) = c
+            plt.axline(
+                (obs[0], obs[1]),
+                (-(obs[1] + origin[0]) + obs[0], obs[0] + origin[1] + obs[1]),
+                color="black", linestyle=(0, (5, 5)))
+
+            # Find the parameters of the line defining the area to paint
+            # filling gray area
+            #       y = m*x + b
+            #       m = (y_2-y_1)/(x_2-x_1)
+            #       b = y
+            # TODO: if obs[1] - origin[1] == 0 -> run in condition 1   ==>   robot_obstacle_slope and in
+            #                                                                normal_slope there is a division by 0
+            if obs[0] - origin[0] != 0:
+                robot_obstacle_slope = (obs[1] - origin[1]) / (obs[0] - origin[0])
+                if robot_obstacle_slope == 0:
+                    normal_slope = -np.inf  # TODO: is this +inf or -inf?
+                else:
+                    normal_slope = -1 / robot_obstacle_slope
+                # obs[0] & obs[1] are whatever points lying in normal line
+                normal_intercept = obs[1] - normal_slope * obs[0]
             else:
-                plt.fill_betweenx(x, -200, obs[0], color='gray', alpha=0.5)
-        # normal slope
-        elif normal_slope is not None:
-            y = normal_slope * x + normal_intercept
+                normal_slope = None
+                robot_obstacle_slope = np.inf
 
-            if obs[0] > origin[0] and obs[1] > origin[1]:
-                plt.fill_between(x, y, 200, color='gray', alpha=0.5)
-            elif obs[0] < origin[0] and obs[1] > origin[1]:
-                plt.fill_between(x, y, 200, color='gray', alpha=0.5)
-            elif obs[0] < origin[0] and obs[1] < origin[1]:
-                plt.fill_between(x, y, -200, color='gray', alpha=0.5)
-            else:  # Region to the left of the origin
-                plt.fill_between(x, y, -200, color='gray', alpha=0.5)
-        # vertical slope
-        else:
-            if obs[1] > origin[1]:
-                plt.fill_between(x, obs[1], 200, color='gray', alpha=0.5)
-            else:
-                plt.fill_between(x, -200, obs[1], color='gray', alpha=0.5)
+            # Paint the area of the plot that starts from this obstacle and do not contain the origin
+            x = np.linspace(-200, 200, 4000)
+            if robot_obstacle_slope == 0:  # horizontal case
+                if obs[0] > origin[0]:
+                    plt.fill_betweenx(x, obs[0], 200, color='gray', alpha=0.5)
+                else:
+                    plt.fill_betweenx(x, -200, obs[0], color='gray', alpha=0.5)
+            elif normal_slope is not None:  # normal slope case
+                y = normal_slope * x + normal_intercept
 
-    # plot all obstacles
-    plt.scatter(obstacles[0], obstacles[1], color='cyan')
+                if obs[0] > origin[0] and obs[1] > origin[1]:
+                    plt.fill_between(x, y, 200, color='gray', alpha=0.5)
+                elif obs[0] < origin[0] and obs[1] > origin[1]:
+                    plt.fill_between(x, y, 200, color='gray', alpha=0.5)
+                elif obs[0] < origin[0] and obs[1] < origin[1]:
+                    plt.fill_between(x, y, -200, color='gray', alpha=0.5)
+                else:  # Region to the left of the origin
+                    plt.fill_between(x, y, -200, color='gray', alpha=0.5)
+            else:  # vertical slope case
+                if obs[1] > origin[1]:
+                    plt.fill_between(x, obs[1], 200, color='gray', alpha=0.5)
+                else:
+                    plt.fill_between(x, -200, obs[1], color='gray', alpha=0.5)
 
-    # plot origin
-    plt.scatter(origin[0], origin[1], color='red', s=500)
+        # Plot all the obstacles as cyan points
+        plt.scatter(self.obstacles[0], self.obstacles[1], color='cyan')
 
-    # plot origin history
-    for i, h in enumerate(origin_history):
-        plt.scatter(h[0], h[1], color='red', s=500, alpha=i * 0.1)
+        # Plot the origin as a red point
+        plt.scatter(origin[0], origin[1], color='red', s=500)
 
-    # set boundaries and equal aspect
-    plt.xlim(-100, 100)
-    plt.ylim(-100, 100)
-    ax = plt.gca()
-    ax.set_aspect('equal', adjustable='box')
+        # Plot the previous positions of the origin as blurred red points
+        for i, h in enumerate(self.origin_history):
+            plt.scatter(h[0], h[1], color='red', s=500, alpha=i * 0.1)
 
-fig, ax = plt.subplots()
-ani = FuncAnimation(fig, update, frames=len(origin_positions), interval=200)
-ani.save('../Assets/Animations/cbf_animation.gif', writer='ffmpeg')
-plt.show()
+        # Set the boundaries of the plot and equal aspect ratio
+        plt.xlim(CBFAnimationHelper.MIN_COORD, CBFAnimationHelper.MAX_COORD)
+        plt.ylim(CBFAnimationHelper.MIN_COORD, CBFAnimationHelper.MAX_COORD)
+        ax = plt.gca()
+        ax.set_aspect('equal', adjustable='box')
+
+
+if __name__ == '__main__':
+    # The number of obstacles to put in the plot
+    num_obstacles = 5
+    # The position of the cells of the grid containing obstacles
+    obstacles = np.random.randint(CBFAnimationHelper.MIN_COORD, CBFAnimationHelper.MAX_COORD, (2, num_obstacles))
+    # The positions of the point to move in each frame of the animation
+    origin_positions = [[-30 + i, 30 - i] for i in range(-20, 21)]
+
+    animation_helper = CBFAnimationHelper(obstacles=obstacles,
+                                          origin_positions=origin_positions)
+    animation_helper.show_animation(path_to_gif='../Assets/Animations/cbf_animation.gif')
