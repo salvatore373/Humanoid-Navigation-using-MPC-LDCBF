@@ -1,15 +1,10 @@
-import math
-
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.animation import FuncAnimation
+
+from BaseAnimationHelper import BaseAnimationHelper
 
 
-class CBFAnimationHelper:
-    # Assuming that the plot is a square, the minimum and maximum value that x and y coordinated can have
-    MIN_COORD = -100
-    MAX_COORD = +100
-
+class CBFAnimationHelper(BaseAnimationHelper):
     def __init__(self, obstacles, origin_positions, fig=None, ax=None):
         """
         Initializes a new instance of the utility to show the animation regarding control barrier functions.
@@ -21,36 +16,16 @@ class CBFAnimationHelper:
         :param ax: The second element returned by plt.subplots(). If either fig or axis is not provided, a new one
         is created.
         """
-        if fig is not None and ax is not None:
-            self.fig = fig
-            self.ax = ax
-        else:
-            self.fig, self.ax = plt.subplots()
+        super(CBFAnimationHelper, self).__init__(fig, ax)
         self.obstacles = obstacles
         self.origin_positions = origin_positions
 
         # The list containing some of the positions of the origin in the frames that have already been displayed
         self.origin_history = []
-
         # The total number of frames in the animation
         self.num_frames = len(origin_positions)
 
-    def show_animation(self, path_to_gif: str, interval: int = 200):
-        """
-        Shows the animation regarding control barrier functions and saves it at save_path.
-        :param path_to_gif: The path to the GIF file where the animation will be saved.
-        :param interval: Delay between frames in milliseconds.
-        """
-        ani = FuncAnimation(self.fig, self._update, frames=self.num_frames, interval=interval)
-        ani.save(path_to_gif, writer='ffmpeg')
-        plt.show()
-
-    def _update(self, frame: int):
-        """
-        Updates the canvas to display the state corresponding to the given frame number.
-
-        :param frame: The number of the frame whom state has to be represented.
-        """
+    def update(self, frame: int):
         # Get the position of the origin (red point) in this frame
         origin = self.origin_positions[frame]
         # origin_history = origin_positions[max(1, frame-10):frame]
@@ -122,12 +97,6 @@ class CBFAnimationHelper:
         # Plot the previous positions of the origin as blurred red points
         for i, h in enumerate(self.origin_history):
             plt.scatter(h[0], h[1], color='red', s=500, alpha=i * 0.1)
-
-        # Set the boundaries of the plot and equal aspect ratio
-        plt.xlim(CBFAnimationHelper.MIN_COORD, CBFAnimationHelper.MAX_COORD)
-        plt.ylim(CBFAnimationHelper.MIN_COORD, CBFAnimationHelper.MAX_COORD)
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
 
 
 if __name__ == '__main__':
