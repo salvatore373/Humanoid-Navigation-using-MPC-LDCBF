@@ -44,9 +44,9 @@ class Mpc():
             self.optim_prob.subject_to(self.X[:,self.N] == self.goal)
 
     def simulation(self):
-        self.cost_function()
         simulation_time = np.zeros(self.N_simul)
         for k in range(self.N_simul):
+            # self.cost_function(k) do something like this
             iter_time = time.time()
             self.optim_prob.set_value(self.x0, self.x[:,k])
             solution = self.optim_prob.solve()
@@ -64,13 +64,13 @@ class Mpc():
 
         print('The average computation time is: ', np.mean(simulation_time) * 1000, ' ms')
 
-    def cost_function(self):
+    def cost_function(self, t):
         cost_function = cs.sumsqr(self.U)
 
         if self.reference is not None:
             reference_cost = 0
-            for k in range(self.N): # change this everytime look from k to k+N
-                reference_cost += cs.sumsqr(self.X[:2, k] - self.reference[:, k]) # xy trajectory
+            for k in range(self.N-1): # change this everytime look from k to k+N
+                reference_cost += cs.sumsqr(self.X[:2, k] - self.reference[:, k+t:]) # xy trajectory
             terminal_cost = self.X[:2, self.N] - self.reference[:, self.N]
             weight = 100
             cost_function += weight*reference_cost + weight*cs.sumsqr(terminal_cost)
@@ -84,21 +84,34 @@ class Mpc():
         if self.reference is not None:
             plt.plot(self.reference[0,:], self.reference[1,:], color="yellowgreen", label="Reference Trajectory")
         plt.plot(self.x[0,:], self.x[1,:], color="mediumpurple", label="Predicted Trajectory")
-        print(self.x)
         plt.legend()
         plt.show()      
 
-
+goal = (4,1.5,cs.pi/2)
 delta_t = 0.01
-# mpc = Mpc(n=3, m=2, N=10, N_simul=300, sampling_time=delta_t, goal=(4,1.5,cs.pi/2))
+# mpc = Mpc(n=3, m=2, N=10, N_simul=300, sampling_time=delta_t, goal=goal)
 # mpc.add_constraints()
 # mpc.simulation()
 # mpc.plot()
 
 N_simul = 300
-psi = np.linspace(0, 2*np.pi, N_simul)
-reference = np.array([[-1+np.cos(psi)],[np.sin(psi)]]).squeeze(1)
-mpc = Mpc(n=3, m=2, N=10, N_simul=N_simul, sampling_time=delta_t, reference=reference)
+k = 1.2
+alpha_x = k*np.cos(goal[2]) - 3*goal[0]
+beta_x = k*np.cos(goal[2])
+alpha_y = k*np.cos(goal[2]) - 3*goal[1]
+beta_y = k*np.cos(goal[2])
+
+s = np.linspace(0, 1, 351)
+x_traj = goal[0]*s**3 - alpha_x*(s-1)*s**2 + beta_x*s*(s-1)**2
+y_traj = goal[1]*s**3 - alpha_x*(s-1)*s**2 + beta_y*s*(s-1)**2
+reference = np.array([x_traj, y_traj])
+mpc = Mpc(n=3, m=2, N=50, N_simul=N_simul, sampling_time=delta_t, reference=reference)
 mpc.add_constraints()
 mpc.simulation()
 mpc.plot()
+
+# TODO
+# fix cost function
+# change structure and names for x,u and X,U
+# add some comments
+# create a base class and then start with the Humanoid
