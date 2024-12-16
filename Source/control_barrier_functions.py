@@ -77,12 +77,10 @@ class CBFAnimationHelper:
             #       y = m*x + b
             #       m = (y_2-y_1)/(x_2-x_1)
             #       b = y
-            # TODO: if obs[1] - origin[1] == 0 -> run in condition 1   ==>   robot_obstacle_slope and in
-            #                                                                normal_slope there is a division by 0
             if obs[0] - origin[0] != 0:
                 robot_obstacle_slope = (obs[1] - origin[1]) / (obs[0] - origin[0])
                 if robot_obstacle_slope == 0:
-                    normal_slope = -np.inf  # TODO: is this +inf or -inf?
+                    normal_slope = -np.inf
                 else:
                     normal_slope = -1 / robot_obstacle_slope
                 # obs[0] & obs[1] are whatever points lying in normal line
