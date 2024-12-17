@@ -1,6 +1,6 @@
 SIMULATION:
 1. Fix random obstacles generation (D) (DONE)
-2. Differential animation (S)
+2. Differential animation (S) (DONE)
 3. Humanoid animation (D) (DONE)
 4. Error plots (plots + animation) (S)
 5. Range Finder Simulation (E)
