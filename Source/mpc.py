@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 class Mpc():
 
-    def __init__(self, n, m, N, N_simul, sampling_time, goal=None, reference=None):
+    def __init__(self, n, m, N, N_simul, sampling_time, goal=None):
         self.state_dim = n
         self.control_dim = m
         self.N = N # horizon MPC 
@@ -28,6 +28,10 @@ class Mpc():
 
         # initial state (this value will be update at each step)
         self.x0 = self.optim_prob.parameter(self.state_dim)
+        self.reference = self.optim_prob.parameter(self.state_dim-1, self.N)
+
+        self.add_constraints()
+        self.cost_function()
 
     def integrate(self, state, input):
         # currently this is only suited for the Differential Drive
@@ -40,15 +44,16 @@ class Mpc():
         self.optim_prob.subject_to(self.X[:,0] == self.x0)
         for k in range(self.N):
             self.optim_prob.subject_to(self.X[:,k+1] == self.X[:,k] + self.delta_t*self.integrate(self.X[:,k], self.U[:,k]))
-        if self.goal is not None:
-            self.optim_prob.subject_to(self.X[:,self.N] == self.goal)
+        # if self.goal is not None:
+        #     self.optim_prob.subject_to(self.X[:,self.N] == self.goal)
 
-    def simulation(self):
+    def simulation(self, ref):
         simulation_time = np.zeros(self.N_simul)
         for k in range(self.N_simul):
-            # self.cost_function(k) do something like this
             iter_time = time.time()
             self.optim_prob.set_value(self.x0, self.x[:,k])
+            if self.reference is not None:
+                self.optim_prob.set_value(self.reference, ref[:,k:k+self.N])
             solution = self.optim_prob.solve()
 
             self.u[:,k] = solution.value(self.U[:,0]) # only take the initial control from the prediction in the current horizon
@@ -63,52 +68,50 @@ class Mpc():
             simulation_time[k] = time.time() - iter_time
 
         print('The average computation time is: ', np.mean(simulation_time) * 1000, ' ms')
+        self.plot(ref)
 
-    def cost_function(self, t):
+    def cost_function(self):
         cost_function = cs.sumsqr(self.U)
-
-        if self.reference is not None:
+        if self.reference is not None: # change the condition later
             reference_cost = 0
             for k in range(self.N-1): # change this everytime look from k to k+N
-                reference_cost += cs.sumsqr(self.X[:2, k] - self.reference[:, k+t:]) # xy trajectory
-            terminal_cost = self.X[:2, self.N] - self.reference[:, self.N]
-            weight = 100
-            cost_function += weight*reference_cost + weight*cs.sumsqr(terminal_cost)
-
+                reference_cost += cs.sumsqr(self.X[:2, k] - self.reference[:, k]) # xy trajectory
+            terminal_cost = cs.sumsqr(self.X[:2, -2] - self.reference[:, -1])
+            weight = 500
+            cost_function += weight*reference_cost + weight*terminal_cost
         self.optim_prob.minimize(cost_function) # cost function
 
-    def plot(self):
+    def plot(self, ref):
         plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
         if self.goal is not None:
             plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
-        if self.reference is not None:
-            plt.plot(self.reference[0,:], self.reference[1,:], color="yellowgreen", label="Reference Trajectory")
+        if self.reference is not None: # completely useless change asap
+            plt.plot(ref[0,:], ref[1,:], color="yellowgreen", label="Reference Trajectory")
         plt.plot(self.x[0,:], self.x[1,:], color="mediumpurple", label="Predicted Trajectory")
         plt.legend()
         plt.show()      
 
-goal = (4,1.5,cs.pi/2)
+goal = (3,1.5,cs.pi/2)
 delta_t = 0.01
 # mpc = Mpc(n=3, m=2, N=10, N_simul=300, sampling_time=delta_t, goal=goal)
 # mpc.add_constraints()
 # mpc.simulation()
 # mpc.plot()
 
-N_simul = 300
+N_simul = 1000
+N = 30
 k = 1.2
 alpha_x = k*np.cos(goal[2]) - 3*goal[0]
 beta_x = k*np.cos(goal[2])
 alpha_y = k*np.cos(goal[2]) - 3*goal[1]
 beta_y = k*np.cos(goal[2])
 
-s = np.linspace(0, 1, 351)
+s = np.linspace(0, 1, N_simul+N+1)
 x_traj = goal[0]*s**3 - alpha_x*(s-1)*s**2 + beta_x*s*(s-1)**2
 y_traj = goal[1]*s**3 - alpha_x*(s-1)*s**2 + beta_y*s*(s-1)**2
 reference = np.array([x_traj, y_traj])
-mpc = Mpc(n=3, m=2, N=50, N_simul=N_simul, sampling_time=delta_t, reference=reference)
-mpc.add_constraints()
-mpc.simulation()
-mpc.plot()
+mpc = Mpc(n=3, m=2, N=N, N_simul=N_simul, sampling_time=delta_t)
+mpc.simulation(ref=reference)
 
 # TODO
 # fix cost function
