@@ -10,4 +10,5 @@
 *.synctex
 *.synctex.gz
 Source/.idea
-.idea
+Source/__pycache__
+.vscode

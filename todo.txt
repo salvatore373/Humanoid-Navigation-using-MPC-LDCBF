@@ -1,3 +1,8 @@
+SOON:
+1. fix path problems
+2. abstract class mpc
+3. collision functions
+
 SIMULATION:
 1. Fix random obstacles generation (D) (DONE)
 2. Differential animation (S) (DONE)
@@ -8,10 +13,11 @@ SIMULATION:
 7. COM and ZMP trajectory plot in 2D for simple case
 
 MPC:
-1. Adjust cost function and check everything makes sense (E)
+1. Adjust cost function and check everything makes sense (E) (DONE)
 2. Control Barrier Function implementation  
 3. Apply the same approach to the Humanoid Model (E)
 4. Add specific Humanoid Constraints
+5. Footstep planner
 
 BONUS:
 1. RRT*
