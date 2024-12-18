@@ -5,6 +5,12 @@ from scipy.spatial import ConvexHull
 from sympy import Point, Polygon
 import random
 
+
+
+
+
+
+
 def RandomPoints(min, max, n, std=0.7):
     # use this to sample from a gaussian distribution with random mean between min and max and a std=0.7
     mu_x = random.uniform(min, max)
@@ -19,12 +25,12 @@ def CreateStartAndGoal(start, goal):
     plt.plot(goal[0], goal[1], marker="o", color="royalblue", label="end")
     return 0
 
-def CreateConvexObstacle(start, goal):
+def CreateConvexObstacle(start, goal, range_min, range_max):
     # num of random_points inside a single obstacle
     n = np.random.randint(3, 10)
 
     # get vertices of an obstacle
-    rnd_points = RandomPoints(min=1, max=20, n=n)
+    rnd_points = RandomPoints(min=range_min, max=range_max, n=n)
     
     # this can be done more efficiently
     if start in rnd_points: 
@@ -42,33 +48,44 @@ def IsIntersected(current_poly, poly_list):
     return False
 
 
+# ===== TO RUN SIMULATION FROM OTHER FILES =====
+def GenerateObstacles(start, goal, num_obs=30, range_min=1, range_max=20):
+    # to obtain the current plot in the launched file
+    fig = plt.gcf()
+    ax = fig.gca()
 
-num_obs = 30
-poly_list = []
-start = RandomPoints(min=0, max=8, n=1)[0]
-goal = RandomPoints(min=15, max=21, n=1)[0]
-CreateStartAndGoal(start,goal)
+    poly_list = []
 
-for j in range(0, num_obs):
-    vertices = CreateConvexObstacle(start, goal)
-    poly = Polygon(*map(Point, vertices))
+    for j in range(0, num_obs):
+        vertices = CreateConvexObstacle(start, goal, range_min, range_max)
+        poly = Polygon(*map(Point, vertices))
 
-    # skip whether start or goal fall inside a polygon
-    if poly.encloses_point(start) or poly.encloses_point(goal):
-        continue
+        # skip whether start or goal fall inside a polygon
+        if poly.encloses_point(start) or poly.encloses_point(goal):
+            continue
 
-    # skip if current poly intersect with at least one other poly
-    if IsIntersected(poly, poly_list):
-        continue
+        # skip if current poly intersect with at least one other poly
+        if IsIntersected(poly, poly_list):
+            continue
 
-    poly_list.append(poly)
-    plt.fill(vertices[:,0], vertices[:,1], 'k', alpha=0.3)
+        poly_list.append(poly)
+        plt.fill(vertices[:, 0], vertices[:, 1], 'k', alpha=0.3)
+
+    return poly_list
 
 
-plt.legend()
-plt.show()
 
+# ===== TO RUN SIMULATION FROM THIS FILE =====
+if __name__ == '__main__':
+    num_obs = 30
+    start = RandomPoints(min=0, max=8, n=1)[0]
+    goal = RandomPoints(min=15, max=21, n=1)[0]
 
+    CreateStartAndGoal(start,goal)
+    GenerateObstacles(start, goal, num_obs)
+
+    plt.legend()
+    plt.show()
 
 
 
