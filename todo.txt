@@ -1,3 +1,8 @@
+SOON:
+1. fix path problems
+2. abstract class mpc
+3. collision functions
+
 SIMULATION:
 1. (DONE) Fix random obstacles generation (D)
 2. (DONE) Differential animation (S)
@@ -12,6 +17,7 @@ MPC:
 2. Control Barrier Function implementation (D)
 3. Apply the same approach to the Humanoid Model (E)
 4. Add specific Humanoid Constraints
+5. Footstep planner
 
 BONUS:
 1. RRT*
