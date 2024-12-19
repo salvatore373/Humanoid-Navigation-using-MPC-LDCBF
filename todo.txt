@@ -1,7 +1,8 @@
 SOON:
 1. fix path problems
-2. abstract class mpc
+2. (DONE) abstract class mpc
 3. collision functions
+4. delete diff_drive.py and bring the simulation inside MPC/DifferentialMpc.py
 
 SIMULATION:
 1. (DONE) Fix random obstacles generation (D)

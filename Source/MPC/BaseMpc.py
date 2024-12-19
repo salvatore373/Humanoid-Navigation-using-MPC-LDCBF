@@ -12,7 +12,8 @@ class MpcSkeleton(ABC):
         self.sampling_time = sampling_time
 
         self.optim_prob = cs.Opti()
-        p_opts, s_opts = {"ipopt.print_level": 0, "expand": True}, {}
+        p_opts = dict(print_time=False, verbose=False, expand=True)
+        s_opts = dict(print_level=0)
         self.optim_prob.solver("ipopt", p_opts, s_opts) # (NLP solver)
 
         # definition of the containers used + the parameter related to the initial state
