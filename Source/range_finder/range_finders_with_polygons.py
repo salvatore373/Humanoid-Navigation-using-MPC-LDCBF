@@ -5,8 +5,6 @@ from sympy import Point, Ray, intersection
 
 from Source.obstacles import GenerateObstacles
 
-LIDAR_RANGE = 2.0
-RESOLUTION = 360
 
 def get_closest_point(points_list, point):
     closest_point = None
@@ -62,9 +60,43 @@ def compute_lidar_readings(position, obstacles, lidar_range, resolution=360):
     return detected_points
 
 
+def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=True):
+    fig = plt.gcf()
+    ax = fig.gca()
 
-# Example Usage
+    # LiDAR
+    plt.scatter(lidar_position[0], lidar_position[1], color="red", label="LiDAR Position")
+
+    # readings
+    xs = []
+    ys = []
+    for point in readings:
+        # ignore None points (i.e. no obstacles)
+        if point:
+            xs.append(point[0])
+            ys.append(point[1])
+
+    # LiDAR range
+    if with_range:
+        range = plt.Circle((lidar_position[0], lidar_position[1]), radius=LIDAR_RANGE, color='tomato',
+                           label='LiDAR range', fill=False, linewidth=2, alpha=1.0)
+        ax.add_patch(range)
+
+    # utils
+    plt.scatter(xs, ys, color="green", label="Detected Points")
+    plt.legend() # check if needed to remove
+    plt.grid(with_grid)
+    plt.axis("equal")
+
+
+
+
+# ===== TO RUN SIMULATION FROM THIS FILE =====
 if __name__ == "__main__":
+    LIDAR_RANGE = 2.0
+    RESOLUTION = 360
+
+
     # LiDAR 2d position
     lidar_position = [0, 0]
 
@@ -80,32 +112,9 @@ if __name__ == "__main__":
     # get LiDAR readings
     readings = compute_lidar_readings(lidar_position, obstacles, lidar_range=LIDAR_RANGE, resolution=RESOLUTION)
 
-    # ===== PLOTTING PHASE =====
-    # LiDAR
-    plt.scatter(lidar_position[0], lidar_position[1], color="red", label="LiDAR Position")
+    display_lidar_readings(lidar_position, readings, with_range=True, with_grid=True)
 
-    # readings
-    xs = []
-    ys = []
-    for point in readings:
-        # ignore None points (i.e. no obstacles)
-        if point:
-            xs.append(point[0])
-            ys.append(point[1])
-
-    # LiDAR range
-    robot = plt.Circle((lidar_position[0], lidar_position[1]), radius=LIDAR_RANGE, color='tomato', label='LiDAR range',
-                       fill=False, linewidth=2, alpha=1.0)
-    fig = plt.gcf()
-    ax = fig.gca()
-    ax.add_patch(robot)
-
-    # utils
-    plt.scatter(xs, ys, color="green", label="Detected Points")
-    plt.legend()
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
     plt.title("LiDAR Simulation")
-    plt.grid(True)
-    plt.axis("equal")
     plt.show()
