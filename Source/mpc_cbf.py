@@ -3,7 +3,7 @@ import numpy as np
 import casadi as cs
 import matplotlib.pyplot as plt
 
-
+from Source.range_finder.range_finders_with_polygons import compute_lidar_readings
 from obstacles import GenerateObstacles
 from sympy import Point, Polygon
 
@@ -55,10 +55,7 @@ class Mpc():
 
 
     def control_barrier_functions(self, x, y):
-        all_vertices = []
-
-        for polygon in self.obstacles:
-            all_vertices.extend(polygon.vertices)
+        all_vertices = compute_lidar_readings([x, y], self.obstacles, lidar_range=2, resolution=20)
 
         distances = [
             # euclidean distance
@@ -67,12 +64,6 @@ class Mpc():
         ]
         return cs.mmin(cs.vertcat(*distances))  # Minimum distance to any vertex
 
-    # def control_barrier_functions(self, x, y):
-    #     point = Point(x, y)
-    #     distances = [point.distance(polygon) for polygon in self.obstacles]
-    #     # minimum clearance
-    #     min_distance = cs.mmin(cs.vertcat(*distances))
-    #     return min_distance
 
     def add_constraints(self):
         self.optim_prob.subject_to(self.X_mpc[:,0] == self.x0)
@@ -96,7 +87,7 @@ class Mpc():
                     self.X_mpc[1, k+1]
                 )
 
-                alpha = 0.9  # CBF parameter
+                alpha = 0.9  # CBF parameter, it is equal to (1-gamma) in the paper
                 self.optim_prob.subject_to(h_k_next >= alpha * h_k)
 
 

@@ -64,9 +64,6 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
     fig = plt.gcf()
     ax = fig.gca()
 
-    # LiDAR
-    plt.scatter(lidar_position[0], lidar_position[1], color="red", label="LiDAR Position")
-
     # readings
     xs = []
     ys = []
@@ -99,6 +96,9 @@ if __name__ == "__main__":
 
     # LiDAR 2d position
     lidar_position = [0, 0]
+
+    # LiDAR
+    plt.scatter(lidar_position[0], lidar_position[1], color="red", label="LiDAR Position")
 
     # obstacles (i.e. polygons)
     obstacles = GenerateObstacles(
