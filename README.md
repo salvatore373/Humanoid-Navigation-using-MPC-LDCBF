@@ -1,4 +1,4 @@
-# Humanoid-Navigation-using-Control-Barrier-Functions
+# Humanoid Navigation using Control Barrier Functions
 
 ## CREATE Virtual Environment and install Libraries
 
