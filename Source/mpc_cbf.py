@@ -55,12 +55,12 @@ class Mpc():
 
 
     def control_barrier_functions(self, x, y):
-        all_vertices = compute_lidar_readings([x, y], self.obstacles, lidar_range=2, resolution=20)
+        readings = compute_lidar_readings([x, y], self.obstacles, lidar_range=2, resolution=20)
 
         distances = [
             # euclidean distance
-            cs.sqrt((x - float(vertex[0]))**2 + (y - float(vertex[1]))**2)
-            for vertex in all_vertices
+            cs.sqrt((x - float(point[0]))**2 + (y - float(point[1]))**2)
+            for point in readings
         ]
         return cs.mmin(cs.vertcat(*distances))  # Minimum distance to any vertex
 
@@ -74,6 +74,7 @@ class Mpc():
         if self.goal is not None:
             self.optim_prob.subject_to(self.X_mpc[:,self.N] == self.goal)
 
+        # can be moved in the former 'for'
         if self.obstacles is not None:
             for k in range(self.N):
                 # barrier constraints to avoid collisions
