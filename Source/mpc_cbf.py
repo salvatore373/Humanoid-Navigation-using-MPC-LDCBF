@@ -35,8 +35,9 @@ class Mpc():
         self.X_mpc = self.optim_prob.variable(self.state_dim, self.N+1)
         self.U_mpc = self.optim_prob.variable(self.control_dim, self.N) 
 
-        # initial state (this value will be update at each step)
+        # initial state (this value will be updated at each step)
         self.x0 = self.optim_prob.parameter(self.state_dim)
+
         # reference trajectory (at each simulation step k we take the reference from k to k+N)
         if goal is None:
             self.reference = self.optim_prob.parameter(self.state_dim-1, self.N)
@@ -62,7 +63,8 @@ class Mpc():
             cs.sqrt((x - float(point[0]))**2 + (y - float(point[1]))**2)
             for point in readings
         ]
-        return cs.mmin(cs.vertcat(*distances))  # Minimum distance to any vertex
+
+        return cs.mmin(cs.vertcat(*distances))
 
 
     def add_constraints(self):
@@ -77,7 +79,7 @@ class Mpc():
         # can be moved in the former 'for'
         if self.obstacles is not None:
             for k in range(self.N):
-                # barrier constraints to avoid collisions
+                # barrier functions at k and k+1
                 h_k = self.control_barrier_functions(
                     self.X_mpc[0, k],
                     self.X_mpc[1, k]
@@ -94,6 +96,7 @@ class Mpc():
 
     def simulation(self, ref=None):
         simulation_time = np.zeros(self.N_simul)
+
         for k in range(self.N_simul):
             iter_time = time.time()
             self.optim_prob.set_value(self.x0, self.x[:,k])
@@ -116,13 +119,16 @@ class Mpc():
 
     def cost_function(self):
         cost_function = cs.sumsqr(self.U_mpc)
+
         if self.reference is not None: # change the condition later
             reference_cost = 0
             for k in range(self.N-1): # change this everytime look from k to k+N
                 reference_cost += cs.sumsqr(self.X_mpc[:2, k] - self.reference[:, k]) # xy trajectory
             terminal_cost = cs.sumsqr(self.X_mpc[:2, -2] - self.reference[:, -1])
+            # FIXME: ARE WE SURE 500 IS A GOOD VALUE?
             weight = 500
             cost_function += weight*reference_cost + weight*terminal_cost
+
         self.optim_prob.minimize(cost_function) # cost function
 
     def plot(self, ref):

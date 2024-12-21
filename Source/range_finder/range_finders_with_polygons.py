@@ -91,8 +91,7 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
 # ===== TO RUN SIMULATION FROM THIS FILE =====
 if __name__ == "__main__":
     LIDAR_RANGE = 2.0
-    RESOLUTION = 360
-
+    RESOLUTION = 90 # a ray each 4 degree
 
     # LiDAR 2d position
     lidar_position = [0, 0]
