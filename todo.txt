@@ -11,14 +11,14 @@ SIMULATION:
 4. (DONE) Error plots (plots + animation) (S)
 5. (DONE) Range Finder Simulation (E)
 6. (DONE) Control Barrier Function Visualization (D)
-7. (DONE) COM and ZMP trajectory plot in 2D for simple case
+7. (DONE) COM and ZMP trajectory plot in 2D for simple case (S)
 
 MPC:
 1. (DONE) Adjust cost function and check everything makes sense (E)
 2. Control Barrier Function implementation (D)
 3. Apply the same approach to the Humanoid Model (E)
 4. Add specific Humanoid Constraints
-5. Footstep planner
+5. Footstep planner (S)
 
 BONUS:
 1. RRT*
