@@ -8,10 +8,10 @@ SIMULATION:
 1. (DONE) Fix random obstacles generation (D)
 2. (DONE) Differential animation (S)
 3. (DONE) Humanoid animation (D)
-4. Error plots (plots + animation) (S)
+4. (DONE) Error plots (plots + animation) (S)
 5. (DONE) Range Finder Simulation (E)
 6. (DONE) Control Barrier Function Visualization (D)
-7. COM and ZMP trajectory plot in 2D for simple case
+7. (DONE) COM and ZMP trajectory plot in 2D for simple case
 
 MPC:
 1. (DONE) Adjust cost function and check everything makes sense (E)

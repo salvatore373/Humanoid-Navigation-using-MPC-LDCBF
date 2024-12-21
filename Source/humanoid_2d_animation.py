@@ -1,7 +1,9 @@
 from typing import Callable
 
+import matplotlib.patches
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import patches
 from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 
@@ -24,7 +26,8 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
     # The length of the tick in the line representing the motion of the CoM
     TICK_LENGTH = 1
 
-    def __init__(self, start_conf, goal_conf, following_com_position=None, following_left_foot=None,
+    def __init__(self, start_conf, goal_conf, zmp_trajectory: np.ndarray, com_reference: np.ndarray,
+                 zmp_reference: np.ndarray, following_com_position=None, following_left_foot=None,
                  following_right_foot=None):
         """
         Initializes a new instance of the utility to show the animation regarding the humanoid.
@@ -36,29 +39,57 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         :param following_left_foot: The left foot positions starting from the configuration after the start
          configuration.
         :param following_right_foot: The right foot positions starting from the configuration after the start
-         configuration
+         configuration.
+        :param zmp_trajectory: The trajectory of the ZMP. A numpy array of shape (num_animation_frame, 2).
+        :param com_reference: The reference trajectory of the CoM. A numpy array of shape (num_animation_frame, 2).
+        :param zmp_reference: The reference trajectory of the ZMP. A numpy array of shape (num_animation_frame, 2).
         """
-        super(HumanoidAnimationHelper, self).__init__(None, None)
-        # # Initialize the plots
-        # self.fig = plt.figure(figsize=(10, 6))
-        # gs = GridSpec(2, 2, figure=self.fig, width_ratios=[3, 1], height_ratios=[1, 1])
-        # # Animation plot (spans 2 rows in the first column)
-        # ax1 = self.fig.add_subplot(gs[:, 0])  # Full left side for animation
-        # ax1.set_xlim(0, 6)
-        # ax1.set_ylim(0, 6)
-        # ax1.set_aspect('equal')
-        # ax1.set_title("Animation of Humanoid")  # todo: change title
-        # self.ax = ax1
-        # # Second plot (upper part of the second column)
-        # ax2 = self.fig.add_subplot(gs[0, 1])
-        # ax2.set_title("CoM and ZMP trajectory and reference")
-        # ax2.set_xlim(0, 5)
-        # ax2.set_ylim(0, 10)
-        # # Third plot (lower part of the second column)
-        # ax3 = self.fig.add_subplot(gs[1, 1])
-        # ax3.set_title("CoM and ZMP errors")
-        # ax3.set_xlim(0, 5)
-        # ax3.set_ylim(0, 10)
+        # Initialize the plots
+        self.fig = plt.figure(figsize=(10, 6))
+        # gs = GridSpec(2, 3, figure=self.fig, width_ratios=[3, 1, 1], height_ratios=[1, 1])
+        gs = GridSpec(4, 2, figure=self.fig, width_ratios=[3, 1], height_ratios=[1, 1, 1, 1])
+        # Animation plot (spans 2 rows in the first column)
+        ax1 = self.fig.add_subplot(gs[:, 0])  # Full left side for animation
+        ax1.set_aspect('equal')
+        ax1.set_title("Animation of Humanoid")  # todo: change title
+        self.anim_ax = ax1
+        # Second plot (upper part of the second column)
+        ax2 = self.fig.add_subplot(gs[0, 1])
+        ax2.set_title("CoM trajectory and reference")
+        self.com_traj_ref_ax = ax2
+        # Third plot (lower part of the second column)
+        ax3 = self.fig.add_subplot(gs[1, 1])
+        ax3.set_title("CoM error")
+        self.com_err_ax = ax3
+        # Fourth plot (upper part of the third column)
+        # ax4 = self.fig.add_subplot(gs[0, 2])
+        ax4 = self.fig.add_subplot(gs[2, 1])
+        ax4.set_title("ZMP trajectory and reference")
+        self.zmp_traj_ref_ax = ax4
+        # Fifth plot (lower part of the third column)
+        # ax5 = self.fig.add_subplot(gs[1, 2])
+        ax5 = self.fig.add_subplot(gs[3, 1])
+        ax5.set_title("ZMP errors")
+        ax5.set_xlabel('Time')
+        self.zmp_err_ax = ax5
+
+        # Adjust the layout
+        self.fig.tight_layout()
+
+        # Set a time reference
+        self.time = np.linspace(0, 10, num_frames)
+
+        # Internally store the CoM and ZMP trajectories and references
+        self.zmp_trajectory = zmp_trajectory
+        self.com_reference = com_reference
+        self.zmp_reference = zmp_reference
+        # Initialize the lines to represent the CoM and ZMP trajectories, references and errors
+        self.com_traj_line, = self.com_traj_ref_ax.plot([], [], '-', lw=1, label="CoM Trajectory")
+        self.com_ref_line, = self.com_traj_ref_ax.plot([], [], '--', lw=1, label="CoM Reference")
+        self.com_err_line, = self.com_err_ax.plot([], [], '-', lw=1, label="CoM Error")
+        self.zmp_traj_line, = self.zmp_traj_ref_ax.plot([], [], '-', lw=1, label="ZMP Trajectory")
+        self.zmp_ref_line, = self.zmp_traj_ref_ax.plot([], [], '--', lw=1, label="ZMP Reference")
+        self.zmp_err_line, = self.zmp_err_ax.plot([], [], '-', lw=1, label="ZMP Error")
 
         # Put the start and goal configurations in a numpy vector (and put the orientation in the interval [0, 2pi] rad)
         self.start = np.array([start_conf[0], start_conf[1], np.deg2rad(np.rad2deg(start_conf[2]) % 360)])
@@ -76,7 +107,8 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         ])
 
         # Initialize the lists containing the evolution of the CoM and feet position
-        self.com_pose_history = [self.start]
+        self.com_pose_history = np.empty((num_frames, 3))
+        self.com_pose_history[0, :] = self.start[:, 0]
         self.left_foot_history = [left_foot]
         self.right_foot_history = [right_foot]
 
@@ -90,12 +122,12 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
     def _draw_circle(self, position, alpha=1.0, radius=2.0, color='tomato', fill=True, linewidth=2):
         robot = plt.Circle((position[0], position[1]), radius=radius, color=color,
                            fill=fill, linewidth=linewidth, alpha=alpha)
-        self.ax.add_patch(robot)
+        self.anim_ax.add_patch(robot)
 
     def _draw_tick(self, position, alpha=1.0, color='black', linewidth=2):
         tick_x = [position[0], position[0] + HumanoidAnimationHelper.TICK_LENGTH * np.cos(position[2])]
         tick_y = [position[1], position[1] + HumanoidAnimationHelper.TICK_LENGTH * np.sin(position[2])]
-        plt.plot(tick_x, tick_y, color=color, linewidth=linewidth, alpha=alpha)
+        self.anim_ax.plot(tick_x, tick_y, color=color, linewidth=linewidth, alpha=alpha)
 
     def update(self, frame: int):
         print("### FRAME", frame)
@@ -108,38 +140,41 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
             return -1
 
         # Clear the canvas
-        plt.cla()
+        self.anim_ax.cla()
 
         # Plot the goal position
-        plt.scatter(self.goal[0], self.goal[1], marker="o", color="royalblue", label='goal', s=300)
+        self.anim_ax.scatter(self.goal[0], self.goal[1], marker="o", color="royalblue", label='goal', s=300)
 
         # Draw the last CoMs
-        for idx, com in enumerate(
-                reversed(self.com_pose_history[-min(len(self.com_pose_history), NUMBER_OF_SHADOWS):])):
-            # Draw the point representing the CoM
-            self._draw_circle(com, alpha=1.0 - idx / NUMBER_OF_SHADOWS)
-            # Draw the line connecting this CoM to the previous one
-            self._draw_tick(com, alpha=1.0 - idx / NUMBER_OF_SHADOWS)
+        if frame != 0:
+            for idx, com in enumerate(self.com_pose_history[frame:max(0, frame - NUMBER_OF_SHADOWS):-1]):
+                # Draw the point representing the CoM
+                self._draw_circle(com, alpha=1.0 - idx / NUMBER_OF_SHADOWS)
+                # Draw the line connecting this CoM to the previous one
+                self._draw_tick(com, alpha=1.0 - idx / NUMBER_OF_SHADOWS)
 
         # Draw the last left footsteps
         for idx, left in enumerate(
                 reversed(self.left_foot_history[-min(len(self.left_foot_history), NUMBER_OF_FOOTSTEPS_SHADOWS):])):
             # Plot the point corresponding to the left foot position (and give a label - to be used by the legend -
             # only to the first footstep).
-            plt.scatter(left[0], left[1], marker="o", color="green", label='left foot' if idx == 0 else None,
-                        s=20, alpha=1.0 - idx * 1 / NUMBER_OF_SHADOWS / 2)
+            self.anim_ax.scatter(left[0], left[1], marker="o", color="green", label='left foot' if idx == 0 else None,
+                                 s=20, alpha=1.0 - idx * 1 / NUMBER_OF_SHADOWS / 2)
 
         # Draw the last right footsteps
         for idx, right in enumerate(
                 reversed(self.right_foot_history[-min(len(self.right_foot_history), NUMBER_OF_FOOTSTEPS_SHADOWS):])):
             # Plot the point corresponding to the right foot position (and give a label - to be used by the legend -
             # only to the first footstep).
-            plt.scatter(right[0], right[1], marker="o", color="lightgreen", label='right foot' if idx == 0 else None,
-                        s=20, alpha=1.0 - idx * 1 / NUMBER_OF_SHADOWS / 2)
+            self.anim_ax.scatter(right[0], right[1], marker="o", color="lightgreen",
+                                 label='right foot' if idx == 0 else None,
+                                 s=20, alpha=1.0 - idx * 1 / NUMBER_OF_SHADOWS / 2)
 
         # Add a legend
-        plt.subplots_adjust(right=0.75)
-        plt.legend(loc='center right', bbox_to_anchor=(1.45, 0.5), ncol=1, fancybox=True, shadow=False, fontsize="13")
+        self.anim_ax.legend(loc='upper left', ncol=1, fancybox=True, shadow=False,  # bbox_to_anchor=(1.45, 0.5),
+                            fontsize="13")
+
+        return self.anim_ax
 
     def show_animation_with_autogeneration(self, path_to_gif: str, num_frames: int = 20, interval: int = 200):
         """
@@ -164,6 +199,54 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         """
         super().show_animation(path_to_gif, num_frames, interval, self.update_with_offline_trajectory)
 
+    def _update_plots(self, frame: int):
+        """
+        Performs the update regarding the CoM and ZMP reference, trajectory and error.
+
+        :param frame: The number of the frame whom state has to be represented.
+        """
+        # Update the trajectory, reference and error graphs of the CoM (x-component)
+        self.com_traj_line.set_data(self.time[:frame + 1], self.com_pose_history[:frame + 1, 0])
+        self.com_ref_line.set_data(self.time[:frame + 1], self.com_reference[:frame + 1, 0])
+        self.com_err_line.set_data(self.time[:frame + 1],
+                                   self.com_reference[:frame + 1, 0] - self.com_pose_history[:frame + 1, 0])
+        # Update the trajectory, reference and error graphs of the CoM (y-component)
+        self.com_traj_line.set_data(self.time[:frame + 1], self.com_pose_history[:frame + 1, 1])
+        self.com_ref_line.set_data(self.time[:frame + 1], self.com_reference[:frame + 1, 1])
+        self.com_err_line.set_data(self.time[:frame + 1],
+                                   self.com_reference[:frame + 1, 1] - self.com_pose_history[:frame + 1, 1])
+        # Update the trajectory, reference and error graphs of the ZMP (x-component)
+        self.zmp_traj_line.set_data(self.time[:frame + 1], self.zmp_trajectory[:frame + 1, 0])
+        self.zmp_ref_line.set_data(self.time[:frame + 1], self.zmp_reference[:frame + 1, 0])
+        self.zmp_err_line.set_data(self.time[:frame + 1],
+                                   self.zmp_reference[:frame + 1, 0] - self.zmp_trajectory[:frame + 1, 0])
+        # Update the trajectory, reference and error graphs of the ZMP (y-component)
+        self.zmp_traj_line.set_data(self.time[:frame + 1], self.zmp_trajectory[:frame + 1, 1])
+        self.zmp_ref_line.set_data(self.time[:frame + 1], self.zmp_reference[:frame + 1, 1])
+        self.zmp_err_line.set_data(self.time[:frame + 1],
+                                   self.zmp_reference[:frame + 1, 1] - self.zmp_trajectory[:frame + 1, 1])
+
+        # Adjust the plots limits
+        self.anim_ax.set_xlim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
+        self.anim_ax.set_ylim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
+        self.com_traj_ref_ax.set_xlim(0, max(frame, 1))
+        self.com_traj_ref_ax.set_ylim(-1.5, +1.5)
+        self.com_err_ax.set_xlim(0, max(frame, 1))
+        self.com_err_ax.set_ylim(-1.5, +1.5)
+        self.zmp_traj_ref_ax.set_xlim(0, max(frame, 1))
+        self.zmp_traj_ref_ax.set_ylim(-1.5, +1.5)
+        self.zmp_err_ax.set_xlim(0, max(frame, 1))
+        self.zmp_err_ax.set_ylim(-1.5, +1.5)
+
+        if frame == 0:
+            # Display the legends for the plots
+            self.zmp_traj_ref_ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            self.zmp_err_ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            self.com_traj_ref_ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+            self.com_err_ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        if frame == 1:
+            self.fig.tight_layout()
+
     def show_animation(self, path_to_gif: str, num_frames: int = 20, interval: int = 200, update: Callable = None):
         self.show_animation_with_autogeneration(path_to_gif, num_frames, interval)
 
@@ -178,17 +261,20 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         if res == -1:
             return
 
+        # Update the ZMP/CoM plots
+        self._update_plots(frame)
+
         # ===== COMPUTING NEXT VALUES =====
         # Set a lower step size for the first step
         step_size = STEP_SIZE / 2 if frame == 0 else STEP_SIZE
         # Compute the next CoM position
-        last_conf = self.com_pose_history[-1]
+        last_conf = self.com_pose_history[frame]
         next_conf = np.array([
             last_conf[0] + step_size / 2 * np.cos(last_conf[2]),
             last_conf[1] + step_size / 2 * np.sin(last_conf[2]),
             last_conf[2]
         ])
-        self.com_pose_history.append(next_conf)
+        self.com_pose_history[frame + 1] = next_conf
 
         foot = 0 if frame % 2 == 0 else 1
 
@@ -209,10 +295,9 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
             ])
             self.right_foot_history.append(right_foot)
 
-        plt.xlim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
-        plt.ylim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
+        self.anim_ax.set_xlim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
+        self.anim_ax.set_ylim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
+        self.anim_ax.set_aspect('equal', adjustable='box')
 
     def update_with_offline_trajectory(self, frame):
         """
@@ -226,8 +311,11 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         if res == -1:
             return
 
+        # Update the ZMP/CoM plots
+        self._update_plots(frame)
+
         # ===== COMPUTING NEXT VALUES =====
-        self.com_pose_history.append(self.following_com_position.pop(0))
+        self.com_pose_history[frame + 1] = self.following_com_position.pop(0)[:, 0]
         foot = 0 if frame % 2 == 0 else 1
         if foot == 0:
             print("LEFT")
@@ -236,10 +324,8 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
             print("RIGHT")
             self.right_foot_history.append(self.following_right_foot.pop(0))
 
-        plt.xlim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
-        plt.ylim(HumanoidAnimationHelper.MIN_COORD, HumanoidAnimationHelper.MAX_COORD)
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
+        # Additional adjustments
+        self.anim_ax.set_aspect('equal', adjustable='box')
 
 
 def generate_com_and_feet_evolution(start_com, start_left_foot, start_right_foot, num_frames):
@@ -289,19 +375,26 @@ def generate_com_and_feet_evolution(start_com, start_left_foot, start_right_foot
 
 
 if __name__ == "__main__":
+    # TESTING HumanoidAnimationHelper WITH DUMMY DATA
+    num_frames = 21
+
     # Set a random goal
     goal = np.random.randint(-10, 10, (3, 1))
     # Set a random initial position
     start = np.random.randint(-10, 10, (3, 1))
 
-    anim_helper = HumanoidAnimationHelper(goal_conf=goal, start_conf=start)
+    # Set the CoM and ZMP trajectory and reference
+    time = np.linspace(0, 10, num_frames)
+    zmp_trajectory = np.array([np.sin(time + np.pi), np.cos(time + np.pi)]).T  # dim: (num_frames, 2)
+    zmp_reference = np.array([np.sin(time), np.cos(time)]).T  # dim: (num_frames, 2)
+    com_reference = np.array([np.cos(time + np.pi), np.sin(time + np.pi)]).T  # dim: (num_frames, 2)
+    anim_helper = HumanoidAnimationHelper(goal_conf=goal, start_conf=start,
+                                          zmp_reference=zmp_reference, zmp_trajectory=zmp_trajectory,
+                                          com_reference=com_reference)
     # anim_helper.show_animation_with_autogeneration('../Assets/Animations/humanoid_2d_animation.gif')
-
-    # TODO: next to the animation, add 1 graph to plot the CoM/ZMP trajectory and the CoM/ZMP reference,
-    #  add another graph to plot the CoM/ZMP errors
 
     anim_helper.following_com_position, anim_helper.following_left_foot, anim_helper.following_right_foot = (
         generate_com_and_feet_evolution(
             anim_helper.start, anim_helper.left_foot_history[0],
-            anim_helper.right_foot_history[0], num_frames=21))
-    anim_helper.show_animation('../Assets/Animations/humanoid_2d_animation.gif')
+            anim_helper.right_foot_history[0], num_frames=num_frames))
+    anim_helper.show_animation_with_offline_trajectory('../Assets/Animations/humanoid_2d_animation.gif')

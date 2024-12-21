@@ -23,9 +23,9 @@ class BaseAnimationHelper:
         """
         if fig is not None and ax is not None:
             self.fig = fig
-            self.ax = ax
+            self.anim_ax = ax
         else:
-            self.fig, self.ax = plt.subplots()
+            self.fig, self.anim_ax = plt.subplots()
 
     def show_animation(self, path_to_gif: str, num_frames: int = 20, interval: int = 200, update: Callable = None):
         """
@@ -60,7 +60,7 @@ class BaseAnimationHelper:
         self.update(frame)
 
         # Set the boundaries of the plot and equal aspect ratio
-        plt.xlim(BaseAnimationHelper.MIN_COORD, BaseAnimationHelper.MAX_COORD)
-        plt.ylim(BaseAnimationHelper.MIN_COORD, BaseAnimationHelper.MAX_COORD)
-        self.ax = plt.gca()
-        self.ax.set_aspect('equal', adjustable='box')
+        self.anim_ax.set_xlim(BaseAnimationHelper.MIN_COORD, BaseAnimationHelper.MAX_COORD)
+        self.anim_ax.set_ylim(BaseAnimationHelper.MIN_COORD, BaseAnimationHelper.MAX_COORD)
+        self.anim_ax = plt.gca()
+        self.anim_ax.set_aspect('equal', adjustable='box')
