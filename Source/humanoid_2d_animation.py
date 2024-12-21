@@ -1,6 +1,9 @@
+from typing import Callable
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
+from matplotlib.gridspec import GridSpec
 
 from BaseAnimationHelper import BaseAnimationHelper
 
@@ -21,7 +24,7 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
     # The length of the tick in the line representing the motion of the CoM
     TICK_LENGTH = 1
 
-    def __init__(self, start_conf, goal_conf, fig=None, ax=None, following_com_position=None, following_left_foot=None,
+    def __init__(self, start_conf, goal_conf, following_com_position=None, following_left_foot=None,
                  following_right_foot=None):
         """
         Initializes a new instance of the utility to show the animation regarding the humanoid.
@@ -29,17 +32,34 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         :param start_conf: The start configuration of the humanoid, represented by a 3-components vector:
          X-coord, Y-coord, orientation.
         :param goal_conf: The goal configuration, represented by a 3-components vector: X-coord, Y-coord, orientation.
-        :param fig: The first element returned by plt.subplots(). If either fig or axis is not provided, a new one
-        is created.
-        :param ax: The second element returned by plt.subplots(). If either fig or axis is not provided, a new one
-        is created.
         :param following_com_position: The CoM positions starting from the configuration after the start configuration.
         :param following_left_foot: The left foot positions starting from the configuration after the start
          configuration.
         :param following_right_foot: The right foot positions starting from the configuration after the start
          configuration
         """
-        super(HumanoidAnimationHelper, self).__init__(fig, ax)
+        super(HumanoidAnimationHelper, self).__init__(None, None)
+        # # Initialize the plots
+        # self.fig = plt.figure(figsize=(10, 6))
+        # gs = GridSpec(2, 2, figure=self.fig, width_ratios=[3, 1], height_ratios=[1, 1])
+        # # Animation plot (spans 2 rows in the first column)
+        # ax1 = self.fig.add_subplot(gs[:, 0])  # Full left side for animation
+        # ax1.set_xlim(0, 6)
+        # ax1.set_ylim(0, 6)
+        # ax1.set_aspect('equal')
+        # ax1.set_title("Animation of Humanoid")  # todo: change title
+        # self.ax = ax1
+        # # Second plot (upper part of the second column)
+        # ax2 = self.fig.add_subplot(gs[0, 1])
+        # ax2.set_title("CoM and ZMP trajectory and reference")
+        # ax2.set_xlim(0, 5)
+        # ax2.set_ylim(0, 10)
+        # # Third plot (lower part of the second column)
+        # ax3 = self.fig.add_subplot(gs[1, 1])
+        # ax3.set_title("CoM and ZMP errors")
+        # ax3.set_xlim(0, 5)
+        # ax3.set_ylim(0, 10)
+
         # Put the start and goal configurations in a numpy vector (and put the orientation in the interval [0, 2pi] rad)
         self.start = np.array([start_conf[0], start_conf[1], np.deg2rad(np.rad2deg(start_conf[2]) % 360)])
         self.goal = np.array([goal_conf[0], goal_conf[1], np.deg2rad(np.rad2deg(goal_conf[2]) % 360)])
@@ -66,6 +86,16 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         self.following_right_foot = following_right_foot
         # The number of the previous frame
         self.last_seen_frame = -1
+
+    def _draw_circle(self, position, alpha=1.0, radius=2.0, color='tomato', fill=True, linewidth=2):
+        robot = plt.Circle((position[0], position[1]), radius=radius, color=color,
+                           fill=fill, linewidth=linewidth, alpha=alpha)
+        self.ax.add_patch(robot)
+
+    def _draw_tick(self, position, alpha=1.0, color='black', linewidth=2):
+        tick_x = [position[0], position[0] + HumanoidAnimationHelper.TICK_LENGTH * np.cos(position[2])]
+        tick_y = [position[1], position[1] + HumanoidAnimationHelper.TICK_LENGTH * np.sin(position[2])]
+        plt.plot(tick_x, tick_y, color=color, linewidth=linewidth, alpha=alpha)
 
     def update(self, frame: int):
         print("### FRAME", frame)
@@ -120,9 +150,7 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         :param num_frames: The number of frames in the animation.
         :param interval: Delay between frames in milliseconds.
         """
-        ani = FuncAnimation(self.fig, self.update_with_autogeneration, frames=num_frames, interval=interval)
-        ani.save(path_to_gif, writer='ffmpeg')
-        plt.show()
+        super().show_animation(path_to_gif, num_frames, interval, self.update_with_autogeneration)
 
     def show_animation_with_offline_trajectory(self, path_to_gif: str, num_frames: int = 20, interval: int = 200):
         """
@@ -134,22 +162,10 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         :param num_frames: The number of frames in the animation.
         :param interval: Delay between frames in milliseconds.
         """
-        ani = FuncAnimation(self.fig, self.update_with_offline_trajectory, frames=num_frames, interval=interval)
-        ani.save(path_to_gif, writer='ffmpeg')
-        plt.show()
+        super().show_animation(path_to_gif, num_frames, interval, self.update_with_offline_trajectory)
 
-    def show_animation(self, path_to_gif: str, num_frames: int = 20, interval: int = 200):
-        self.show_animation_with_offline_trajectory(path_to_gif, num_frames, interval)
-
-    def _draw_circle(self, position, alpha=1.0, radius=2.0, color='tomato', fill=True, linewidth=2):
-        robot = plt.Circle((position[0], position[1]), radius=radius, color=color,
-                           fill=fill, linewidth=linewidth, alpha=alpha)
-        self.ax.add_patch(robot)
-
-    def _draw_tick(self, position, alpha=1.0, color='black', linewidth=2):
-        tick_x = [position[0], position[0] + HumanoidAnimationHelper.TICK_LENGTH * np.cos(position[2])]
-        tick_y = [position[1], position[1] + HumanoidAnimationHelper.TICK_LENGTH * np.sin(position[2])]
-        plt.plot(tick_x, tick_y, color=color, linewidth=linewidth, alpha=alpha)
+    def show_animation(self, path_to_gif: str, num_frames: int = 20, interval: int = 200, update: Callable = None):
+        self.show_animation_with_autogeneration(path_to_gif, num_frames, interval)
 
     def update_with_autogeneration(self, frame):
         """
@@ -162,10 +178,10 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         if res == -1:
             return
 
+        # ===== COMPUTING NEXT VALUES =====
         # Set a lower step size for the first step
         step_size = STEP_SIZE / 2 if frame == 0 else STEP_SIZE
-
-        # ===== COMPUTING NEXT VALUES =====
+        # Compute the next CoM position
         last_conf = self.com_pose_history[-1]
         next_conf = np.array([
             last_conf[0] + step_size / 2 * np.cos(last_conf[2]),
@@ -280,6 +296,9 @@ if __name__ == "__main__":
 
     anim_helper = HumanoidAnimationHelper(goal_conf=goal, start_conf=start)
     # anim_helper.show_animation_with_autogeneration('../Assets/Animations/humanoid_2d_animation.gif')
+
+    # TODO: next to the animation, add 1 graph to plot the CoM/ZMP trajectory and the CoM/ZMP reference,
+    #  add another graph to plot the CoM/ZMP errors
 
     anim_helper.following_com_position, anim_helper.following_left_foot, anim_helper.following_right_foot = (
         generate_com_and_feet_evolution(
