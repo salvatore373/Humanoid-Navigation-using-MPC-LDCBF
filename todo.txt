@@ -17,8 +17,9 @@ MPC:
 1. (DONE) Adjust cost function and check everything makes sense (E)
 2. Control Barrier Function implementation (D)
 3. Apply the same approach to the Humanoid Model (E)
-4. Add specific Humanoid Constraints
-5. Footstep planner (S)
+4. Build Humanoid MPC (D)
+5. Add specific Humanoid Constraints (D)
+6. Footstep planner (S)
 
 BONUS:
 1. RRT*
