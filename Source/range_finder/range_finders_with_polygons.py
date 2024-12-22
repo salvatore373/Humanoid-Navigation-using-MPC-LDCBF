@@ -6,9 +6,9 @@ from sympy import Point, Ray, intersection
 from Source.obstacles import GenerateObstacles
 
 
-def get_closest_point(points_list, point):
+def get_closest_point(points_list, point, lidar_range):
     closest_point = None
-    distance = LIDAR_RANGE
+    distance = lidar_range
 
     for p in points_list:
         curr = float(p.distance(point))
@@ -49,7 +49,7 @@ def compute_lidar_readings(position, obstacles, lidar_range, resolution=360):
             if len(intersections) == 0: continue
 
             # intersections between a ray and a polygon may be more than 1
-            closest, distance = get_closest_point(intersections, point)
+            closest, distance = get_closest_point(intersections, point, lidar_range)
 
             if distance <= lidar_range and distance < min_distance:
                 nearest_point = closest
