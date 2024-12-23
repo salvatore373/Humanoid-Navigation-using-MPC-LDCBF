@@ -16,24 +16,24 @@ COM_HEIGHT = 1
 
 class HumanoidMPC(MpcSkeleton, ABC):
     # DONE
-    def __init__(self, state_dim, control_dim, N_horizon, N_simul, sampling_time, goal):
-        super().__init__(state_dim=5, control_dim=3, N_horizon=300, N_simul=10, sampling_time=1e-3)
+    def __init__(self, state_dim=5, control_dim=3, N_horizon=40, N_simul=300, sampling_time=1e-3, goal=None):
+        super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
 
         self.add_constraints()
         self.cost_function()
 
     def add_constraints(self):
-        # FIXME: ask to Euge
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
-        # self.optim_prob.subject_to(self.X_mpc[:, 1] == self.x0)
 
-        # goal constraint
-        self.optim_prob.subject_to(self.X_mpc[:, self.N_horizon] == self.goal)
+        # goal constraint (only in position)
+        # FIXME: ask to Euge (il king di CasADi)
+        self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
+        self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
 
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
-            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[k]))
+            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
         # TODO: Walking velocities constraint
         # TODO: Leg reachability
         # TODO: Maneuverability constraint
@@ -46,44 +46,52 @@ class HumanoidMPC(MpcSkeleton, ABC):
         #     [cs.cosh(beta * self.sampling_time), cs.sinh(beta * self.sampling_time) / beta],
         #     [beta * cs.sinh(beta * self.sampling_time), cs.cosh(beta * self.sampling_time)]
         # ]
-        # print(Ad.shape)
+
+        Ad11 = cs.cosh(beta * self.sampling_time)
+        Ad12 = cs.sinh(beta * self.sampling_time) / beta
+        Ad21 = beta * cs.sinh(beta * self.sampling_time)
+        Ad22 = cs.cosh(beta * self.sampling_time)
 
         Al = np.array([
-            [cs.cosh(beta * self.sampling_time), cs.sinh(beta * self.sampling_time) / beta, 0, 0, 0],
-            [beta * cs.sinh(beta * self.sampling_time), cs.cosh(beta * self.sampling_time), 0, 0, 0],
-            [0, 0, cs.cosh(beta * self.sampling_time), cs.sinh(beta * self.sampling_time) / beta, 0],
-            [0, 0, beta * cs.sinh(beta * self.sampling_time), cs.cosh(beta * self.sampling_time), 0],
+            [Ad11, Ad12, 0, 0, 0],
+            [Ad21, Ad22, 0, 0, 0],
+            [0, 0, Ad11, Ad12, 0],
+            [0, 0, Ad21, Ad22, 0],
             [0, 0, 0, 0, 1]
         ])
-        print(Al.shape)
 
         # Bd = [
         #     [1-cs.cosh(beta*self.sampling_time)],
         #     [-beta*cs.sinh(beta*self.sampling_time)]
         # ]
 
+        Bd1 = 1-cs.cosh(beta*self.sampling_time)
+        Bd2 = -beta*cs.sinh(beta*self.sampling_time)
+
         Bl = np.array([
-            [1-cs.cosh(beta*self.sampling_time), 0, 0],
-            [-beta*cs.sinh(beta*self.sampling_time), 0, 0],
-            [0, 1-cs.cosh(beta*self.sampling_time), 0],
-            [0, -beta*cs.sinh(beta*self.sampling_time), 0],
+            [Bd1, 0, 0],
+            [Bd2, 0, 0],
+            [0, Bd1, 0],
+            [0, Bd2, 0],
             [0, 0, self.sampling_time]
         ])
-        print(Bl.shape)
-
-
-
 
         first_term = cs.mtimes(Al, x_k)
         second_term = cs.mtimes(Bl, u_k)
+
+        # print("##########")
+        # print(first_term.shape, Al.shape, x_k.shape)
+        # print(second_term.shape, Bl.shape, u_k.shape)
 
         return first_term + second_term
 
     # DONE
     def cost_function(self):
+        # control actions cost
+        control_cost = cs.sumsqr(self.U_mpc)
         # (p_x - g_x)^2 + (p_y - g_y)^2
-        cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
-        self.optim_prob.minimize(cost)
+        distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
+        self.optim_prob.minimize(distance_cost + control_cost)
 
     def integrate(self):
         raise NotImplemented()
@@ -120,7 +128,8 @@ class HumanoidMPC(MpcSkeleton, ABC):
             self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
             self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
 
-            X_pred[:, k+1] = self.lip3d_dynamics(X_pred[:, k], U_pred[k]).full().squeeze(-1)
+            # compute x_k_next using x_k and u_k
+            X_pred[:, k+1] = self.lip3d_dynamics(X_pred[:, k], U_pred[:, k]).full().squeeze(-1)
 
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
@@ -131,6 +140,6 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
 if __name__ == "__main__":
     mpc = HumanoidMPC(
-        state_dim=5, control_dim=3, N_horizon=300, N_simul=10, sampling_time=1e-3, goal=(4, 1, 4, 1, cs.pi)
+        state_dim=5, control_dim=3, N_horizon=10, N_simul=300, sampling_time=1e-3, goal=(4, 1, 4, 1, cs.pi)
     )
     mpc.simulation()
