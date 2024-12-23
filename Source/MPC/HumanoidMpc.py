@@ -15,7 +15,6 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 
 class HumanoidMPC(MpcSkeleton, ABC):
-    # DONE
     def __init__(self, state_dim=5, control_dim=3, N_horizon=40, N_simul=300, sampling_time=1e-3, goal=None):
         super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
@@ -27,7 +26,6 @@ class HumanoidMPC(MpcSkeleton, ABC):
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
         # goal constraint (only in position)
-        # FIXME: ask to Euge (il king di CasADi)
         self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
         self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
 
@@ -35,21 +33,40 @@ class HumanoidMPC(MpcSkeleton, ABC):
         for k in range(self.N_horizon):
             self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
 
+        # TODO: control barrier functions constraint
+
         # Walking velocities constraint
-        # FIXME: no solution when plugged in
+        # FIXME: leads to infeasible solution
         v_min = [-0.1, 0.1]
         v_max = [0.8, 0.4]
         for k in range(self.N_horizon):
-            reachability = self.leg_reachability(self.X_mpc[:, k+1], k)
+            local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
             # le = less equal
-            self.optim_prob.subject_to(cs.le(reachability, v_max))
+            self.optim_prob.subject_to(cs.le(local_velocities, v_max))
             # ge = greater equal
-            self.optim_prob.subject_to(cs.ge(reachability, v_min))
-        # TODO: Leg reachability
-        # TODO: Maneuverability constraint
+            self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
+
+        # leg reachability (WORKS)
+        l_max = 0.17320508075 # = 0.1 * sqrt(3)
+        l_min = -l_max
+        for k in range(self.N_horizon):
+            reachability = self.walking_velocities(self.X_mpc[:, k], k)
+            # le = less equal
+            self.optim_prob.subject_to(cs.le(reachability, l_max))
+            # ge = greater equal
+            self.optim_prob.subject_to(cs.ge(reachability, l_min))
 
 
-    # DONE
+        # maneuverability constraint
+        # FIXME: leads to infeasible solution
+        v_max = [0.8, 0.4]
+        for k in range(self.N_horizon):
+            velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k])
+            # le = less equal
+            # minus = '-' operator
+            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
+
+
     def cost_function(self):
         # control actions cost
         control_cost = cs.sumsqr(self.U_mpc)
@@ -57,7 +74,6 @@ class HumanoidMPC(MpcSkeleton, ABC):
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
         self.optim_prob.minimize(distance_cost + control_cost)
 
-    # DONE
     def integrate(self):
         raise NotImplemented()
 
@@ -102,7 +118,6 @@ class HumanoidMPC(MpcSkeleton, ABC):
         self.plot(X_pred)
 
     # ===== HUMANOID SPECIFIC CONSTRAINTS =====
-    # DONE
     def lip3d_dynamics(self, x_k, u_k):
         beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
 
@@ -149,22 +164,9 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
         return first_term + second_term
 
-    # DONE
-    def leg_reachability(self, x_k, k):
+    def walking_velocities(self, x_k, k):
         theta = x_k[4]
         s_v = 1 if k%2==0 else -1
-
-        # world_to_local = np.array([
-        #     [cs.cos(theta), cs.sin(theta)],
-        #     [-cs.sin(theta), cs.cos(theta)]
-        # ])
-
-        # velocities = np.array([
-        #     x_k[1],
-        #     s_v * x_k[3]
-        # ]).reshape(2, -1)
-
-        # return cs.mtimes(world_to_local, velocities)
 
         local_velocities = cs.vertcat(
             cs.cos(theta)*x_k[1] + cs.sin(theta)*s_v*x_k[3],
@@ -173,6 +175,29 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
         return local_velocities
 
+    def leg_reachability(self, x_k):
+        theta = x_k[4]
+
+        local_positions = cs.vertcat(
+            cs.cos(theta)*x_k[0] + cs.sin(theta)*x_k[2],
+            -cs.sin(theta)*x_k[0] + cs.cos(theta)*x_k[2]
+        )
+
+        return local_positions
+
+    def maneuverability(self, x_k, u_k):
+        alpha = 1.44 # or 3.6?
+        omega = u_k[2]
+
+        velocity_term = cs.vertcat(
+            cs.cos(alpha)*x_k[1],
+            cs.sin(alpha)*x_k[3]
+        )
+
+        safety_term = alpha/cs.pi * cs.fabs(omega)
+        turning_term = cs.vertcat(safety_term, safety_term)
+
+        return velocity_term, turning_term
 
 if __name__ == "__main__":
     mpc = HumanoidMPC(
