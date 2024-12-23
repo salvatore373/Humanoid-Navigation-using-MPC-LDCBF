@@ -23,37 +23,35 @@ class HumanoidMPC(MpcSkeleton, ABC):
         self.cost_function()
 
     def add_constraints(self):
+        # initial position constraint
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
         # goal constraint (only in position)
         self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
         self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
 
+
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
             self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
 
-        # TODO: control barrier functions constraint
 
-        # Walking velocities constraint
+        # walking velocities constraint
         # FIXME: leads to infeasible solution
         v_min = [-0.1, 0.1]
         v_max = [0.8, 0.4]
         for k in range(self.N_horizon):
             local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
-            # le = less equal
             self.optim_prob.subject_to(cs.le(local_velocities, v_max))
-            # ge = greater equal
             self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
 
-        # leg reachability (WORKS)
+
+        # leg reachability
         l_max = 0.17320508075 # = 0.1 * sqrt(3)
         l_min = -l_max
         for k in range(self.N_horizon):
-            reachability = self.walking_velocities(self.X_mpc[:, k], k)
-            # le = less equal
+            reachability = self.leg_reachability(self.X_mpc[:, k])
             self.optim_prob.subject_to(cs.le(reachability, l_max))
-            # ge = greater equal
             self.optim_prob.subject_to(cs.ge(reachability, l_min))
 
 
@@ -62,9 +60,10 @@ class HumanoidMPC(MpcSkeleton, ABC):
         v_max = [0.8, 0.4]
         for k in range(self.N_horizon):
             velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k])
-            # le = less equal
-            # minus = '-' operator
             self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
+
+
+        # TODO: control barrier functions constraint
 
 
     def cost_function(self):
