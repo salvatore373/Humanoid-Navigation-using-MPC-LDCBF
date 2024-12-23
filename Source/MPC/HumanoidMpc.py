@@ -34,56 +34,20 @@ class HumanoidMPC(MpcSkeleton, ABC):
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
             self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
-        # TODO: Walking velocities constraint
+
+        # Walking velocities constraint
+        # FIXME: no solution when plugged in
+        v_min = [-0.1, 0.1]
+        v_max = [0.8, 0.4]
+        for k in range(self.N_horizon):
+            reachability = self.leg_reachability(self.X_mpc[:, k+1], k)
+            # le = less equal
+            self.optim_prob.subject_to(cs.le(reachability, v_max))
+            # ge = greater equal
+            self.optim_prob.subject_to(cs.ge(reachability, v_min))
         # TODO: Leg reachability
         # TODO: Maneuverability constraint
 
-    # DONE
-    def lip3d_dynamics(self, x_k, u_k):
-        beta = cs.sqrt(GRAVITY_CONST/COM_HEIGHT)
-
-        # Ad = [
-        #     [cs.cosh(beta * self.sampling_time), cs.sinh(beta * self.sampling_time) / beta],
-        #     [beta * cs.sinh(beta * self.sampling_time), cs.cosh(beta * self.sampling_time)]
-        # ]
-
-        Ad11 = cs.cosh(beta * self.sampling_time)
-        Ad12 = cs.sinh(beta * self.sampling_time) / beta
-        Ad21 = beta * cs.sinh(beta * self.sampling_time)
-        Ad22 = cs.cosh(beta * self.sampling_time)
-
-        Al = np.array([
-            [Ad11, Ad12, 0, 0, 0],
-            [Ad21, Ad22, 0, 0, 0],
-            [0, 0, Ad11, Ad12, 0],
-            [0, 0, Ad21, Ad22, 0],
-            [0, 0, 0, 0, 1]
-        ])
-
-        # Bd = [
-        #     [1-cs.cosh(beta*self.sampling_time)],
-        #     [-beta*cs.sinh(beta*self.sampling_time)]
-        # ]
-
-        Bd1 = 1-cs.cosh(beta*self.sampling_time)
-        Bd2 = -beta*cs.sinh(beta*self.sampling_time)
-
-        Bl = np.array([
-            [Bd1, 0, 0],
-            [Bd2, 0, 0],
-            [0, Bd1, 0],
-            [0, Bd2, 0],
-            [0, 0, self.sampling_time]
-        ])
-
-        first_term = cs.mtimes(Al, x_k)
-        second_term = cs.mtimes(Bl, u_k)
-
-        # print("##########")
-        # print(first_term.shape, Al.shape, x_k.shape)
-        # print(second_term.shape, Bl.shape, u_k.shape)
-
-        return first_term + second_term
 
     # DONE
     def cost_function(self):
@@ -93,10 +57,11 @@ class HumanoidMPC(MpcSkeleton, ABC):
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
         self.optim_prob.minimize(distance_cost + control_cost)
 
+    # DONE
     def integrate(self):
         raise NotImplemented()
 
-    def plot(self, x_pred):
+    def plot(self):
         # plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
         # if self.goal is not None:
         #     plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
@@ -136,6 +101,77 @@ class HumanoidMPC(MpcSkeleton, ABC):
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
         self.plot(X_pred)
 
+    # ===== HUMANOID SPECIFIC CONSTRAINTS =====
+    # DONE
+    def lip3d_dynamics(self, x_k, u_k):
+        beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
+
+        # Ad = [
+        #     [cs.cosh(beta * self.sampling_time), cs.sinh(beta * self.sampling_time) / beta],
+        #     [beta * cs.sinh(beta * self.sampling_time), cs.cosh(beta * self.sampling_time)]
+        # ]
+
+        Ad11 = cs.cosh(beta * self.sampling_time)
+        Ad12 = cs.sinh(beta * self.sampling_time) / beta
+        Ad21 = beta * cs.sinh(beta * self.sampling_time)
+        Ad22 = cs.cosh(beta * self.sampling_time)
+
+        Al = np.array([
+            [Ad11, Ad12, 0, 0, 0],
+            [Ad21, Ad22, 0, 0, 0],
+            [0, 0, Ad11, Ad12, 0],
+            [0, 0, Ad21, Ad22, 0],
+            [0, 0, 0, 0, 1]
+        ])
+
+        # Bd = [
+        #     [1-cs.cosh(beta*self.sampling_time)],
+        #     [-beta*cs.sinh(beta*self.sampling_time)]
+        # ]
+
+        Bd1 = 1 - cs.cosh(beta * self.sampling_time)
+        Bd2 = -beta * cs.sinh(beta * self.sampling_time)
+
+        Bl = np.array([
+            [Bd1, 0, 0],
+            [Bd2, 0, 0],
+            [0, Bd1, 0],
+            [0, Bd2, 0],
+            [0, 0, self.sampling_time]
+        ])
+
+        first_term = cs.mtimes(Al, x_k)
+        second_term = cs.mtimes(Bl, u_k)
+
+        # print("##########")
+        # print(first_term.shape, Al.shape, x_k.shape)
+        # print(second_term.shape, Bl.shape, u_k.shape)
+
+        return first_term + second_term
+
+    # DONE
+    def leg_reachability(self, x_k, k):
+        theta = x_k[4]
+        s_v = 1 if k%2==0 else -1
+
+        # world_to_local = np.array([
+        #     [cs.cos(theta), cs.sin(theta)],
+        #     [-cs.sin(theta), cs.cos(theta)]
+        # ])
+
+        # velocities = np.array([
+        #     x_k[1],
+        #     s_v * x_k[3]
+        # ]).reshape(2, -1)
+
+        # return cs.mtimes(world_to_local, velocities)
+
+        local_velocities = cs.vertcat(
+            cs.cos(theta)*x_k[1] + cs.sin(theta)*s_v*x_k[3],
+            -cs.sin(theta)*x_k[1] + cs.cos(theta)*s_v*x_k[3]
+        )
+
+        return local_velocities
 
 
 if __name__ == "__main__":
