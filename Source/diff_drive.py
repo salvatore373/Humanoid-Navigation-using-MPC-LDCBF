@@ -125,5 +125,5 @@ if __name__ == "__main__":
     x_traj = np.concat([np.linspace(0, 3, T), np.linspace(3, 5, 10)])
     y_traj = np.concat([np.linspace(0, 3, T), np.linspace(3, 3, 10)])
     theta_traj = np.concat([np.linspace(0, cs.pi / 2, T), np.linspace(cs.pi / 2, cs.pi / 2, 10)])
-    model.move_and_plot(x_traj, y_traj, theta_traj, path_to_gif='../Assets/Animations/diff_drive.gif',
+    model.move_and_plot(x_traj, y_traj, theta_traj, path_to_gif='./Assets/Animations/diff_drive.gif',
                         triangle_height=1, triangle_width=0.8)
