@@ -9,6 +9,7 @@ from BaseMpc import MpcSkeleton
 from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
 
 """
+    This is the implementation related to our reference paper (3D Lip Dynamics with Heading angle and control barrier functions)
     humanoid state: [p_x, v_x, p_y, v_y, theta]
     humanoid control: [f_x, f_y, omega]
 """
