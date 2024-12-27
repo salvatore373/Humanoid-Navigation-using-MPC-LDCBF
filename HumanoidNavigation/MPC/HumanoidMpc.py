@@ -6,7 +6,7 @@ import casadi as cs
 import matplotlib.pyplot as plt
 from BaseMpc import MpcSkeleton
 
-from Source.obstacles_no_sympy import generate_random_convex_polygon
+from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon
 
 """
     humanoid state: [p_x, v_x, p_y, v_y, theta]
@@ -17,7 +17,7 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 
 class HumanoidMPC(MpcSkeleton, ABC):
-    def __init__(self, state_dim=5, control_dim=3, N_horizon=40, N_simul=300, sampling_time=1e-3, goal=None, obstacles=None):
+    def __init__(self, state_dim=5, control_dim=3, N_horizon=5, N_simul=300, sampling_time=1e-3, goal=None, obstacles=None):
         super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
         self.obstacles = obstacles
@@ -42,16 +42,6 @@ class HumanoidMPC(MpcSkeleton, ABC):
             self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
 
 
-        # walking velocities constraint
-        # FIXME: leads to infeasible solution
-        v_min = [-0.1, 0.1]
-        v_max = [0.8, 0.4]
-        for k in range(self.N_horizon):
-            local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
-            self.optim_prob.subject_to(cs.le(local_velocities, v_max))
-            self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
-
-
         # leg reachability
         l_max = 0.17320508075 # = 0.1 * sqrt(3)
         l_min = -l_max
@@ -61,21 +51,32 @@ class HumanoidMPC(MpcSkeleton, ABC):
             self.optim_prob.subject_to(cs.ge(reachability, l_min))
 
 
-        # maneuverability constraint
-        # FIXME: leads to infeasible solution
-        v_max = [0.8, 0.4]
-        for k in range(self.N_horizon):
-            velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k])
-            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
 
-        # control barrier functions constraint
-        # FIXME: leads to infeasible solution
-        for k in range(self.N_horizon):
-            ldcbf_constraints = self.compute_ldcbf(self.X_mpc[:, k], self.obstacles)
-
-            for constraint in ldcbf_constraints:
-                self.optim_prob.subject_to(constraint)
-
+        # # walking velocities constraint
+        # # FIXME: leads to infeasible solution
+        # v_min = [-0.1, 0.1]
+        # v_max = [0.8, 0.4]
+        # for k in range(self.N_horizon):
+        #     local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
+        #     self.optim_prob.subject_to(cs.le(local_velocities, v_max))
+        #     self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
+        #
+        #
+        #
+        # # maneuverability constraint
+        # # FIXME: leads to infeasible solution
+        # v_max = [0.8, 0.4]
+        # for k in range(self.N_horizon):
+        #     velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k])
+        #     self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
+        #
+        # # control barrier functions constraint
+        # # FIXME: leads to infeasible solution
+        # for k in range(self.N_horizon):
+        #     ldcbf_constraints = self.compute_ldcbf(self.X_mpc[:, k], self.obstacles)
+        #
+        #     for constraint in ldcbf_constraints:
+        #         self.optim_prob.subject_to(constraint)
 
 
     def cost_function(self):
@@ -194,15 +195,18 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
         constraints = []
         for i in range(len(obstacle_vertices)):
+            # i-th and (i+1)-th vertices
             vertex = cs.MX(obstacle_vertices[i])
             next_vertex = cs.MX(obstacle_vertices[(i + 1) % len(obstacle_vertices)])
+
+            # get the edge between previous vertices
             edge_vector = next_vertex - vertex
 
             # get the normal vector to such edge vector
             normal = cs.vertcat(-edge_vector[1], edge_vector[0])
             normal /= cs.norm_2(normal)
 
-
+            #
             to_robot = robot_position - vertex
             projection = cs.dot(to_robot, edge_vector) / cs.norm_2(edge_vector) ** 2
             projection = cs.fmax(0.0, cs.fmin(projection, 1.0))  # Clamp to edge
@@ -226,7 +230,7 @@ if __name__ == "__main__":
         N_horizon=10,
         N_simul=300,
         sampling_time=1e-3,
-        goal=(4, 1, 4, 1, cs.pi),
+        goal=(4, 0, 0, 0, 0),
         obstacles=obstacles
     )
     mpc.simulation()
