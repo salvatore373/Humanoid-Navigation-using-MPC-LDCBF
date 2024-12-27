@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from BaseAnimationHelper import BaseAnimationHelper
+from HumanoidNavigation.Utils.BaseAnimationHelper import BaseAnimationHelper
 
 
 class CBFAnimationHelper(BaseAnimationHelper):
@@ -109,4 +109,4 @@ if __name__ == '__main__':
 
     animation_helper = CBFAnimationHelper(obstacles=obstacles,
                                           origin_positions=origin_positions)
-    animation_helper.show_animation(path_to_gif='../Assets/Animations/cbf_animation.gif')
+    animation_helper.show_animation(path_to_gif='./Assets/Animations/cbf_animation.gif')

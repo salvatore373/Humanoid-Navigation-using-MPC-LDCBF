@@ -7,7 +7,7 @@ from matplotlib import patches
 from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 
-from BaseAnimationHelper import BaseAnimationHelper
+from HumanoidNavigation.Utils.BaseAnimationHelper import BaseAnimationHelper
 
 STEP_SIZE = 6
 # The maximum number of previous CoM position to plot
@@ -391,10 +391,10 @@ if __name__ == "__main__":
     anim_helper = HumanoidAnimationHelper(goal_conf=goal, start_conf=start,
                                           zmp_reference=zmp_reference, zmp_trajectory=zmp_trajectory,
                                           com_reference=com_reference)
-    # anim_helper.show_animation_with_autogeneration('../Assets/Animations/humanoid_2d_animation.gif')
+    # anim_helper.show_animation_with_autogeneration('./Assets/Animations/humanoid_2d_animation.gif')
 
     anim_helper.following_com_position, anim_helper.following_left_foot, anim_helper.following_right_foot = (
         generate_com_and_feet_evolution(
             anim_helper.start, anim_helper.left_foot_history[0],
             anim_helper.right_foot_history[0], num_frames=num_frames))
-    anim_helper.show_animation_with_offline_trajectory('../Assets/Animations/humanoid_2d_animation.gif')
+    anim_helper.show_animation_with_offline_trajectory('./Assets/Animations/humanoid_2d_animation.gif')
