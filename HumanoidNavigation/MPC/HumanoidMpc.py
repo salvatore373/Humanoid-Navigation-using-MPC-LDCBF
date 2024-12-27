@@ -6,7 +6,7 @@ import casadi as cs
 import matplotlib.pyplot as plt
 from BaseMpc import MpcSkeleton
 
-from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon
+from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
 
 """
     humanoid state: [p_x, v_x, p_y, v_y, theta]
@@ -16,7 +16,7 @@ from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_p
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 
-class HumanoidMPC(MpcSkeleton, ABC):
+class HumanoidMPC(MpcSkeleton):
     def __init__(self, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3, goal=None, obstacles=None):
         super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
@@ -39,7 +39,7 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
-            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.lip3d_dynamics(self.X_mpc[:, k], self.U_mpc[:, k]))
+            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.integrate(self.X_mpc[:, k], self.U_mpc[:, k]))
 
 
         # leg reachability
@@ -87,43 +87,7 @@ class HumanoidMPC(MpcSkeleton, ABC):
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
         self.optim_prob.minimize(distance_cost + control_cost)
 
-    def integrate(self):
-        raise NotImplemented()
-
-    def plot(self):
-        raise NotImplemented()
-
-    def simulation(self):
-        X_pred = np.zeros(shape=(self.state_dim, self.N_simul + 1))
-        U_pred = np.zeros(shape=(self.control_dim, self.N_simul))
-        computation_time = np.zeros(self.N_simul)
-
-        for k in range(self.N_simul):
-            starting_iter_time = time.time() # CLOCK
-
-            # set x_0
-            self.optim_prob.set_value(self.x0, X_pred[:, k])
-
-            # solve
-            kth_solution = self.optim_prob.solve()
-
-            # get u_0 for x_1
-            U_pred[:, k] = kth_solution.value(self.U_mpc[:, 0])
-
-            # assign to X_mpc and U_mpc the relative values
-            self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
-            self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
-
-            # compute x_k_next using x_k and u_k
-            X_pred[:, k+1] = self.lip3d_dynamics(X_pred[:, k], U_pred[:, k]).full().squeeze(-1)
-
-            computation_time[k] = time.time() - starting_iter_time  # CLOCK
-
-        print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
-        self.plot(X_pred)
-
-    # ===== HUMANOID SPECIFIC CONSTRAINTS =====
-    def lip3d_dynamics(self, x_k, u_k):
+    def integrate(self, x_k, u_k):
         beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
 
         Ad11 = cs.cosh(beta * self.sampling_time)
@@ -154,6 +118,46 @@ class HumanoidMPC(MpcSkeleton, ABC):
         second_term = cs.mtimes(Bl, u_k)
 
         return first_term + second_term
+
+    def plot(self, X_pred):
+        plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
+        if self.goal is not None:
+            plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
+        if self.obstacles is not None:
+            plot_polygon(obstacles)
+        plt.plot(X_pred[0,:], X_pred[2,:], color="mediumpurple", label="Predicted Trajectory")
+        plt.legend()
+        plt.show()
+
+
+    def simulation(self):
+        X_pred = np.zeros(shape=(self.state_dim, self.N_simul + 1))
+        U_pred = np.zeros(shape=(self.control_dim, self.N_simul))
+        computation_time = np.zeros(self.N_simul)
+
+        for k in range(self.N_simul):
+            starting_iter_time = time.time() # CLOCK
+
+            # set x_0
+            self.optim_prob.set_value(self.x0, X_pred[:, k])
+
+            # solve
+            kth_solution = self.optim_prob.solve()
+
+            # get u_0 for x_1
+            U_pred[:, k] = kth_solution.value(self.U_mpc[:, 0])
+
+            # assign to X_mpc and U_mpc the relative values
+            self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
+            self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
+
+            # compute x_k_next using x_k and u_k
+            X_pred[:, k+1] = self.integrate(X_pred[:, k], U_pred[:, k]).full().squeeze(-1)
+
+            computation_time[k] = time.time() - starting_iter_time  # CLOCK
+
+        print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
+        self.plot(X_pred)   
 
     def walking_velocities(self, x_k, k):
         theta = x_k[4]
@@ -241,7 +245,7 @@ if __name__ == "__main__":
     mpc = HumanoidMPC(
         state_dim=5,
         control_dim=3,
-        N_horizon=10,
+        N_horizon=5,
         N_simul=300,
         sampling_time=1e-3,
         goal=(4, 0, 0, 0, 0), # position=(4, 0), velocity=(0, 0) theta=0

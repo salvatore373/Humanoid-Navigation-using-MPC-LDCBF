@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 from BaseMpc import MpcSkeleton
 from matplotlib import patches
 from matplotlib.animation import FuncAnimation
-from sympy import symbols
+
+from HumanoidNavigation.RangeFinder.range_finder_with_polygons import compute_lidar_readings
+from HumanoidNavigation.Utils.obstacles import GenerateObstacles
+from sympy import Point, Polygon, symbols
 
 class DifferentialDriveMPC(MpcSkeleton):
     def __init__(self, state_dim, control_dim, N_horizon, N_simul, sampling_time, goal=None, cbf=None):
@@ -173,7 +176,8 @@ if __name__ == "__main__":
             state_dim=3, control_dim=2, N_horizon=N, N_simul=N_simul, sampling_time=delta_t
         )
         pred_traj = diffmpc.simulation(ref=reference)
-        print(pred_traj.shape)
-        theta_traj = np.atan2(pred_traj[1,:], pred_traj[0,:])
-        move_and_plot(pred_traj[0,:], pred_traj[1,:], theta_traj, path_to_gif='../Assets/Animations/diff_drive.gif',
-                        triangle_height=0.1, triangle_width=0.08)
+        # something strange happens here
+        # print(pred_traj.shape)
+        # theta_traj = np.atan2(pred_traj[1,:], pred_traj[0,:])
+        # move_and_plot(pred_traj[0,:], pred_traj[1,:], theta_traj, path_to_gif='../Assets/Animations/diff_drive.gif',
+        #                 triangle_height=0.1, triangle_width=0.08)
