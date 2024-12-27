@@ -9,6 +9,7 @@
 *.fdb_latexmk
 *.synctex
 *.synctex.gz
-Source/.idea
 **/__pycache__
 .vscode
+.venv
+HumanoidNavigation.egg-info

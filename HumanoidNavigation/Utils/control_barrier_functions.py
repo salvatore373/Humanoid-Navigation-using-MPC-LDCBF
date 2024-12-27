@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from Source.Utils.BaseAnimationHelper import BaseAnimationHelper
+from HumanoidNavigation.Utils.BaseAnimationHelper import BaseAnimationHelper
 
 
 class CBFAnimationHelper(BaseAnimationHelper):

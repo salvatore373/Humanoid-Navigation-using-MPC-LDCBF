@@ -1,0 +1,19 @@
+[project]
+name = "HumanoidNavigation"
+version = "0.1.0"
+description = "Humanoid Navigation using Mpc with Control Barrier Functions"
+readme = "README.md"
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "casadi",
+    "scipy",
+    "sympy",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]

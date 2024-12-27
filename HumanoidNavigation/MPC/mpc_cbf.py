@@ -3,8 +3,8 @@ import numpy as np
 import casadi as cs
 import matplotlib.pyplot as plt
 
-from Source.RangeFinder.range_finder_with_polygons import compute_lidar_readings
-from Source.Utils.obstacles import GenerateObstacles
+from HumanoidNavigation.RangeFinder.range_finder_with_polygons import compute_lidar_readings
+from HumanoidNavigation.Utils.obstacles import GenerateObstacles
 from sympy import Point, Polygon
 
 
