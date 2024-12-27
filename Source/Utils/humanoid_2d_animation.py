@@ -7,7 +7,7 @@ from matplotlib import patches
 from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 
-from BaseAnimationHelper import BaseAnimationHelper
+from Source.Utils.BaseAnimationHelper import BaseAnimationHelper
 
 STEP_SIZE = 6
 # The maximum number of previous CoM position to plot

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from BaseAnimationHelper import BaseAnimationHelper
+from Source.Utils.BaseAnimationHelper import BaseAnimationHelper
 
 
 class CBFAnimationHelper(BaseAnimationHelper):

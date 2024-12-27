@@ -2,8 +2,7 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 from sympy import Point, Ray, intersection
-
-from Source.obstacles import GenerateObstacles
+from Source.Utils.obstacles import GenerateObstacles
 
 
 def get_closest_point(points_list, point, lidar_range):
