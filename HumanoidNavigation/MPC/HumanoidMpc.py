@@ -17,7 +17,7 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 
 class HumanoidMPC(MpcSkeleton, ABC):
-    def __init__(self, state_dim=5, control_dim=3, N_horizon=5, N_simul=300, sampling_time=1e-3, goal=None, obstacles=None):
+    def __init__(self, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3, goal=None, obstacles=None):
         super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
         self.obstacles = obstacles
@@ -52,24 +52,25 @@ class HumanoidMPC(MpcSkeleton, ABC):
 
 
 
-        # # walking velocities constraint
-        # # FIXME: leads to infeasible solution
-        # v_min = [-0.1, 0.1]
-        # v_max = [0.8, 0.4]
-        # for k in range(self.N_horizon):
-        #     local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
-        #     self.optim_prob.subject_to(cs.le(local_velocities, v_max))
-        #     self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
-        #
-        #
-        #
+        # walking velocities constraint
+        # FIXME: leads to infeasible solution
+        v_min = [-0.1, -0.1]
+        v_max = [0.8, 0.4]
+        for k in range(self.N_horizon):
+            local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
+            self.optim_prob.subject_to(cs.le(local_velocities, v_max))
+            self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
+
+
+
         # # maneuverability constraint
         # # FIXME: leads to infeasible solution
         # v_max = [0.8, 0.4]
         # for k in range(self.N_horizon):
         #     velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k])
         #     self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
-        #
+
+
         # # control barrier functions constraint
         # # FIXME: leads to infeasible solution
         # for k in range(self.N_horizon):
@@ -176,7 +177,7 @@ class HumanoidMPC(MpcSkeleton, ABC):
         return local_positions
 
     def maneuverability(self, x_k, u_k):
-        alpha = 1.44 # or 3.6?
+        alpha = 3.6 # 1.44 or 3.6?
         theta = x_k[4]
         omega = u_k[2]
 
@@ -206,31 +207,45 @@ class HumanoidMPC(MpcSkeleton, ABC):
             normal = cs.vertcat(-edge_vector[1], edge_vector[0])
             normal /= cs.norm_2(normal)
 
-            #
             to_robot = robot_position - vertex
+            # closest point to the robot in the edge:
+            #       0=cos(90°)=vertex, 1=cos(0°)=next_vertex
+            # all middle values are the point (in percentage)
+            # that lies on edge and is the closest to the robot
             projection = cs.dot(to_robot, edge_vector) / cs.norm_2(edge_vector) ** 2
-            projection = cs.fmax(0.0, cs.fmin(projection, 1.0))  # Clamp to edge
-            closest_point = vertex + projection * edge_vector
+            projection = cs.fmax(0.0, cs.fmin(projection, 1.0))
 
-            # LDCBF condition
+            # moving along edge_vector from vertex by a projection
+            # between 0 and 1, so it is a percentage of edge_vector
+            closest_point = vertex + projection*edge_vector
+
+            # LDCBF condition: normal vector points away from edge (obv)
+            # so, the following dot product tells us if we are in the safe
+            # region (>0) or not (<0)
             h = cs.dot(normal, (robot_position - closest_point))
-            gamma = 0.3  # Tunable scalar
+
+            # from the paper
+            gamma = 0.3
+
             h_next = h + gamma * h
             constraints.append(h_next >= 0)
 
         return constraints
 
+
+
+
 if __name__ == "__main__":
-    NUM_OBSTACLES = 3
     obstacles = generate_random_convex_polygon(5, (10, 11), (10, 11)) # only one
-    print(obstacles)
+
     mpc = HumanoidMPC(
         state_dim=5,
         control_dim=3,
         N_horizon=10,
         N_simul=300,
         sampling_time=1e-3,
-        goal=(4, 0, 0, 0, 0),
+        goal=(4, 0, 0, 0, 0), # position=(4, 0), velocity=(0, 0) theta=0
         obstacles=obstacles
     )
+
     mpc.simulation()
