@@ -4,8 +4,12 @@
 
 - Enter the following commands:
     1. ```python3 -m venv venv```
-    2. ```source venv/bin/activate```
+    2. ```source .venv/bin/activate```
     3. ```pip install -r requirements.txt```
+
+## Install the Package
+
+- Enter this command: ```pip install -e .```
 
 ## CONTAINER INSTRUCTIONS
 
