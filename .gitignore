@@ -13,3 +13,16 @@
 .vscode
 .venv
 HumanoidNavigation.egg-info
+*.iml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/jupyter-settings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+Source/.idea/inspectionProfiles/profiles_settings.xml
+Source/.idea/inspectionProfiles/Project_Default.xml
+Source/.idea/jupyter-settings.xml
+Source/.idea/misc.xml
+Source/.idea/modules.xml
+Source/.idea/vcs.xml
