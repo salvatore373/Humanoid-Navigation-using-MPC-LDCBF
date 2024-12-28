@@ -48,15 +48,20 @@ class BasicHumanoidMPC(MpcSkeleton):
         self.optim_prob.minimize(control_cost)
 
     def integrate(self, x_k, u_k):
-        beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
+        eta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
 
-        Al = cs.vertcat(cs.horzcat(0, 1, 0), cs.horzcat(0, 0, 1), cs.horzcat(0, 0, 0))
-        Bl = cs.vertcat(0,0,1)
+        # these are the equation of the dynamics, but we need to discretize them
+        # Al = cs.vertcat(cs.horzcat(0, 1, 0), cs.horzcat(0, 0, 1), cs.horzcat(0, 0, 0))
+        # Bl = cs.vertcat(0,0,1)
+        # Cl = cs.vertcat(1,0,-eta**-2)
+        
+        Ad = cs.vertcat(cs.horzcat(1, self.sampling_time, 0.5*self.sampling_time**2), cs.horzcat(0, 1, self.sampling_time), cs.horzcat(0, 0, 1))
+        Bd = cs.vertcat((self.sampling_time**3)/6, 0.5*self.sampling_time**2, self.sampling_time)
         
         return cs.vertcat(
-            cs.mtimes( Al, x_k[0:3] + cs.mtimes(Bl, u_k[0]) ), 
-            cs.mtimes( Al, x_k[3:6] + cs.mtimes(Bl, u_k[1]) ), 
-            cs.mtimes( Al, x_k[6:9] + cs.mtimes(Bl, u_k[2]) ))
+            cs.mtimes( Ad, x_k[0:3] + cs.mtimes(Bd, u_k[0]) ), 
+            cs.mtimes( Ad, x_k[3:6] + cs.mtimes(Bd, u_k[1]) ), 
+            cs.mtimes( Ad, x_k[6:9] + cs.mtimes(Bd, u_k[2]) ))
 
     def plot(self, X_pred):
         plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
