@@ -77,7 +77,7 @@ class HumanoidAnimationHelper(BaseAnimationHelper):
         self.fig.tight_layout()
 
         # Set a time reference
-        self.time = np.linspace(0, 10, num_frames)
+        self.time = np.linspace(0, num_frames, num_frames)
 
         # Internally store the CoM and ZMP trajectories and references
         self.zmp_trajectory = zmp_trajectory
@@ -384,7 +384,7 @@ if __name__ == "__main__":
     start = np.random.randint(-10, 10, (3, 1))
 
     # Set the CoM and ZMP trajectory and reference
-    time = np.linspace(0, 10, num_frames)
+    time = np.linspace(0, num_frames, num_frames)
     zmp_trajectory = np.array([np.sin(time + np.pi), np.cos(time + np.pi)]).T  # dim: (num_frames, 2)
     zmp_reference = np.array([np.sin(time), np.cos(time)]).T  # dim: (num_frames, 2)
     com_reference = np.array([np.cos(time + np.pi), np.sin(time + np.pi)]).T  # dim: (num_frames, 2)
