@@ -15,6 +15,8 @@ from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_p
 
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
+ETA = np.sqrt(GRAVITY_CONST/COM_HEIGHT)
+ALPHA = 100 # weight related to the tracking of the zmp trajectory
 
 class BasicHumanoidMPC(MpcSkeleton):
     def __init__(self, state_dim=9, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3, goal=None, obstacles=None):
@@ -24,6 +26,9 @@ class BasicHumanoidMPC(MpcSkeleton):
 
         # to be sure they are defined
         assert(self.goal is not None and self.obstacles is not None)
+        
+        # define the parameter related to the zmp trajectory
+        self.ZMP_ref = self.optim_prob.parameter(3, self.N_horizon + 1)
 
         self.add_constraints()
         self.cost_function()
@@ -32,24 +37,26 @@ class BasicHumanoidMPC(MpcSkeleton):
         # initial position constraint
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
-        # FIXME goal constraint (only in position)
-        self.optim_prob.subject_to(self.X_mpc[0:3, self.N_horizon] == self.goal[0])
-        self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
-
-
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
-            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.X_mpc[:, k+1] + self.sampling_time*self.integrate(self.X_mpc[:, k], self.U_mpc[:, k]))
+            self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.integrate(self.X_mpc[:, k], self.U_mpc[:, k]))
+            
+    def get_ZMP_position(self, x_k):
+        # x_k is the entire state and NOT the position of the COM 
+        Cl = cs.horzcat(1,0,-1/(ETA**2))
+        return cs.mtimes(Cl, x_k[0:3,:])
 
 
     def cost_function(self):
         # control actions cost
         control_cost = cs.sumsqr(self.U_mpc)
-        self.optim_prob.minimize(control_cost)
+        zmp_tracking_cost = 0
+        for k in range(self.N_horizon - 1):
+            zmp_tracking_cost += cs.sumsqr(self.get_ZMP_position(self.X_mpc[:, k]) - self.ZMP_ref[:, k])
+        zmp_terminal_cost = cs.sumsqr(self.get_ZMP_position(self.X_mpc[:, self.N_horizon]) - self.ZMP_ref[:, self.N_horizon])
+        self.optim_prob.minimize(control_cost + ALPHA*zmp_tracking_cost + ALPHA*zmp_terminal_cost)
 
     def integrate(self, x_k, u_k):
-        eta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
-
         # these are the equation of the dynamics, but we need to discretize them
         # Al = cs.vertcat(cs.horzcat(0, 1, 0), cs.horzcat(0, 0, 1), cs.horzcat(0, 0, 0))
         # Bl = cs.vertcat(0,0,1)
@@ -63,20 +70,29 @@ class BasicHumanoidMPC(MpcSkeleton):
             cs.mtimes( Ad, x_k[3:6] + cs.mtimes(Bd, u_k[1]) ), 
             cs.mtimes( Ad, x_k[6:9] + cs.mtimes(Bd, u_k[2]) ))
 
-    def plot(self, X_pred):
+    def plot(self, X_pred, ZMP_pred, ZMP_ref):
+        # X_pred: predicted state (Pc, dPc, ddPc)
+        # ZMP_pred: predicted trajectory of the ZMP
+        # ZMP_ref: reference trajectory of the ZMP
         plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
         if self.goal is not None:
-            plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
+            plt.plot(self.goal[0], self.goal[1], marker='x', color="darkorange", label="Goal")
         if self.obstacles is not None:
             plot_polygon(obstacles)
-        plt.plot(X_pred[0,:], X_pred[2,:], color="mediumpurple", label="Predicted Trajectory")
+        plt.plot(X_pred[0,:], X_pred[1,:], color="mediumpurple", label="COM Trajectory")
+        plt.plot(ZMP_pred[0,:], ZMP_pred[1,:], color="forestgreen", label="ZMP Predicted Trajectory")
+        plt.plot(ZMP_ref[0,:], ZMP_ref[1,:], color="coral", label="ZMP Reference Trajectory")
+        print(X_pred)
         plt.legend()
         plt.show()
 
 
-    def simulation(self):
+    def simulation(self, zmp_reference):
+        # zmp_reference is the entire reference trajectory of the zmp while ZMP_ref is the container used by casadi which only has the 
+        # trajectory during the horizon 
         X_pred = np.zeros(shape=(self.state_dim, self.N_simul + 1))
         U_pred = np.zeros(shape=(self.control_dim, self.N_simul))
+        ZMP_pred = np.zeros(shape=(3, self.N_simul+1))
         computation_time = np.zeros(self.N_simul)
 
         for k in range(self.N_simul):
@@ -84,6 +100,9 @@ class BasicHumanoidMPC(MpcSkeleton):
 
             # set x_0
             self.optim_prob.set_value(self.x0, X_pred[:, k])
+            
+            # set ZMP trajectory
+            self.optim_prob.set_value(self.ZMP_ref, zmp_reference[:, k:k+self.N_horizon])
 
             # solve
             kth_solution = self.optim_prob.solve()
@@ -97,6 +116,7 @@ class BasicHumanoidMPC(MpcSkeleton):
 
             # compute x_k_next using x_k and u_k
             X_pred[:, k+1] = self.integrate(X_pred[:, k], U_pred[:, k]).full().squeeze(-1)
+            ZMP_pred[:, k+1] = self.get_ZMP_position(X_pred[:, k+1])
 
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
@@ -108,6 +128,8 @@ class BasicHumanoidMPC(MpcSkeleton):
 
 if __name__ == "__main__":
     obstacles = generate_random_convex_polygon(5, (10, 11), (10, 11)) # only one
+    
+    zmp_reference = np.zeros() #TODO    
 
     mpc = BasicHumanoidMPC(
         state_dim=9,
@@ -119,4 +141,4 @@ if __name__ == "__main__":
         obstacles=obstacles
     )
 
-    mpc.simulation()
+    mpc.simulation(zmp_reference)
