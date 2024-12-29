@@ -2,7 +2,7 @@ SOON:
 1. fix path problems
 2. (DONE) abstract class mpc
 3. collision functions
-4. delete diff_drive.py and bring the simulation inside MPC/DifferentialMpc.py
+4. (DONE) delete diff_drive.py and bring the simulation inside MPC/DifferentialMpc.py
 
 SIMULATION:
 1. (DONE) Fix random obstacles generation (D)
@@ -15,10 +15,10 @@ SIMULATION:
 
 MPC:
 1. (DONE) Adjust cost function and check everything makes sense (E)
-2. Control Barrier Function implementation (D)
+2. (DONE) Control Barrier Function implementation (D)
 3. Apply the same approach to the Humanoid Model (E)
-4. Build Humanoid MPC (D)
-5. Add specific Humanoid Constraints (D)
+4. (CHECK) Build Humanoid MPC (D)
+5. (DONE) Add specific Humanoid Constraints (D)
 6. (DONE) Footstep planner (S)
 
 BONUS:
