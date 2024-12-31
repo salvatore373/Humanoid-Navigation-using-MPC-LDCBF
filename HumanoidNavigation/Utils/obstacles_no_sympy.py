@@ -100,55 +100,78 @@ def polygons_intersect(polygon1, polygon2):
     return False
 
 # plotting funtion
-def plot_polygon(polygon, point=None, segment=None):
-    polygon = np.array(polygon + [polygon[0]])  # Close the polygon by adding the first point at the end
-    plt.plot(polygon[:, 0], polygon[:, 1], 'b-', label="Polygon")
-    plt.fill(polygon[:, 0], polygon[:, 1], alpha=0.2, color='blue')
-
-    if point:
-        plt.plot(point[0], point[1], 'ro', label="Point")
-
-    if segment:
-        seg = np.array(segment)
-        plt.plot(seg[:, 0], seg[:, 1], 'g--', label="Segment")
-
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.legend()
+def plot_polygon(polygon, color='blue', label=None):
+    # to 'close' the polygon, we need to append the first vertex
+    # to the end of the vertex list
+    polygon = np.array(polygon + [polygon[0]])
+    plt.plot(polygon[:, 0], polygon[:, 1], '-', color=color, label=label)
+    plt.fill(polygon[:, 0], polygon[:, 1], alpha=0.2, color=color)
 
 
-# FIXME: can be improved
-# generate multiple non-intersecting convex polygons
-def generate_non_intersecting_polygons(num_polygons, num_points, x_range, y_range):
-    polygons = []
+# Generate small obstacles randomly placed around the map
+def generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range):
+    obstacles = []
     attempts = 0
     max_attempts = 500
 
-    while len(polygons) < num_polygons and attempts < max_attempts:
-        polygon = generate_random_convex_polygon(num_points, x_range, y_range)
-        if not polygon_intersect_with_list_of_polygons(polygon, polygons):
-            polygons.append(polygon)
+    while len(obstacles) < num_obstacles and attempts < max_attempts:
+        x_center = random.uniform(*x_range)
+        y_center = random.uniform(*y_range)
+        obstacle = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+        if not any(polygons_intersect(obstacle, p) for p in obstacles):
+            obstacles.append(obstacle)
         attempts += 1
 
-    if attempts >= max_attempts:
-        print("max attempts reached")
+    return obstacles
 
-    return polygons
 
-# Example usage
+
+
+
+# ===== PLOTTING OBSTACLES FROM OTHER FILES =====
+def generate_obstacles(num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10)):
+    # generate the polygons
+    polygons = generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range)
+
+    # Plot obstacles
+    for i, obs in enumerate(polygons):
+        plot_polygon(obs, color='tomato', label='obstacle' if i == 0 else None)
+
+    plt.gca().set_aspect('equal', adjustable='box')
+
+
+
+
+
+
+
+# ===== PLOTTING OBSTACLES FROM CURRENT FILE =====
 if __name__ == "__main__":
-    # 5 non-intersecting polygons
-    num_polygons = 5
-    num_points = 10
-    polygons = generate_non_intersecting_polygons(num_polygons, num_points, (0, 20), (0, 20))
+    # define ranges
+    x_range = (-10, 10)
+    y_range = (-10, 10)
 
-    # Plot the polygons
-    for poly in polygons:
-        plot_polygon(poly)
+    # useful constants
+    num_obstacles = 10
+    num_points = 5
 
+    # generate the polygons
+    polygons = generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range)
+
+    # Plot obstacles
+    for i, obs in enumerate(polygons):
+        plot_polygon(obs, color='tomato', label='obstacle' if i == 0 else None)
+
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlim(x_range)
+    plt.ylim(y_range)
+    plt.legend()
     plt.show()
 
 
-# Example usage
+
+
+# ===== TESTING FUNCTION =====
 # if __name__ == "__main__":
 #     # Generate a random convex polygon
 #     polygon = generate_random_convex_polygon(10, (0, 10), (0, 10))
