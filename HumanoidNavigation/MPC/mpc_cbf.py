@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 from HumanoidNavigation.RangeFinder.range_finder_with_polygons import compute_lidar_readings
 from HumanoidNavigation.Utils.obstacles import GenerateObstacles
+from HumanoidNavigation.Utils.obstacles_no_sympy import generate_obstacles
 from sympy import Point, Polygon
 
 
@@ -76,22 +77,22 @@ class Mpc():
         if self.goal is not None:
             self.optim_prob.subject_to(self.X_mpc[:,self.N] == self.goal)
 
-        # can be moved in the former 'for'
-        if self.obstacles is not None:
-            for k in range(self.N):
-                # barrier functions at k and k+1
-                h_k = self.control_barrier_functions(
-                    self.X_mpc[0, k],
-                    self.X_mpc[1, k]
-                )
-
-                h_k_next = self.control_barrier_functions(
-                    self.X_mpc[0, k+1],
-                    self.X_mpc[1, k+1]
-                )
-
-                alpha = 0.9  # CBF parameter, it is equal to (1-gamma) in the paper
-                self.optim_prob.subject_to(h_k_next >= alpha * h_k)
+        # # can be moved in the former 'for'
+        # if self.obstacles is not None:
+        #     for k in range(self.N):
+        #         # barrier functions at k and k+1
+        #         h_k = self.control_barrier_functions(
+        #             self.X_mpc[0, k],
+        #             self.X_mpc[1, k]
+        #         )
+        #
+        #         h_k_next = self.control_barrier_functions(
+        #             self.X_mpc[0, k+1],
+        #             self.X_mpc[1, k+1]
+        #         )
+        #
+        #         alpha = 0.9  # CBF parameter, it is equal to (1-gamma) in the paper
+        #         self.optim_prob.subject_to(h_k_next >= alpha * h_k)
 
 
     def simulation(self, ref=None):
@@ -146,7 +147,9 @@ goal = (-3, 1.5, cs.pi/2)
 delta_t = 0.01
 
 
-print("===== GENERATING OBSTACLES =====")
+
+print("===== GENERATING OBSTACLES 1 =====")
+start = time.time()
 obstacles = GenerateObstacles(
     start=np.array([0, 0]),
     goal=np.array([goal[0], goal[1]]),
@@ -154,7 +157,22 @@ obstacles = GenerateObstacles(
     range_min=-3,
     range_max=3,
 )
+end = time.time()
+print("Time for generating obstacles with Sympy", end - start)
 
+
+print("===== GENERATING OBSTACLES 2 =====")
+start = time.time()
+obstacles = generate_obstacles(
+    start=np.array([0, 0]),
+    goal=np.array([goal[0], goal[1]]),
+    num_obstacles=5,
+    num_points=5,
+    x_range=(-4, 4),
+    y_range=(-4, 4),
+)
+end = time.time()
+print("Time for generating obstacles without Sympy", end - start)
 
 
 print("===== LAUNCHING MPC =====")

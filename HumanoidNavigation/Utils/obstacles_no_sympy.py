@@ -109,35 +109,46 @@ def plot_polygon(polygon, color='blue', label=None):
 
 
 # Generate small obstacles randomly placed around the map
-def generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range):
-    obstacles = []
+def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
+    polygons = []
     attempts = 0
     max_attempts = 500
 
-    while len(obstacles) < num_obstacles and attempts < max_attempts:
-        x_center = random.uniform(*x_range)
-        y_center = random.uniform(*y_range)
-        obstacle = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
-        if not any(polygons_intersect(obstacle, p) for p in obstacles):
-            obstacles.append(obstacle)
+    while len(polygons) < num_obstacles and attempts < max_attempts:
         attempts += 1
 
-    return obstacles
+        x_center = random.uniform(*x_range)
+        y_center = random.uniform(*y_range)
+        poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+
+        if is_point_inside_polygon(start, poly):
+            continue
+
+        if is_point_inside_polygon(goal, poly):
+            continue
+
+        if any(polygons_intersect(poly, p) for p in polygons):
+            continue
+
+        polygons.append(poly)
+
+
+    return polygons
 
 
 
 
 
 # ===== PLOTTING OBSTACLES FROM OTHER FILES =====
-def generate_obstacles(num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10)):
+def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10)):
     # generate the polygons
-    polygons = generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range)
+    polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
 
     # Plot obstacles
     for i, obs in enumerate(polygons):
         plot_polygon(obs, color='tomato', label='obstacle' if i == 0 else None)
 
-    plt.gca().set_aspect('equal', adjustable='box')
+    return polygons
 
 
 
