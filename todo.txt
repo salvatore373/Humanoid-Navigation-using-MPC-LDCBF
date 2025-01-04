@@ -1,25 +1,9 @@
-SOON:
-1. fix path problems
-2. (DONE) abstract class mpc
-3. collision functions
-4. (DONE) delete diff_drive.py and bring the simulation inside MPC/DifferentialMpc.py
-
-SIMULATION:
-1. (DONE) Fix random obstacles generation (D)
-2. (DONE) Differential animation (S)
-3. (DONE) Humanoid animation (D)
-4. (DONE) Error plots (plots + animation) (S)
-5. (DONE) Range Finder Simulation (E)
-6. (DONE) Control Barrier Function Visualization (D)
-7. (DONE) COM and ZMP trajectory plot in 2D for simple case (S)
-
 MPC:
-1. (DONE) Adjust cost function and check everything makes sense (E)
-2. (DONE) Control Barrier Function implementation (D)
-3. Apply the same approach to the Humanoid Model (E)
-4. (CHECK) Build Humanoid MPC (D)
-5. (DONE) Add specific Humanoid Constraints (D)
-6. (DONE) Footstep planner (S)
+1. Apply the same approach to the Humanoid Model (E)
+2. (CHECK) Build Humanoid MPC (D)
+
+FOOTSTEP_PLANNER:
+1. generate ZMP trajectory from the support polygon positions
 
 BONUS:
 1. RRT*
