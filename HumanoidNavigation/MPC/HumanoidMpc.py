@@ -20,7 +20,7 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 
 class HumanoidMPC(MpcSkeleton):
-    def __init__(self, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3, goal=None, obstacles=None):
+    def __init__(self, goal, obstacles, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3):
         super().__init__(state_dim, control_dim, N_horizon, N_simul, sampling_time)
         self.goal = goal
         self.obstacles = obstacles
@@ -38,7 +38,8 @@ class HumanoidMPC(MpcSkeleton):
     def parameters_precalculation(self):
         omega_max = 0.156 * cs.pi # unit: rad/s
         omega_min = -omega_max
-        target_heading_angle = cs.atan2(self.goal[1]-self.x0[2], self.goal[0]-self.x0[0])
+        # SALVO target_heading_angle = cs.atan2(self.goal[1]-self.x0[2], self.goal[0]-self.x0[0])
+        target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0]) + cs.pi  # SALVO
 
         # omegas (turning rate)
         self.precomputed_omega = [
@@ -78,21 +79,23 @@ class HumanoidMPC(MpcSkeleton):
         # # walking velocities constraint
         # # FIXME: the s_v inside the function leads to infeasible
         # #  solution if selected by k
-        # v_min = [-0.1, -0.1]
-        # v_max = [0.8, 0.4]
-        # for k in range(self.N_horizon-1):
-        #     local_velocities = self.walking_velocities(self.X_mpc[:, k], self.X_mpc[:, k+1], k)
-        #     self.optim_prob.subject_to(cs.le(local_velocities, v_max))
-        #     # self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
+        v_min = [-0.1, -0.1]
+        v_max = [0.8, 0.4]
+        for k in range(self.N_horizon-1):
+            local_velocities = self.walking_velocities(self.X_mpc[:, k], self.X_mpc[:, k+1], k)
+            self.optim_prob.subject_to(cs.le(local_velocities, v_max))
+            self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
 
 
 
         # # maneuverability constraint
         # # FIXME: leads to infeasible solution
-        # v_max = [0.8, 0.4]
-        # for k in range(self.N_horizon):
-        #     velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
-        #     self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
+        # SALVO v_max = [0.8, 0.4]
+        v_x_max = 0.8  # SALVO
+        for k in range(self.N_horizon):
+            velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
+            # SALVO self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
+            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_x_max, turning_term)))  # SALVO
 
 
         # # control barrier functions constraint
@@ -109,7 +112,8 @@ class HumanoidMPC(MpcSkeleton):
         control_cost = cs.sumsqr(self.U_mpc)
         # (p_x - g_x)^2 + (p_y - g_y)^2
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
-        self.optim_prob.minimize(distance_cost + control_cost)
+        # SALVO self.optim_prob.minimize(distance_cost + control_cost)
+        self.optim_prob.minimize(distance_cost)  # SALVO
 
     def integrate(self, x_k, u_k):
         beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
@@ -201,8 +205,8 @@ class HumanoidMPC(MpcSkeleton):
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
     def walking_velocities(self, x_k, x_k_next, k):
         theta = self.precomputed_theta[k]
-        # s_v = 1 if k%2==0 else -1
-        s_v = -1
+        s_v = 1 if k%2==0 else -1  # SALVO
+        # SALVO s_v = -1
 
         local_velocities = cs.vertcat(
             cs.cos(theta)*x_k_next[1] + cs.sin(theta)*s_v*x_k_next[3],
