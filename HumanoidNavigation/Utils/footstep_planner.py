@@ -396,6 +396,7 @@ class FootstepPlanner:
             fig, ax = plt.subplots()
         else:
             fig, ax = custom_fig, custom_ax
+
         for step in steps:
             x, y, _ = step.position
             _, _, theta = step.orientation
