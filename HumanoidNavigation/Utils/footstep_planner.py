@@ -17,8 +17,8 @@ ABS_UNICYCLE_DISPLACEMENT = 0.2
 
 
 # DEBUG
-def move_and_plot_unicycle(x_trajectory: np.ndarray, y_trajectory: np.ndarray, theta_trajectory: np.ndarray,
-                           path_to_gif: str, triangle_height: float = 0.1, triangle_width: float = 0.05, ):
+def _move_and_plot_unicycle(x_trajectory: np.ndarray, y_trajectory: np.ndarray, theta_trajectory: np.ndarray,
+                            path_to_gif: str, triangle_height: float = 0.1, triangle_width: float = 0.05, ):
     """
     Plots the animation of this differential drive moving in a 2D graph along the provided state trajectory.
     The robot is represented by a triangle.
@@ -203,21 +203,22 @@ class FootstepPlanner:
         return plan
 
     @staticmethod
-    def compute_plan_from_uni_state(unicycle_state: np.ndarray, initial_left_foot_pose: np.ndarray,
-                                    initial_right_foot_pose: np.ndarray, initial_support_foot: Foot,
-                                    sampling_time: float) -> list[Step]:
+    # def compute_plan_from_uni_state(unicycle_state: np.ndarray, initial_left_foot_pose: np.ndarray,
+    #                                 initial_right_foot_pose: np.ndarray, initial_support_foot: Foot,
+    #                                 sampling_time: float) -> list[Step]:
+    def compute_plan_from_uni_state(unicycle_state: np.ndarray, initial_support_foot: Foot) -> list[Step]:
         """
         Computes the sequence of footsteps that the humanoid must take to travel at the velocity specified in
         ref_velocities, starting with the provided left and right foot poses.
 
-        :param unicycle_state: A matrix of shape (num_time_instants x 3), where each element represents the state of
-         the unicycle in the form (x, y, theta).
         :param initial_left_foot_pose: Initial states of the left foot, containing positional and orientation data in
          the form (x, y, z=0, theta).
         :param initial_right_foot_pose: Initial states of the right foot, containing positional and orientation data in
          the form (x, y, z=0, theta).
-        :param initial_support_foot: The foot to use as support for the first step.
         :param sampling_time: The duration of a timestep in the simulation, in seconds.
+        :param unicycle_state: A matrix of shape (num_time_instants x 3), where each element represents the state of
+         the unicycle in the form (x, y, theta).
+        :param initial_support_foot: The foot to use as support for the first step.
         :return: The sequence of footsteps that the humanoid must take to travel at the specified ref_velocities.
         """
         # Initialize the unicycle's position as the midpoint between the feet,
@@ -381,10 +382,7 @@ class FootstepPlanner:
         #                        triangle_height=1, triangle_width=0.8)
 
         return FootstepPlanner.compute_plan_from_uni_state(unicycle_state=np.vstack((x, y, theta)).T,
-                                                           initial_left_foot_pose=initial_left_foot_pose,
-                                                           initial_right_foot_pose=initial_right_foot_pose,
-                                                           initial_support_foot=initial_support_foot,
-                                                           sampling_time=sampling_time)
+                                                           initial_support_foot=initial_support_foot)
 
         # return FootstepPlanner.compute_plan_from_velocities(ref_velocities=np.vstack((x_dot, y_dot, omega)).T,
         #                                                     initial_left_foot_pose=initial_left_foot_pose,
@@ -392,39 +390,41 @@ class FootstepPlanner:
         #                                                     initial_support_foot=initial_support_foot,
         #                                                     sampling_time=sampling_time)
 
+    @staticmethod
+    def plot_steps(steps, custom_fig=None, custom_ax=None):
+        if custom_fig is None and custom_ax is None:
+            fig, ax = plt.subplots()
+        for step in steps:
+            x, y, _ = step.position
+            _, _, theta = step.orientation
 
-# Function to plot steps
-def _plot_steps(steps):
-    fig, ax = plt.subplots()
-    for step in steps:
-        x, y, _ = step.position
-        _, _, theta = step.orientation
+            # Rectangle dimensions
+            rect_width = 0.5
+            rect_height = 0.2
 
-        # Rectangle dimensions
-        rect_width = 0.5
-        rect_height = 0.2
+            # Create rectangle centered at the position
+            rect = Rectangle((-rect_width / 2, -rect_height / 2), rect_width, rect_height,
+                             color='blue' if step.support_foot == Foot.RIGHT else 'green', alpha=0.7)
 
-        # Create rectangle centered at the position
-        rect = Rectangle((-rect_width / 2, -rect_height / 2), rect_width, rect_height,
-                         color='blue' if step.support_foot == Foot.RIGHT else 'green', alpha=0.7)
+            # Apply rotation
+            t = matplotlib.transforms.Affine2D().rotate(theta) + matplotlib.transforms.Affine2D().translate(x,
+                                                                                                            y) + ax.transData
+            rect.set_transform(t)
 
-        # Apply rotation
-        t = matplotlib.transforms.Affine2D().rotate(theta) + matplotlib.transforms.Affine2D().translate(x,
-                                                                                                        y) + ax.transData
-        rect.set_transform(t)
+            # Add rectangle to the plot
+            ax.add_patch(rect)
 
-        # Add rectangle to the plot
-        ax.add_patch(rect)
+        # Set aspect ratio and labels
+        ax.set_aspect('equal')
+        if custom_fig is None and custom_ax is None:
+            ax.set_xlim(-2, 15)
+            ax.set_ylim(-2, 15)
+        ax.set_xlabel('X Position')
+        ax.set_ylabel('Y Position')
 
-    # Set aspect ratio and labels
-    ax.set_aspect('equal')
-    ax.set_xlim(-2, 15)
-    ax.set_ylim(-2, 15)
-    ax.set_xlabel('X Position')
-    ax.set_ylabel('Y Position')
-    plt.grid()
-    plt.title("Steps Visualization")
-    plt.show()
+        plt.grid()
+        plt.title("Steps Visualization")
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -436,4 +436,4 @@ if __name__ == '__main__':
                                                           [+ABS_UNICYCLE_DISPLACEMENT, 0, 0, 0]),
                                                       initial_support_foot=Foot.RIGHT, sampling_time=0.01,
                                                       )
-    _plot_steps(plan)
+    FootstepPlanner.plot_steps(plan)
