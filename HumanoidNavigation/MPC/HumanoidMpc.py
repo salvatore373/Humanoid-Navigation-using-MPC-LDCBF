@@ -38,8 +38,8 @@ class HumanoidMPC(MpcSkeleton):
     def parameters_precalculation(self):
         omega_max = 0.156 * cs.pi # unit: rad/s
         omega_min = -omega_max
-        # SALVO target_heading_angle = cs.atan2(self.goal[1]-self.x0[2], self.goal[0]-self.x0[0])
-        target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0]) + cs.pi  # SALVO
+        target_heading_angle = cs.atan2(self.goal[1]-self.x0[2], self.goal[0]-self.x0[0])
+        # target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0]) + cs.pi  # SALVO
 
         # omegas (turning rate)
         self.precomputed_omega = [
@@ -69,37 +69,33 @@ class HumanoidMPC(MpcSkeleton):
 
 
         # leg reachability
-        l_max = 0.17320508075 # = 0.1 * sqrt(3)
+        l_max = 0.17320508075 * 1000 # = 0.1*sqrt(3)
         l_min = -l_max
         for k in range(self.N_horizon):
             reachability = self.leg_reachability(self.X_mpc[:, k], k)
             self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(l_max, l_max)))
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(l_min, l_min)))
 
-        # # walking velocities constraint
-        # # FIXME: the s_v inside the function leads to infeasible
-        # #  solution if selected by k
-        v_min = [-0.1, -0.1]
-        v_max = [0.8, 0.4]
-        for k in range(self.N_horizon-1):
-            local_velocities = self.walking_velocities(self.X_mpc[:, k], self.X_mpc[:, k+1], k)
+
+
+        # walking velocities constraint
+        v_min = [1000*-0.1, 1000*-0.1] # [-0.1, -0.1]
+        v_max = [1000*0.8, 1000*0.4] # [0.8, 0.4]
+        for k in range(1, self.N_horizon):
+            local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
             self.optim_prob.subject_to(cs.le(local_velocities, v_max))
             self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
 
 
 
-        # # maneuverability constraint
-        # # FIXME: leads to infeasible solution
-        # SALVO v_max = [0.8, 0.4]
-        v_x_max = 0.8  # SALVO
+        # maneuverability constraint
+        v_max = [1000*0.8, 1000*0.4] # [0.8, 0.4]
         for k in range(self.N_horizon):
             velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
-            # SALVO self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
-            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_x_max, turning_term)))  # SALVO
+            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
 
 
         # # control barrier functions constraint
-        # # FIXME: leads to infeasible solution
         # for k in range(self.N_horizon):
         #     ldcbf_constraints = self.compute_ldcbf(self.X_mpc[:, k], self.obstacles)
         #
@@ -112,8 +108,7 @@ class HumanoidMPC(MpcSkeleton):
         control_cost = cs.sumsqr(self.U_mpc)
         # (p_x - g_x)^2 + (p_y - g_y)^2
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
-        # SALVO self.optim_prob.minimize(distance_cost + control_cost)
-        self.optim_prob.minimize(distance_cost)  # SALVO
+        self.optim_prob.minimize(distance_cost + control_cost)
 
     def integrate(self, x_k, u_k):
         beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
@@ -203,10 +198,9 @@ class HumanoidMPC(MpcSkeleton):
 
 
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
-    def walking_velocities(self, x_k, x_k_next, k):
+    def walking_velocities(self, x_k_next, k):
         theta = self.precomputed_theta[k]
-        s_v = 1 if k%2==0 else -1  # SALVO
-        # SALVO s_v = -1
+        s_v = 1 if k%2==0 else -1
 
         local_velocities = cs.vertcat(
             cs.cos(theta)*x_k_next[1] + cs.sin(theta)*s_v*x_k_next[3],
@@ -286,10 +280,10 @@ if __name__ == "__main__":
     mpc = HumanoidMPC(
         state_dim=5,
         control_dim=3,
-        N_horizon=5,
+        N_horizon=50,
         N_simul=300,
         sampling_time=1e-3,
-        goal=(1, 0, 2, 0, 0), # position=(4, 0), velocity=(0, 0) theta=0
+        goal=(1, 0, 10, 0, 0), # position=(4, 0), velocity=(0, 0) theta=0
         obstacles=obstacles
     )
 
