@@ -18,6 +18,12 @@ from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_p
 
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
+M_CONVERSION = 1000 # everything is expressed wrt meters -> use this to change the unit measure
+ALPHA = 3.6 # paper refers to Digit robot (1.44 or 3.6?)
+GAMMA = 0.3 # used in CBF
+L_MAX = 0.17320508075 * M_CONVERSION # 0.1*sqrt(3)
+V_MIN = [M_CONVERSION*-0.1, M_CONVERSION*-0.1] # [-0.1, -0.1]
+V_MAX = [M_CONVERSION*0.8, M_CONVERSION*0.4] # [0.8, 0.4] 
 
 class HumanoidMPC(MpcSkeleton):
     def __init__(self, goal, obstacles, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3):
@@ -36,14 +42,15 @@ class HumanoidMPC(MpcSkeleton):
         self.cost_function()
 
     def parameters_precalculation(self):
+        # we are pre-computing the heading angle as the direction from the current position towards the goal position
         omega_max = 0.156 * cs.pi # unit: rad/s
         omega_min = -omega_max
         target_heading_angle = cs.atan2(self.goal[1]-self.x0[2], self.goal[0]-self.x0[0])
         # target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0]) + cs.pi  # SALVO
 
         # omegas (turning rate)
-        self.precomputed_omega = [
-            cs.fmin(cs.fmax((target_heading_angle - self.x0[4]) / self.N_horizon, omega_min), omega_max)
+        self.precomputed_omega = [ 
+            cs.fmin(cs.fmax((target_heading_angle - self.x0[4]) / self.N_horizon, omega_min), omega_max) # avoid sharp turns
             for _ in range(self.N_horizon)
         ]
 
@@ -61,39 +68,27 @@ class HumanoidMPC(MpcSkeleton):
         # goal constraint (only in position)
         self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
         self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
-
-
+        
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
             self.optim_prob.subject_to(self.X_mpc[:, k+1] == self.integrate(self.X_mpc[:, k], self.U_mpc[:, k]))
 
-
-        # leg reachability
-        l_max = 0.17320508075 * 1000 # = 0.1*sqrt(3)
-        l_min = -l_max
+        # leg reachability -> prevent the over-extension of the swing leg
         for k in range(self.N_horizon):
             reachability = self.leg_reachability(self.X_mpc[:, k], k)
-            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(l_max, l_max)))
-            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(l_min, l_min)))
-
-
+            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
+            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
 
         # walking velocities constraint
-        v_min = [1000*-0.1, 1000*-0.1] # [-0.1, -0.1]
-        v_max = [1000*0.8, 1000*0.4] # [0.8, 0.4]
         for k in range(1, self.N_horizon):
             local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
-            self.optim_prob.subject_to(cs.le(local_velocities, v_max))
-            self.optim_prob.subject_to(cs.ge(local_velocities, v_min))
+            self.optim_prob.subject_to(cs.le(local_velocities, V_MAX))
+            self.optim_prob.subject_to(cs.ge(local_velocities, V_MIN))
 
-
-
-        # maneuverability constraint
-        v_max = [1000*0.8, 1000*0.4] # [0.8, 0.4]
+        # maneuverability constraint (right now using the same v_max of the walking constraint)
         for k in range(self.N_horizon):
             velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
-            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(v_max, turning_term)))
-
+            self.optim_prob.subject_to(cs.le(velocity_term, cs.minus(V_MAX, turning_term)))
 
         # # control barrier functions constraint
         # for k in range(self.N_horizon):
@@ -106,13 +101,13 @@ class HumanoidMPC(MpcSkeleton):
     def cost_function(self):
         # control actions cost
         control_cost = cs.sumsqr(self.U_mpc)
-        # (p_x - g_x)^2 + (p_y - g_y)^2
+        # (p_x - g_x)^2 + (p_y - g_y)^2 distance of a sequence of predicted states from the goal position
         distance_cost = cs.sumsqr(self.X_mpc[0] - self.goal[0]) + cs.sumsqr(self.X_mpc[2] - self.goal[1])
         self.optim_prob.minimize(distance_cost + control_cost)
 
     def integrate(self, x_k, u_k):
         beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
-
+        # discretized model
         Ad11 = cs.cosh(beta * self.sampling_time)
         Ad12 = cs.sinh(beta * self.sampling_time) / beta
         Ad21 = beta * cs.sinh(beta * self.sampling_time)
@@ -200,7 +195,7 @@ class HumanoidMPC(MpcSkeleton):
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
     def walking_velocities(self, x_k_next, k):
         theta = self.precomputed_theta[k]
-        s_v = 1 if k%2==0 else -1
+        s_v = 1 if k%2==0 else -1 # s_v = 1 right foot, s_v = -1 left foot
 
         local_velocities = cs.vertcat(
             cs.cos(theta)*x_k_next[1] + cs.sin(theta)*s_v*x_k_next[3],
@@ -220,12 +215,12 @@ class HumanoidMPC(MpcSkeleton):
         return local_positions
 
     def maneuverability(self, x_k, u_k, k):
-        alpha = 1.44 # 1.44 or 3.6?
+        # u_k is not used, so we should omit it!
         theta = self.precomputed_theta[k] # theta = x_k[4]
         omega = self.precomputed_omega[k] # omega = u_k[2]
 
         velocity_term = cs.cos(theta)*x_k[1] + cs.sin(theta)*x_k[3]
-        safety_term = alpha/cs.pi * cs.fabs(omega)
+        safety_term = ALPHA/cs.pi * cs.fabs(omega)
 
         return velocity_term, safety_term
 
@@ -262,10 +257,7 @@ class HumanoidMPC(MpcSkeleton):
             # region (>0) or not (<0)
             h = cs.dot(normal, (robot_position - closest_point))
 
-            # from the paper
-            gamma = 0.3
-
-            h_next = h + gamma * h
+            h_next = h + GAMMA * h
             constraints.append(h_next >= 0)
 
         return constraints
