@@ -15,15 +15,35 @@ from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_p
     humanoid state: [p_x, v_x, p_y, v_y, theta]
     humanoid control: [f_x, f_y, omega]
 """
-
+DELTA_T = 1e-3
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
+BETA = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
 M_CONVERSION = 1000 # everything is expressed wrt meters -> use this to change the unit measure
 ALPHA = 3.6 # paper refers to Digit robot (1.44 or 3.6?)
 GAMMA = 0.3 # used in CBF
 L_MAX = 0.17320508075 * M_CONVERSION # 0.1*sqrt(3)
 V_MIN = [M_CONVERSION*-0.1, M_CONVERSION*-0.1] # [-0.1, -0.1]
-V_MAX = [M_CONVERSION*0.8, M_CONVERSION*0.4] # [0.8, 0.4] 
+V_MAX = [M_CONVERSION*0.8, M_CONVERSION*0.4] # [0.8, 0.4]
+
+COSH = cs.cosh(BETA*DELTA_T)
+SINH = cs.sinh(BETA*DELTA_T)
+
+AD = cs.vertcat(
+        cs.horzcat(COSH, SINH/BETA, 0, 0, 0),
+        cs.horzcat(SINH*BETA, COSH, 0, 0, 0),
+        cs.horzcat(0, 0, COSH, SINH/BETA, 0),
+        cs.horzcat(0, 0, SINH*BETA, COSH, 0),
+        cs.horzcat(0, 0, 0, 0, 1)
+    )
+
+BD = cs.vertcat(
+    cs.horzcat(1-COSH, 0, 0),
+    cs.horzcat(-BETA*SINH, 0, 0),
+    cs.horzcat(0, 1-COSH, 0),
+    cs.horzcat(0, -BETA*SINH, 0),
+    cs.horzcat(0, 0, DELTA_T)
+)
 
 class HumanoidMPC(MpcSkeleton):
     def __init__(self, goal, obstacles, state_dim=5, control_dim=3, N_horizon=5, N_simul=100, sampling_time=1e-3):
@@ -106,34 +126,9 @@ class HumanoidMPC(MpcSkeleton):
         self.optim_prob.minimize(distance_cost + control_cost)
 
     def integrate(self, x_k, u_k):
-        beta = cs.sqrt(GRAVITY_CONST / COM_HEIGHT)
-        # discretized model
-        Ad11 = cs.cosh(beta * self.sampling_time)
-        Ad12 = cs.sinh(beta * self.sampling_time) / beta
-        Ad21 = beta * cs.sinh(beta * self.sampling_time)
-        Ad22 = cs.cosh(beta * self.sampling_time)
-
-        Al = cs.vertcat(
-            cs.horzcat(Ad11, Ad12, 0, 0, 0),
-            cs.horzcat(Ad21, Ad22, 0, 0, 0),
-            cs.horzcat(0, 0, Ad11, Ad12, 0),
-            cs.horzcat(0, 0, Ad21, Ad22, 0),
-            cs.horzcat(0, 0, 0, 0, 1)
-        )
-
-        Bd1 = 1 - cs.cosh(beta * self.sampling_time)
-        Bd2 = -beta * cs.sinh(beta * self.sampling_time)
-
-        Bl = cs.vertcat(
-            cs.horzcat(Bd1, 0, 0),
-            cs.horzcat(Bd2, 0, 0),
-            cs.horzcat(0, Bd1, 0),
-            cs.horzcat(0, Bd2, 0),
-            cs.horzcat(0, 0, self.sampling_time)
-        )
-
-        first_term = cs.mtimes(Al, x_k)
-        second_term = cs.mtimes(Bl, u_k)
+        # discretized model xdot = AD*x + BD*u
+        first_term = cs.mtimes(AD, x_k)
+        second_term = cs.mtimes(BD, u_k)
 
         return first_term + second_term
 
@@ -274,7 +269,7 @@ if __name__ == "__main__":
         control_dim=3,
         N_horizon=50,
         N_simul=300,
-        sampling_time=1e-3,
+        sampling_time=DELTA_T,
         goal=(1, 0, 10, 0, 0), # position=(4, 0), velocity=(0, 0) theta=0
         obstacles=obstacles
     )
