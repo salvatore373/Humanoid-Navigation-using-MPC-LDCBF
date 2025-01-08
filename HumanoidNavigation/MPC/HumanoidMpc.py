@@ -66,27 +66,35 @@ class HumanoidMPC(MpcSkeleton):
         # to be sure they are defined
         assert (self.goal is not None and self.obstacles is not None)
 
-        self.parameters_precalculation()
+        self.X_mpc = cs.vertcat(self.X_mpc[:4, :], cs.DM([[0 for _ in range(N_horizon + 1)]]))  # SALVO
+        self.U_mpc = cs.vertcat(self.U_mpc[:2, :], cs.DM([[0 for _ in range(N_horizon)]]))  # SALVO
+        self.x0 = self.optim_prob.parameter(5)  # SALVO
+        self.optim_prob.set_value(self.x0, np.zeros((5, 1)))  # SALVO
+        self.state_dim = 5  # SALVO
+        self.control_dim = 3  # SALVO
+
+        self.parameters_precalculation(self.x0)
 
         self.add_constraints()
         self.cost_function()
 
-    def parameters_precalculation(self):
+    def parameters_precalculation(self, start_state):
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
         omega_max = 0.156 * cs.pi  # unit: rad/s
         omega_min = -omega_max
-        target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0])
-        # target_heading_angle = cs.atan2(self.goal[1] - self.x0[2], self.goal[0] - self.x0[0]) + cs.pi  # SALVO
+        # target_heading_angle = cs.atan2(self.goal[1] - start_state[2], self.goal[0] - start_state[0])
+        target_heading_angle = cs.atan2(self.goal[1] - start_state[2], self.goal[0] - start_state[0]) + cs.pi  # SALVO
 
         # omegas (turning rate)
         self.precomputed_omega = [
-            cs.fmin(cs.fmax((target_heading_angle - self.x0[4]) / self.N_horizon, omega_min), omega_max)
+            cs.fmin(cs.fmax((target_heading_angle - start_state[4]) / self.N_horizon, omega_min), omega_max)
             # avoid sharp turns
             for _ in range(self.N_horizon)
         ]
+        print(self.optim_prob.value(self.precomputed_omega[0]))  # DEBUG
 
         # thetas (heading angles)
-        self.precomputed_theta = [self.x0[4]]  # initial theta
+        self.precomputed_theta = [start_state[4]]  # initial theta
         for k in range(self.N_horizon - 1):
             self.precomputed_theta.append(
                 self.precomputed_theta[-1] + self.precomputed_omega[k] * self.sampling_time
@@ -190,15 +198,23 @@ class HumanoidMPC(MpcSkeleton):
             # set x_0
             self.optim_prob.set_value(self.x0, X_pred[:, k])
 
+            # precompute compute theta and omega
+            self.parameters_precalculation(X_pred[:, k])
+            for i in range(self.N_horizon):
+                self.X_mpc[4, i + 1] = self.precomputed_theta[i]
+                self.U_mpc[2, i] = self.precomputed_omega[i]
+
             # solve
             try:
                 kth_solution = self.optim_prob.solve()
-            except:
+            except Exception as e:
                 print(f"===== ERROR ({k}) =====")
                 print("===== STATES =====")
                 print(self.optim_prob.debug.value(X_pred))
                 print("===== CONTROLS =====")
                 print(self.optim_prob.debug.value(U_pred))
+                print("===== EXCEPTION =====")
+                print(e)
                 exit(1)
 
             # get u_0 for x_1
@@ -218,7 +234,6 @@ class HumanoidMPC(MpcSkeleton):
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
-        print(U_pred[[0, 1], :])
         self.plot(X_pred, U_pred)
 
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
@@ -298,8 +313,10 @@ if __name__ == "__main__":
     obstacles = generate_random_convex_polygon(5, (3, 4), (13, 4))
 
     mpc = HumanoidMPC(
-        state_dim=5,
-        control_dim=3,
+        # SALVO state_dim=5,
+        # SALVO control_dim=3,
+        state_dim=4,
+        control_dim=2,
         N_horizon=3,
         N_simul=300,
         sampling_time=DELTA_T,
