@@ -1,14 +1,20 @@
 import time
 from abc import ABC
 
+import matplotlib
 import numpy as np
 import casadi as cs
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 from sympy.diffgeom.rn import theta
 
 from BaseMpc import MpcSkeleton
 
 from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
+
+""" The width and the height of the rectangle representing the feet in the plot"""
+FOOT_RECT_WIDTH = 0.5
+FOOT_RECT_HEIGHT = 0.2
 
 """
     This is the implementation related to our reference paper (3D Lip Dynamics with Heading angle and control barrier functions)
@@ -53,6 +59,9 @@ class HumanoidMPC(MpcSkeleton):
         self.obstacles = obstacles
         self.precomputed_omega = None
         self.precomputed_theta = None
+        # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
+        # -1 if the stance is the left foot.
+        self.s_v = [0 for _ in range(self.N_simul)]
 
         # to be sure they are defined
         assert (self.goal is not None and self.obstacles is not None)
@@ -132,6 +141,8 @@ class HumanoidMPC(MpcSkeleton):
         return (AD @ x_k) + (BD @ u_k)
 
     def plot(self, X_pred, U_pred):
+        fix, ax = plt.subplots()
+
         # TODO: get x0 from the input
         # Plot the start position
         plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
@@ -146,11 +157,26 @@ class HumanoidMPC(MpcSkeleton):
         plt.plot(X_pred[0, :], X_pred[2, :], color="mediumpurple", label="Predicted Trajectory")
 
         # Plot the footsteps plan computed by the MPC
-        plt.scatter(U_pred[0, :], U_pred[1, :], marker='o', color="forestgreen", label="ZMP")
+        # plt.scatter(U_pred[0, :], U_pred[1, :], marker='o', color="forestgreen", label="ZMP")
+        for time_instant, (step_x, step_y, _) in enumerate(U_pred.T):
+            foot_orient = X_pred[4, time_instant]
+
+            # Create rectangle centered at the position
+            rect = Rectangle((-FOOT_RECT_WIDTH / 2, -FOOT_RECT_HEIGHT / 2), FOOT_RECT_WIDTH, FOOT_RECT_HEIGHT,
+                             color='blue' if self.s_v[time_instant] == 1 else 'green', alpha=0.7)
+            # Apply rotation
+            t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
+                 matplotlib.transforms.Affine2D().translate(step_x, step_y) + ax.transData)
+            rect.set_transform(t)
+
+            # Add rectangle to the plot
+            ax.add_patch(rect)
 
         plt.legend()
-        plt.xlim(-1 - self.goal[0], self.goal[0] + 1)
-        plt.ylim(-1 - self.goal[2], self.goal[2] + 1)
+        # plt.xlim(-1 - self.goal[0], self.goal[0] + 1)
+        # plt.ylim(-1 - self.goal[2], self.goal[2] + 1)
+        plt.xlim(-1, 12)
+        plt.ylim(-1, 12)
         plt.show()
 
     def simulation(self):
@@ -199,6 +225,7 @@ class HumanoidMPC(MpcSkeleton):
     def walking_velocities(self, x_k_next, k):
         theta = self.precomputed_theta[k]
         s_v = 1 if k % 2 == 0 else -1  # s_v = 1 right foot, s_v = -1 left foot
+        self.s_v[k] = s_v
 
         local_velocities = cs.vertcat(
             cs.cos(theta) * x_k_next[1] + cs.sin(theta) * s_v * x_k_next[3],
