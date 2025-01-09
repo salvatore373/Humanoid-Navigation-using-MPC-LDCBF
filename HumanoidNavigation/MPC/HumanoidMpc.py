@@ -117,11 +117,10 @@ class HumanoidMPC(MpcSkeleton):
             self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
 
-            if k > 0:  # defined from 1 to N_horizon (you start still)
-                # walking velocities constraint
-                local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
-                self.optim_prob.subject_to(local_velocities <= V_MAX)
-                self.optim_prob.subject_to(local_velocities >= V_MIN)
+            # walking velocities constraint
+            local_velocities = self.walking_velocities(self.X_mpc[:, k], k)
+            self.optim_prob.subject_to(local_velocities <= V_MAX)
+            self.optim_prob.subject_to(local_velocities >= V_MIN)
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
             velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
