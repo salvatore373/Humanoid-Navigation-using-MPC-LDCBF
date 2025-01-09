@@ -85,6 +85,46 @@ def polygon_intersect_with_list_of_polygons(polygon, polygons):
     return False
 
 
+def line_polygon_intersection(line, polygon):
+    """
+    Computes the explicit intersection points between a line and a polygon.
+
+    Args:
+        line: A tuple of two points (p1, p2) representing the line segment.
+        polygon: A list of points [(x1, y1), (x2, y2), ...] representing the polygon.
+
+    Returns:
+        A list of intersection points.
+    """
+
+    def compute_intersection(p1, p2, q1, q2):
+        """Helper function to compute the intersection of two line segments (p1p2 and q1q2)."""
+        a1, b1 = p1, p2
+        a2, b2 = q1, q2
+
+        denom = (b2[1] - a2[1]) * (b1[0] - a1[0]) - (b2[0] - a2[0]) * (b1[1] - a1[1])
+        if denom == 0:  # Parallel lines
+            return None
+
+        ua = ((b2[0] - a2[0]) * (a1[1] - a2[1]) - (b2[1] - a2[1]) * (a1[0] - a2[0])) / denom
+        ub = ((b1[0] - a1[0]) * (a1[1] - a2[1]) - (b1[1] - a1[1]) * (a1[0] - a2[0])) / denom
+
+        if 0 <= ua <= 1 and 0 <= ub <= 1:  # Intersection within the segment bounds
+            x = a1[0] + ua * (b1[0] - a1[0])
+            y = a1[1] + ua * (b1[1] - a1[1])
+            return (x, y)
+        return None
+
+    intersections = []
+    for i in range(len(polygon)):
+        edge = (polygon[i], polygon[(i + 1) % len(polygon)])
+        intersection = compute_intersection(line[0], line[1], edge[0], edge[1])
+        if intersection:
+            intersections.append(intersection)
+
+    return intersections
+
+
 # check if two polygons intersect by checking if any edge of one
 # polygon intersects any edge of the other
 def polygons_intersect(polygon1, polygon2):
@@ -103,7 +143,7 @@ def polygons_intersect(polygon1, polygon2):
 def plot_polygon(polygon, color='blue', label=None):
     # to 'close' the polygon, we need to append the first vertex
     # to the end of the vertex list
-    polygon = np.array(polygon + [polygon[0]])
+    polygon = np.append(polygon, [polygon[0]], axis=0)
     plt.plot(polygon[:, 0], polygon[:, 1], '-', color=color, label=label)
     plt.fill(polygon[:, 0], polygon[:, 1], alpha=0.2, color=color)
 
@@ -158,24 +198,26 @@ def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10
 
 # ===== PLOTTING OBSTACLES FROM CURRENT FILE =====
 if __name__ == "__main__":
-    # define ranges
-    x_range = (-10, 10)
-    y_range = (-10, 10)
+    # Define a segment
+    segment = ((2, 2), (6, 8))
 
-    # useful constants
-    num_obstacles = 10
-    num_points = 5
+    # Generate a test polygon
+    polygon = [(0, 0), (4, 0), (4, 4), (0, 4)]  # Square
 
-    # generate the polygons
-    polygons = generate_non_intersecting_polygons(num_obstacles, num_points, x_range, y_range)
+    # Compute intersection points
+    intersection_points = line_polygon_intersection(segment, polygon)
 
-    # Plot obstacles
-    for i, obs in enumerate(polygons):
-        plot_polygon(obs, color='tomato', label='obstacle' if i == 0 else None)
+    # Print results
+    print("Polygon vertices:", polygon)
+    print("Segment:", segment)
+    print("Intersection points:", intersection_points)
 
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.xlim(x_range)
-    plt.ylim(y_range)
+    # Plot the segment and polygon
+    plot_polygon(polygon, color='blue', label='Polygon')
+    plt.plot([segment[0][0], segment[1][0]], [segment[0][1], segment[1][1]], 'r-', label='Segment')
+    if intersection_points:
+        x, y = zip(*intersection_points)
+        plt.scatter(x, y, color='green', label='Intersection points')
     plt.legend()
     plt.show()
 
