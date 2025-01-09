@@ -151,9 +151,9 @@ class HumanoidMPC(MpcSkeleton):
     def plot(self, X_pred, U_pred):
         fix, ax = plt.subplots()
 
-        # TODO: get x0 from the input
         # Plot the start position
-        plt.plot(0, 0, marker='o', color="cornflowerblue", label="Start")
+        start_state = self.optim_prob.value(self.x0)
+        plt.plot(start_state[0], start_state[2], marker='o', color="cornflowerblue", label="Start")
 
         # Plot the goal position
         plt.plot(self.goal[0], self.goal[2], marker='o', color="darkorange", label="Goal")
