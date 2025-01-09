@@ -125,7 +125,7 @@ class HumanoidMPC(MpcSkeleton):
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
             velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.U_mpc[:, k], k)
-            self.optim_prob.subject_to(velocity_term <= -turning_term + V_MAX)
+            self.optim_prob.subject_to(velocity_term <= -turning_term + V_MAX[0])
 
             # TODO probably missing constraint related to the foot stance (u[0], u[1]) ~ zmp wrt to com
 
@@ -265,7 +265,7 @@ class HumanoidMPC(MpcSkeleton):
         omega = self.precomputed_omega[k]  # omega = u_k[2]
 
         velocity_term = cs.cos(theta) * x_k[1] + cs.sin(theta) * x_k[3]
-        safety_term = ALPHA / np.pi * cs.fabs(omega)
+        safety_term = (ALPHA / np.pi) * cs.fabs(omega)
 
         return velocity_term, safety_term
 
