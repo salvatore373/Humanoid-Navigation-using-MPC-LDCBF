@@ -22,16 +22,16 @@ FOOT_RECT_HEIGHT = 0.2
     humanoid control: [f_x, f_y, omega] = [stance_foot_pos_x, stance_foot_pos_y, turning_rate]
 """
 # SALVO DELTA_T = 1e-3
-DELTA_T = 1  # SALVO
-# DELTA_T = 0.4  #SALVO
+# DELTA_T = 1  # SALVO
+DELTA_T = 0.4  # SALVO
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
 M_CONVERSION = 1  # everything is expressed wrt meters -> use this to change the unit measure
-ALPHA = 3.6  # paper refers to Digit robot (1.44 or 3.6?)
+ALPHA = 1.44  # paper refers to Digit robot (1.44 or 3.6?)
 GAMMA = 0.3  # used in CBF
 L_MAX = 0.17320508075 * M_CONVERSION  # 0.1*sqrt(3)
-V_MIN = [M_CONVERSION * -0.1, M_CONVERSION * -0.1]  # [-0.1, -0.1]
+V_MIN = [M_CONVERSION * -0.1, M_CONVERSION * 0.1]  # [-0.1, 0.1]
 V_MAX = [M_CONVERSION * 0.8, M_CONVERSION * 0.4]  # [0.8, 0.4]
 
 COSH = np.cosh(BETA * DELTA_T)
@@ -124,7 +124,7 @@ class HumanoidMPC:
 
     def add_constraints(self):
         # initial position constraint
-        # self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
+        self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
         # goal constraint (only in position)
         # self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon-1] == self.goal[0])
@@ -142,9 +142,9 @@ class HumanoidMPC:
             )
 
             # leg reachability -> prevent the over-extension of the swing leg
-            reachability = self.leg_reachability(self.X_mpc[:, k], self.X_mpc_theta[k])
-            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
-            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
+            # reachability = self.leg_reachability(self.X_mpc[:, k], self.X_mpc_theta[k])
+            # self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
+            # self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
 
             # walking velocities constraint
             local_velocities = self.walking_velocities(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
@@ -273,8 +273,6 @@ class HumanoidMPC:
             # ===== DEBUGGING =====
             # print(kth_solution.value(self.X_mpc))
             # print(kth_solution.value(self.U_mpc))
-
-            # X_pred[:4, k] = kth_solution.value(self.X_mpc)[:4, 0]  # DEBUG
 
             # assign to X_mpc and U_mpc the relative values
             self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
