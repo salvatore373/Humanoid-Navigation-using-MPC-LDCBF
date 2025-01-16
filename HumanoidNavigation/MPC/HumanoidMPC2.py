@@ -121,8 +121,8 @@ class HumanoidMPC:
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
         # goal constraint (only in position)
-        self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
-        self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
+        # self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
+        # self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
 
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
@@ -272,6 +272,7 @@ class HumanoidMPC:
 
             # get u_0 for x_1
             U_pred[:2, k] = kth_solution.value(self.U_mpc[:, 0])
+            U_pred[2, k] = self.precomputed_omega[0]
 
             # ===== DEBUGGING =====
             # print(kth_solution.value(self.X_mpc))
@@ -285,8 +286,9 @@ class HumanoidMPC:
             state_res = self.integrate(X_pred[:4, k], U_pred[:2, k],
                                        self.precomputed_theta[0], self.precomputed_omega[0])
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
+            X_pred[4, k+1] = self.precomputed_theta[1]
             # assign X_mpc to the relative value
-            self.optim_prob.set_initial(self.X_mpc[:, 1], X_pred[:4, k + 1])
+            # self.optim_prob.set_initial(self.X_mpc[:, 1], X_pred[:4, k + 1])
 
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
