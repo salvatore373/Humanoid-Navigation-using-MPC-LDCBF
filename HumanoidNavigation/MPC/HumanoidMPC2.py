@@ -23,14 +23,14 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
 M_CONVERSION = 1  # everything is expressed wrt meters -> use this to change the unit measure
-ALPHA = 1.44  # paper refers to Digit robot (1.44 or 3.6?)
+ALPHA = 3.6  # paper refers to Digit robot (1.44 or 3.6?)
 GAMMA = 0.3  # used in CBF
 L_MAX = 0.17320508075 * M_CONVERSION  # 0.1*sqrt(3)
 V_MIN = [M_CONVERSION * -0.1, M_CONVERSION * 0.1]  # [-0.1, 0.1]
 V_MAX = [M_CONVERSION * 0.8, M_CONVERSION * 0.4]  # [0.8, 0.4]
 
-COSH = np.cosh(BETA * DELTA_T)
-SINH = np.sinh(BETA * DELTA_T)
+COSH = cs.cosh(BETA * DELTA_T)
+SINH = cs.sinh(BETA * DELTA_T)
 
 AD = cs.vertcat(
     cs.horzcat(COSH, SINH / BETA, 0, 0, 0),
@@ -56,8 +56,8 @@ class HumanoidMPC:
         self.sampling_time = sampling_time
 
         self.optim_prob = cs.Opti()
-        p_opts = dict(print_time=False, verbose=False, expand=True)
-        s_opts = dict(print_level=0)
+        p_opts = dict(print_time=False, verbose=True, expand=True)
+        s_opts = dict(print_level=3)
         self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
         self.goal = goal
@@ -66,7 +66,6 @@ class HumanoidMPC:
         self.precomputed_theta = None
         # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
         # -1 if the stance is the left foot.
-        # self.s_v = [0 for _ in range(self.N_simul)]
 
         # to be sure they are defined
         assert (self.goal is not None and self.obstacles is not None)
@@ -100,7 +99,14 @@ class HumanoidMPC:
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
         omega_max = 0.156 * cs.pi  # unit: rad/s
         omega_min = -omega_max
-        target_heading_angle = cs.atan2(self.goal[1] - start_state[2], self.goal[0] - start_state[0])
+        target_heading_angle = cs.if_else(
+            cs.logic_and(
+                cs.le(cs.fabs(self.goal[2] - start_state[2]), 1e-4),
+                cs.le(cs.fabs(self.goal[0] - start_state[0]), 1e-4)),
+            0,
+            cs.atan2(self.goal[2] - start_state[2], self.goal[0] - start_state[0])
+        )
+        # target_heading_angle = cs.atan2(self.goal[2] - start_state[2], self.goal[0] - start_state[0])
 
         # omegas (turning rate)
         self.precomputed_omega = [
@@ -128,11 +134,11 @@ class HumanoidMPC:
         for k in range(self.N_horizon):
             integration_res = self.integrate(self.X_mpc[:, k], self.U_mpc[:, k],
                                              self.X_mpc_theta[k], self.U_mpc_omega[k])
-            self.optim_prob.subject_to(cs.eq(self.X_mpc[:, k + 1], integration_res))
+            self.optim_prob.subject_to(self.X_mpc[:, k + 1] == integration_res)
             # self.optim_prob.subject_to(
             #     cs.eq(
-            #         cs.vertcat(self.X_mpc[:, k + 1], self.X_mpc_theta[k + 1]),
-            #         cs.vertcat(state_res, theta_res)
+            #         cs.vertcat(self.X_mpc[:, k + 1]),
+            #         integration_res
             #     )
             # )
 
@@ -168,11 +174,13 @@ class HumanoidMPC:
         #                  + cs.sumsqr(self.X_mpc[2, :-1] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
 
         # Compute state_N
-        distance_cost = cs.vertcat(0)
+        distance_cost = cs.power(self.X_mpc[0, 0] - self.goal[0], 2) + cs.power(self.X_mpc[2, 0] - self.goal[2], 2)
         for k in range(self.N_horizon):
             state_kp1 = self.integrate(self.X_mpc[:, k], self.U_mpc[:, k],
                                        self.X_mpc_theta[k], self.U_mpc_omega[k])
             distance_cost += cs.power(state_kp1[0] - self.goal[0], 2) + cs.power(state_kp1[2] - self.goal[2], 2)
+        # distance_cost = (cs.sumsqr(self.X_mpc[0, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[0])
+        #                  + cs.sumsqr(self.X_mpc[2, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
 
         self.optim_prob.minimize(distance_cost)
         # self.optim_prob.minimize(distance_cost + control_cost)
@@ -181,11 +189,18 @@ class HumanoidMPC:
         """
         :returns Al[:4,:4] * X_woTheta + Bl[:4, :] * U_woOmega, Al[4,4]*theta + Bl[4,2]*U_omega
         """
+        # x_k = [0,0,0,0]
+        # u_k = [0.1,0]
+
         Al1 = cs.vertcat(
             cs.horzcat(COSH, SINH / BETA, 0, 0),
             cs.horzcat(SINH * BETA, COSH, 0, 0),
             cs.horzcat(0, 0, COSH, SINH / BETA),
             cs.horzcat(0, 0, SINH * BETA, COSH),
+            # DEBUG cs.horzcat(COSH, SINH / BETA, 0, 0),
+            # DEBUG cs.horzcat(SINH / BETA, COSH, 0, 0),
+            # DEBUG cs.horzcat(0, 0, COSH, SINH / BETA),
+            # DEBUG cs.horzcat(0, 0, SINH / BETA, COSH),
         )
         Al2 = 1
 
@@ -194,6 +209,10 @@ class HumanoidMPC:
             cs.horzcat(-BETA * SINH, 0),
             cs.horzcat(0, 1 - COSH),
             cs.horzcat(0, -BETA * SINH),
+            # DEBUG cs.horzcat(1 + COSH, 0),
+            # DEBUG cs.horzcat(+BETA * SINH, 0),
+            # DEBUG cs.horzcat(0, 1 + COSH),
+            # DEBUG cs.horzcat(0, +BETA * SINH),
         )
         Bl2 = DELTA_T
 
@@ -286,9 +305,9 @@ class HumanoidMPC:
             state_res = self.integrate(X_pred[:4, k], U_pred[:2, k],
                                        self.precomputed_theta[0], self.precomputed_omega[0])
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
-            X_pred[4, k+1] = self.precomputed_theta[1]
+            X_pred[4, k + 1] = self.precomputed_theta[1]
             # assign X_mpc to the relative value
-            # self.optim_prob.set_initial(self.X_mpc[:, 1], X_pred[:4, k + 1])
+            self.optim_prob.set_initial(self.X_mpc[:, 1], X_pred[:4, k + 1])
 
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
@@ -370,5 +389,14 @@ if __name__ == "__main__":
         goal=(3, 0, 0, 0, 0),  # position=(4, 0), velocity=(0, 0) theta=0
         obstacles=obstacles
     )
+
+    step0 = [0, 0, 0, 0]
+    input0 = [0.1, 0.1]
+    step1 = mpc.integrate(step0, input0, 0, 0)
+    input1 = [0.2, -0.1]
+    step2 = mpc.integrate(step1, input1, 0, 0)
+    input2 = [0.3, 0.1]
+    step3 = mpc.integrate(step2, input2, 0, 0)
+    print()
 
     mpc.simulation()
