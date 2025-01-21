@@ -189,9 +189,6 @@ class HumanoidMPC:
         """
         :returns Al[:4,:4] * X_woTheta + Bl[:4, :] * U_woOmega, Al[4,4]*theta + Bl[4,2]*U_omega
         """
-        # x_k = [0,0,0,0]
-        # u_k = [0.1,0]
-
         Al1 = cs.vertcat(
             cs.horzcat(COSH, SINH / BETA, 0, 0),
             cs.horzcat(SINH * BETA, COSH, 0, 0),
@@ -289,7 +286,7 @@ class HumanoidMPC:
                 print(e)
                 exit(1)
 
-            # get u_0 for x_1
+            # get u_k
             U_pred[:2, k] = kth_solution.value(self.U_mpc[:, 0])
             U_pred[2, k] = self.precomputed_omega[0]
 
@@ -299,15 +296,20 @@ class HumanoidMPC:
 
             # assign to X_mpc and U_mpc the relative values
             # self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
-            self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
+            # self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
 
             # compute x_k_next using x_k and u_k
             state_res = self.integrate(X_pred[:4, k], U_pred[:2, k],
                                        self.precomputed_theta[0], self.precomputed_omega[0])
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
             X_pred[4, k + 1] = self.precomputed_theta[1]
-            # assign X_mpc to the relative value
-            self.optim_prob.set_initial(self.X_mpc[:, 1], X_pred[:4, k + 1])
+
+            # Set X_mpc to the state derived from the computed inputs
+            self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
+            for i in range(self.N_horizon-1):
+                state_res = self.integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]),
+                                           self.precomputed_theta[0], self.precomputed_omega[0])
+                self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
 
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
@@ -391,11 +393,11 @@ if __name__ == "__main__":
     )
 
     step0 = [0, 0, 0, 0]
-    input0 = [0.1, 0.1]
+    input0 = [-0.19396392946460198, 0.0]
     step1 = mpc.integrate(step0, input0, 0, 0)
-    input1 = [0.2, -0.1]
+    input1 = [0.7343380395416466, 0]
     step2 = mpc.integrate(step1, input1, 0, 0)
-    input2 = [0.3, 0.1]
+    input2 = [-0.3879278589277293, 0]
     step3 = mpc.integrate(step2, input2, 0, 0)
     print()
 
