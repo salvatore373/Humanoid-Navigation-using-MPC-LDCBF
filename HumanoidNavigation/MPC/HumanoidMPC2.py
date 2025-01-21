@@ -83,8 +83,13 @@ class HumanoidMPC:
         self.x0_theta = self.optim_prob.parameter(1)
 
         # Set the initial state
-        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))  # SALVO
+        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))  # DEBUG
         self.optim_prob.set_value(self.x0_theta, 0)
+
+        # Define the goal local coordinates as a parameter
+        glob_to_loc_mat = HumanoidMPC.get_glob_to_loc_rf_trans_mat(0, 0, 0)  # TODO: get theta,x,y from init state
+        self.goal_loc_coords = self.optim_prob.parameter(2, 1)  # goal_x, goal_y
+        self.optim_prob.set_value(self.goal_loc_coords, (glob_to_loc_mat @ [self.goal[0], self.goal[1], 1])[:2])
 
         # Precompute theta and omega
         self.parameters_precalculation(self.x0, self.x0_theta)
@@ -95,18 +100,24 @@ class HumanoidMPC:
         # Define the cost function of the objective function
         self.cost_function()
 
+    @staticmethod
+    def get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k):
+        return np.array([
+            [np.cos(theta_k), -np.sin(theta_k), x_k],
+            [np.sin(theta_k), np.cos(theta_k), y_k],
+            [0, 0, 1, ],
+        ])
+
+    @staticmethod
+    def get_glob_to_loc_rf_trans_mat(theta_k, x_k, y_k):
+        return np.linalg.inv(HumanoidMPC.get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
+
     def parameters_precalculation(self, start_state, start_state_theta):
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
         omega_max = 0.156 * cs.pi  # unit: rad/s
         omega_min = -omega_max
-        target_heading_angle = cs.if_else(
-            cs.logic_and(
-                cs.le(cs.fabs(self.goal[2] - start_state[2]), 1e-4),
-                cs.le(cs.fabs(self.goal[0] - start_state[0]), 1e-4)),
-            0,
-            cs.atan2(self.goal[2] - start_state[2], self.goal[0] - start_state[0])
-        )
-        # target_heading_angle = cs.atan2(self.goal[2] - start_state[2], self.goal[0] - start_state[0])
+        goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
+        target_heading_angle = cs.atan2(goal_loc_coords[1] - start_state[2], goal_loc_coords[0] - start_state[0])
 
         # omegas (turning rate)
         self.precomputed_omega = [
@@ -174,11 +185,13 @@ class HumanoidMPC:
         #                  + cs.sumsqr(self.X_mpc[2, :-1] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
 
         # Compute state_N
-        distance_cost = cs.power(self.X_mpc[0, 0] - self.goal[0], 2) + cs.power(self.X_mpc[2, 0] - self.goal[2], 2)
+        distance_cost = cs.power(self.X_mpc[0, 0] - self.goal_loc_coords[0], 2) + cs.power(
+            self.X_mpc[2, 0] - self.goal_loc_coords[1], 2)
         for k in range(self.N_horizon):
             state_kp1 = self.integrate(self.X_mpc[:, k], self.U_mpc[:, k],
                                        self.X_mpc_theta[k], self.U_mpc_omega[k])
-            distance_cost += cs.power(state_kp1[0] - self.goal[0], 2) + cs.power(state_kp1[2] - self.goal[2], 2)
+            distance_cost += cs.power(state_kp1[0] - self.goal_loc_coords[0], 2) + cs.power(
+                state_kp1[2] - self.goal_loc_coords[1], 2)
         # distance_cost = (cs.sumsqr(self.X_mpc[0, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[0])
         #                  + cs.sumsqr(self.X_mpc[2, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
 
@@ -223,7 +236,7 @@ class HumanoidMPC:
         plt.plot(X_pred[0, 0], X_pred[2, 0], marker='o', color="cornflowerblue", label="Start")
 
         # Plot the goal position
-        plt.plot(self.goal[0], self.goal[2], marker='o', color="darkorange", label="Goal")
+        plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
 
         # Plot the obstacles
         plot_polygon(obstacles)
@@ -259,6 +272,11 @@ class HumanoidMPC:
         U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
         computation_time = np.zeros(self.N_simul)
 
+        # The position of the CoM in the global frame at each step of the simulation
+        X_pred_glob = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
+        # The position of the footsteps in the global frame at each step of the simulation
+        U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
+
         for k in range(self.N_simul):
             starting_iter_time = time.time()  # CLOCK
 
@@ -290,6 +308,14 @@ class HumanoidMPC:
             U_pred[:2, k] = kth_solution.value(self.U_mpc[:, 0])
             U_pred[2, k] = self.precomputed_omega[0]
 
+            # Compute u_k in the global frame
+            trans_mat_loc_to_glob = self.get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                                        X_pred_glob[0, k],
+                                                                        X_pred_glob[2, k])
+            U_pred_glob[:2, k] = (trans_mat_loc_to_glob @ np.append(U_pred[:2, k], 1))[:2]
+            U_pred_glob[2, k] = self.precomputed_omega[0] + (
+                U_pred[2, k - 1] if k > 0 else 0)  # TODO: check this formula
+
             # ===== DEBUGGING =====
             # print(kth_solution.value(self.X_mpc))
             # print(kth_solution.value(self.U_mpc))
@@ -304,17 +330,30 @@ class HumanoidMPC:
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
+            # Compute x_k_next in the global frame
+            glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
+            glob_vel = (trans_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1], 1])[:2]
+            X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
+            X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]  # TODO: check this formula
+
             # Set X_mpc to the state derived from the computed inputs
             self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
-            for i in range(self.N_horizon-1):
+            for i in range(self.N_horizon - 1):
                 state_res = self.integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]),
                                            self.precomputed_theta[0], self.precomputed_omega[0])
                 self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
 
+            # Move the goal wrt the RF with origin in p_k_next and orientation theta_next
+            glob_to_loc_trans_mat = self.get_glob_to_loc_rf_trans_mat(X_pred_glob[4, k + 1],
+                                                                      X_pred_glob[0, k + 1],
+                                                                      X_pred_glob[2, k + 1])
+            goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
+            self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
+
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
-        self.plot(X_pred, U_pred)
+        self.plot(X_pred_glob, U_pred_glob)
 
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
     def walking_velocities(self, x_k_next, theta_k, k):
@@ -388,7 +427,7 @@ if __name__ == "__main__":
         N_horizon=3,
         N_simul=150,
         sampling_time=DELTA_T,
-        goal=(3, 0, 0, 0, 0),  # position=(4, 0), velocity=(0, 0) theta=0
+        goal=(3, 0),
         obstacles=obstacles
     )
 
