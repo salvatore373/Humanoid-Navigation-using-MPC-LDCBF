@@ -277,7 +277,13 @@ class HumanoidMPC:
         # The position of the footsteps in the global frame at each step of the simulation
         U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
 
+        last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
+            # Stop searching for the solution if the value of the optimization function with the solution
+            # of the previous step is low enough.
+            if last_obj_fun_val < 1e-2:
+                break
+
             starting_iter_time = time.time()  # CLOCK
 
             # set x_0
@@ -294,6 +300,7 @@ class HumanoidMPC:
             # solve
             try:
                 kth_solution = self.optim_prob.solve()
+                last_obj_fun_val = self.optim_prob.debug.value(self.optim_prob.f)
             except Exception as e:
                 print(f"===== ERROR ({k}) =====")
                 print("===== STATES =====")
