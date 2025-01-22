@@ -50,7 +50,11 @@ BD = cs.vertcat(
 
 
 class HumanoidMPC:
-    def __init__(self, goal, obstacles, N_horizon=5, N_simul=100, sampling_time=1e-3):
+    RIGHT_FOOT = 1
+    LEFT_FOOT = -1
+
+    def __init__(self, goal, obstacles, N_horizon=5, N_simul=100, sampling_time=1e-3,
+                 start_with_right_foot: bool = True):
         self.N_horizon = N_horizon
         self.N_simul = N_simul
         self.sampling_time = sampling_time
@@ -72,6 +76,12 @@ class HumanoidMPC:
 
         self.state_dim = 4
         self.control_dim = 2
+
+        # Define which step should be right and which left
+        self.s_v_param = self.optim_prob.parameter(1, self.N_horizon)
+        self.s_v = []
+        for i in range(self.N_simul):
+            self.s_v.append(self.RIGHT_FOOT if i % 2 == (0 if start_with_right_foot else 1) else self.LEFT_FOOT)
 
         # Define the state and the control variables (without theta and omega)
         self.X_mpc = self.optim_prob.variable(self.state_dim, self.N_horizon + 1)
@@ -159,14 +169,14 @@ class HumanoidMPC:
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
 
             # walking velocities constraint
-            # local_velocities = self.walking_velocities(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
-            # self.optim_prob.subject_to(local_velocities <= V_MAX)
-            # self.optim_prob.subject_to(local_velocities >= V_MIN)
+            local_velocities = self.walking_velocities(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
+            self.optim_prob.subject_to(local_velocities <= V_MAX)
+            self.optim_prob.subject_to(local_velocities >= V_MIN)
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
-            # velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.X_mpc_theta[k],
-            #                                                    self.U_mpc_omega[k])
-            # self.optim_prob.subject_to(velocity_term <= turning_term)
+            velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.X_mpc_theta[k],
+                                                               self.U_mpc_omega[k])
+            self.optim_prob.subject_to(velocity_term <= turning_term)
 
         # control barrier functions constraint
         # for k in range(self.N_horizon):
@@ -251,7 +261,7 @@ class HumanoidMPC:
 
             # Create rectangle centered at the position
             rect = Rectangle((-FOOT_RECT_WIDTH / 2, -FOOT_RECT_HEIGHT / 2), FOOT_RECT_WIDTH, FOOT_RECT_HEIGHT,
-                             color='blue' if time_instant % 2 == 0 else 'green', alpha=0.7)
+                             color='blue' if self.s_v == self.RIGHT_FOOT else 'green', alpha=0.7)
             # Apply rotation
             t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
                  matplotlib.transforms.Affine2D().translate(step_x, step_y) + ax.transData)
@@ -281,14 +291,17 @@ class HumanoidMPC:
         for k in range(self.N_simul):
             # Stop searching for the solution if the value of the optimization function with the solution
             # of the previous step is low enough.
-            if last_obj_fun_val < 1e-2:
+            if last_obj_fun_val < 0.05:
                 break
 
             starting_iter_time = time.time()  # CLOCK
 
-            # set x_0
+            # Set the initial state
             self.optim_prob.set_value(self.x0, X_pred[:4, k])
             self.optim_prob.set_value(self.x0_theta, X_pred[4, k])
+
+            # Set whether the following steps should be with right or left foot
+            self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon])
 
             # precompute compute theta and omega
             self.parameters_precalculation(X_pred[:4, k], X_pred[4, k])
@@ -368,7 +381,7 @@ class HumanoidMPC:
 
     # ===== PAPER-SPECIFIC CONSTRAINTS =====
     def walking_velocities(self, x_k_next, theta_k, k):
-        s_v = 1 if k % 2 == 0 else -1  # s_v = 1 right foot, s_v = -1 left foot
+        s_v = self.s_v_param[k]
 
         local_velocities = cs.vertcat(
             cs.cos(theta_k) * x_k_next[1] + cs.sin(theta_k) * s_v * x_k_next[3],
