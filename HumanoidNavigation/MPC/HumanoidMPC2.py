@@ -313,8 +313,9 @@ class HumanoidMPC:
                                                                         X_pred_glob[0, k],
                                                                         X_pred_glob[2, k])
             U_pred_glob[:2, k] = (trans_mat_loc_to_glob @ np.append(U_pred[:2, k], 1))[:2]
-            U_pred_glob[2, k] = self.precomputed_omega[0] + (
-                U_pred[2, k - 1] if k > 0 else 0)  # TODO: check this formula
+            # U_pred_glob[2, k] = self.precomputed_omega[0] + (
+            #     U_pred[2, k - 1] if k > 0 else 0)  # TODO: check this formula
+            U_pred_glob[2, k] = self.precomputed_omega[0]
 
             # ===== DEBUGGING =====
             # print(kth_solution.value(self.X_mpc))
@@ -331,8 +332,11 @@ class HumanoidMPC:
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
             # Compute x_k_next in the global frame
+            rot_mat_loc_to_glob = self.get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                                      X_pred_glob[0, k],
+                                                                      X_pred_glob[2, k])[:2, :2]
             glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
-            glob_vel = (trans_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1], 1])[:2]
+            glob_vel = (rot_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1]])
             X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
             X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]  # TODO: check this formula
 
