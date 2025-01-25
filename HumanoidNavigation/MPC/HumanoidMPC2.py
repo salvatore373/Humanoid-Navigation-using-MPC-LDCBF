@@ -53,6 +53,9 @@ class HumanoidMPC:
     RIGHT_FOOT = 1
     LEFT_FOOT = -1
 
+    OMEGA_MAX = 0.156 * cs.pi  # unit: rad/s
+    OMEGA_MIN = -OMEGA_MAX
+
     def __init__(self, goal, obstacles, N_horizon=5, N_simul=100, sampling_time=1e-3,
                  start_with_right_foot: bool = True):
         self.N_horizon = N_horizon
@@ -97,12 +100,12 @@ class HumanoidMPC:
         self.optim_prob.set_value(self.x0_theta, 0)
 
         # Define the goal local coordinates as a parameter
-        glob_to_loc_mat = HumanoidMPC.get_glob_to_loc_rf_trans_mat(0, 0, 0)  # TODO: get theta,x,y from init state
+        glob_to_loc_mat = HumanoidMPC._get_glob_to_loc_rf_trans_mat(0, 0, 0)  # TODO: get theta,x,y from init state
         self.goal_loc_coords = self.optim_prob.parameter(2, 1)  # goal_x, goal_y
         self.optim_prob.set_value(self.goal_loc_coords, (glob_to_loc_mat @ [self.goal[0], self.goal[1], 1])[:2])
 
         # Precompute theta and omega
-        self.parameters_precalculation(self.x0, self.x0_theta)
+        self._precompute_theta_omega_naive(self.x0, self.x0_theta)
 
         # Add the constraints to the objective function
         self.add_constraints()
@@ -111,7 +114,7 @@ class HumanoidMPC:
         self.cost_function()
 
     @staticmethod
-    def get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k):
+    def _get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k):
         """
         Returns the homogeneous matrix to transform a vector from the RF relative to the humanoid's CoM and orientation
         to the inertial RF.
@@ -127,7 +130,7 @@ class HumanoidMPC:
         ])
 
     @staticmethod
-    def get_glob_to_loc_rf_trans_mat(theta_k, x_k, y_k):
+    def _get_glob_to_loc_rf_trans_mat(theta_k, x_k, y_k):
         """
         Returns the homogeneous matrix to transform a vector from the inertial RF
         to the RF relative to the humanoid's CoM and orientation.
@@ -136,18 +139,25 @@ class HumanoidMPC:
         :param x_k: The global x-coordinate position of the humanoid at step K.
         :param y_k: The global y-coordinate position of the humanoid at step K.
         """
-        return np.linalg.inv(HumanoidMPC.get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
+        return np.linalg.inv(HumanoidMPC._get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
 
-    def parameters_precalculation(self, start_state, start_state_theta):
+    def _precompute_theta_omega_naive(self, start_state, start_state_theta):
+        """
+        Computes the values that the humanoid's state and input should have for theta and omega for the prediction
+        horizon in order to reach the goal position. It computes the target theta value as atan2(goal_y-p_y, goal_x-p_x)
+        and computes the omega and theta values needed to reach that angle with the current velocity limits.
+
+        :param start_state: The current state of the humanoid's system, defined as (com_x, vel_com_x, com_y, vel_com_y).
+        :param start_state_theta: The current orientation of the humanoid.
+        """
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
-        omega_max = 0.156 * cs.pi  # unit: rad/s
-        omega_min = -omega_max
         goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
         target_heading_angle = cs.atan2(goal_loc_coords[1] - start_state[2], goal_loc_coords[0] - start_state[0])
 
         # omegas (turning rate)
         self.precomputed_omega = [
-            cs.fmin(cs.fmax((target_heading_angle - start_state_theta) / self.N_horizon, omega_min), omega_max)
+            cs.fmin(cs.fmax((target_heading_angle - start_state_theta) / self.N_horizon, self.OMEGA_MIN),
+                    self.OMEGA_MAX)
             # avoid sharp turns
             for _ in range(self.N_horizon)
         ]
@@ -320,7 +330,7 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon])
 
             # precompute compute theta and omega
-            self.parameters_precalculation(X_pred[:4, k], X_pred[4, k])
+            self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
             for i in range(self.N_horizon + 1):
                 self.optim_prob.set_value(self.X_mpc_theta[i], self.precomputed_theta[i])
             for i in range(self.N_horizon):
@@ -345,9 +355,9 @@ class HumanoidMPC:
             U_pred[2, k] = self.precomputed_omega[0]
 
             # Compute u_k in the global frame
-            trans_mat_loc_to_glob = self.get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
-                                                                        X_pred_glob[0, k],
-                                                                        X_pred_glob[2, k])
+            trans_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                                         X_pred_glob[0, k],
+                                                                         X_pred_glob[2, k])
             U_pred_glob[:2, k] = (trans_mat_loc_to_glob @ np.append(U_pred[:2, k], 1))[:2]
             # U_pred_glob[2, k] = self.precomputed_omega[0] + (
             #     U_pred[2, k - 1] if k > 0 else 0)  # TODO: check this formula
@@ -368,9 +378,9 @@ class HumanoidMPC:
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
             # Compute x_k_next in the global frame
-            rot_mat_loc_to_glob = self.get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
-                                                                      X_pred_glob[0, k],
-                                                                      X_pred_glob[2, k])[:2, :2]
+            rot_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                                       X_pred_glob[0, k],
+                                                                       X_pred_glob[2, k])[:2, :2]
             glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
             glob_vel = (rot_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1]])
             X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
@@ -384,9 +394,9 @@ class HumanoidMPC:
                 self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
 
             # Move the goal wrt the RF with origin in p_k_next and orientation theta_next
-            glob_to_loc_trans_mat = self.get_glob_to_loc_rf_trans_mat(X_pred_glob[4, k + 1],
-                                                                      X_pred_glob[0, k + 1],
-                                                                      X_pred_glob[2, k + 1])
+            glob_to_loc_trans_mat = self._get_glob_to_loc_rf_trans_mat(X_pred_glob[4, k + 1],
+                                                                       X_pred_glob[0, k + 1],
+                                                                       X_pred_glob[2, k + 1])
             goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
             self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
 
