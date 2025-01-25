@@ -80,7 +80,7 @@ class HumanoidMPC:
         # Define which step should be right and which left
         self.s_v_param = self.optim_prob.parameter(1, self.N_horizon)
         self.s_v = []
-        for i in range(self.N_simul):
+        for i in range(self.N_simul + self.N_horizon - 1):
             self.s_v.append(self.RIGHT_FOOT if i % 2 == (0 if start_with_right_foot else 1) else self.LEFT_FOOT)
 
         # Define the state and the control variables (without theta and omega)
@@ -449,9 +449,9 @@ if __name__ == "__main__":
 
     mpc = HumanoidMPC(
         N_horizon=3,
-        N_simul=150,
+        N_simul=300,
         sampling_time=DELTA_T,
-        goal=(3, 0),
+        goal=(0, 10),
         obstacles=obstacles
     )
 
