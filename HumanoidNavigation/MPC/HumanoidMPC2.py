@@ -112,6 +112,14 @@ class HumanoidMPC:
 
     @staticmethod
     def get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k):
+        """
+        Returns the homogeneous matrix to transform a vector from the RF relative to the humanoid's CoM and orientation
+        to the inertial RF.
+
+        :param theta_k: The global orientation of the humanoid at step K.
+        :param x_k: The global x-coordinate position of the humanoid at step K.
+        :param y_k: The global y-coordinate position of the humanoid at step K.
+        """
         return np.array([
             [np.cos(theta_k), -np.sin(theta_k), x_k],
             [np.sin(theta_k), np.cos(theta_k), y_k],
@@ -120,6 +128,14 @@ class HumanoidMPC:
 
     @staticmethod
     def get_glob_to_loc_rf_trans_mat(theta_k, x_k, y_k):
+        """
+        Returns the homogeneous matrix to transform a vector from the inertial RF
+        to the RF relative to the humanoid's CoM and orientation.
+
+        :param theta_k: The global orientation of the humanoid at step K.
+        :param x_k: The global x-coordinate position of the humanoid at step K.
+        :param y_k: The global y-coordinate position of the humanoid at step K.
+        """
         return np.linalg.inv(HumanoidMPC.get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
 
     def parameters_precalculation(self, start_state, start_state_theta):
