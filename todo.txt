@@ -2,12 +2,10 @@ MPC:
 1. Apply the same approach to the Humanoid Model (E)
 2. (CHECK) Build Humanoid MPC (D)
 
-FOOTSTEP_PLANNER:
-1. generate ZMP trajectory from the support polygon positions
-
 BONUS:
 1. RRT*
 2. Localization 
 3. Global plan 
 4. Subgoals
 5. 3D simulation
+6. Use Unicycle theta and omega as precomputed theta/omega
