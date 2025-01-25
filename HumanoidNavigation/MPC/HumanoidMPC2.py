@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
 
+from HumanoidNavigation.MPC.UnicycleHelper import UnicycleHelper
 from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
 
 """ The width and the height of the rectangle representing the feet in the plot"""
@@ -78,8 +79,18 @@ class HumanoidMPC:
         cs.horzcat(0, -BETA * SINH),
     )
 
-    def __init__(self, goal, obstacles, N_horizon=5, N_simul=100, sampling_time=1e-3,
+    def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
                  start_with_right_foot: bool = True):
+        """
+        Initialize the MPC.
+
+        :param goal: The position that the humanoid should reach.
+        :param obstacles: The obstacles in the environment.
+        :param N_horizon: The length of the prediction horizon.
+        :param N_simul: The number of time steps in the simulation.
+        :param sampling_time: The duration of a single time step in seconds.
+        :param start_with_right_foot: Whether the first stance foot should be the right or left one.
+        """
         self.N_horizon = N_horizon
         self.N_simul = N_simul
         self.sampling_time = sampling_time
@@ -93,18 +104,20 @@ class HumanoidMPC:
         self.obstacles = obstacles
         self.precomputed_omega = None
         self.precomputed_theta = None
-        # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
-        # -1 if the stance is the left foot.
+        self.precomputed_omega_full = None
+        self.precomputed_theta_full = None
 
-        # to be sure they are defined
+        # Make sure that the goal and the obstacles are given
         assert (self.goal is not None and self.obstacles is not None)
 
         self.state_dim = 4
         self.control_dim = 2
 
+        # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
+        # -1 if the stance is the left foot.
+        self.s_v = []
         # Define which step should be right and which left
         self.s_v_param = self.optim_prob.parameter(1, self.N_horizon)
-        self.s_v = []
         for i in range(self.N_simul + self.N_horizon - 1):
             self.s_v.append(self.RIGHT_FOOT if i % 2 == (0 if start_with_right_foot else 1) else self.LEFT_FOOT)
 
@@ -125,9 +138,6 @@ class HumanoidMPC:
         glob_to_loc_mat = HumanoidMPC._get_glob_to_loc_rf_trans_mat(0, 0, 0)  # TODO: get theta,x,y from init state
         self.goal_loc_coords = self.optim_prob.parameter(2, 1)  # goal_x, goal_y
         self.optim_prob.set_value(self.goal_loc_coords, (glob_to_loc_mat @ [self.goal[0], self.goal[1], 1])[:2])
-
-        # Precompute theta and omega
-        self._precompute_theta_omega_naive(self.x0, self.x0_theta)
 
         # Add the constraints to the objective function
         self._add_constraints()
@@ -190,6 +200,33 @@ class HumanoidMPC:
             self.precomputed_theta.append(
                 self.precomputed_theta[-1] + self.precomputed_omega[k] * self.sampling_time
             )
+
+    def _init_precomputation_theta_omega_unicycle(self, start_posit, start_theta):
+        """
+        It computes the theta and omega used by a unicycle to from the given start_posit (where the robot has the
+        orientation start_theta) to the goal position (with any orientation). The duration of the trajectory is N_simul
+        and the velocity bounds of the humanoid are taken into account.
+
+        :returns: A tuple containing two matrices. Both have dimension (1xN_simul). The matrix at index 0 is the
+         evolution of the orientation of the unicycle while trying to reach the goal. While the matrix at index 1 is the
+         evolution of the rate of change of the orientation of the unicycle while trying to reach the goal.
+        """
+        (_, _, _, _, _, _, theta, _, omega) = UnicycleHelper.compute_unicycle_params_trajectory(
+            start_position=start_posit, start_orientation=start_theta,
+            goal_position=self.optim_prob.value(self.goal_loc_coords), goal_orientation=0.0,
+            num_timesteps=self.N_simul, omega_max=self.OMEGA_MAX, v_max=V_MAX[0],
+        )
+        return theta, omega
+
+    def _precompute_theta_omega_unicycle(self, global_timestep):
+        """
+        It computes the next values of theta and omega along the prediction horizon (according to the current time step
+        in the simulation), defined as the ones of a unicycle that tries to reach the goal position from the initial
+        state.
+
+        :param global_timestep: The time step w.r.t. the simulation horizon.
+        """
+        pass
 
     def _compute_walking_velocities_matrix(self, x_k_next, theta_k, k):
         """
@@ -413,12 +450,14 @@ class HumanoidMPC:
         plt.ylim(-2, 12)
         plt.show()
 
-    def run_simulation(self):
+    def run_simulation(self, use_unicycle_precomputation: bool = False):
         """
         It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
         to reach the goal. Then, it plots the obtained results.
-        """
 
+        :param use_unicycle_precomputation: Whether the theta and omega values of the humanoid should be the ones of a
+         unicycle that tries to reach the goal position.
+        """
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
         U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
         computation_time = np.zeros(self.N_simul)
@@ -427,6 +466,11 @@ class HumanoidMPC:
         X_pred_glob = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
         # The position of the footsteps in the global frame at each step of the simulation
         U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
+
+        # Precompute theta and omega
+        if use_unicycle_precomputation:
+            self.precomputed_theta_full, self.precomputed_omega_full = \
+                self._init_precomputation_theta_omega_unicycle(np.array([0, 0]), 0)
 
         last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
@@ -529,4 +573,6 @@ if __name__ == "__main__":
         obstacles=obstacles
     )
 
-    mpc.run_simulation()
+    mpc.run_simulation(
+        use_unicycle_precomputation=True
+    )
