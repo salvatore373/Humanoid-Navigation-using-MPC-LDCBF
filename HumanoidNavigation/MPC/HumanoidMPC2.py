@@ -50,11 +50,33 @@ BD = cs.vertcat(
 
 
 class HumanoidMPC:
+    """
+    The implementation of the MPC defined in the paper "Real-Time Safe Bipedal Robot Navigation using Linear Discrete
+    Control Barrier Functions" by Peng et al.
+    """
+
+    # The constants used to represent the left and right feet
     RIGHT_FOOT = 1
     LEFT_FOOT = -1
 
+    # The minimum and maximum turning rate allowed by the humanoid's system
     OMEGA_MAX = 0.156 * cs.pi  # unit: rad/s
     OMEGA_MIN = -OMEGA_MAX
+
+    # The drift matrix of the humanoid's dynamic model
+    A_l = cs.vertcat(
+        cs.horzcat(COSH, SINH / BETA, 0, 0),
+        cs.horzcat(SINH * BETA, COSH, 0, 0),
+        cs.horzcat(0, 0, COSH, SINH / BETA),
+        cs.horzcat(0, 0, SINH * BETA, COSH),
+    )
+    # The control matrix of the humanoid's dynamic model
+    B_l = cs.vertcat(
+        cs.horzcat(1 - COSH, 0),
+        cs.horzcat(-BETA * SINH, 0),
+        cs.horzcat(0, 1 - COSH),
+        cs.horzcat(0, -BETA * SINH),
+    )
 
     def __init__(self, goal, obstacles, N_horizon=5, N_simul=100, sampling_time=1e-3,
                  start_with_right_foot: bool = True):
@@ -108,10 +130,10 @@ class HumanoidMPC:
         self._precompute_theta_omega_naive(self.x0, self.x0_theta)
 
         # Add the constraints to the objective function
-        self.add_constraints()
+        self._add_constraints()
 
         # Define the cost function of the objective function
-        self.cost_function()
+        self._add_cost_function()
 
     @staticmethod
     def _get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k):
@@ -169,7 +191,107 @@ class HumanoidMPC:
                 self.precomputed_theta[-1] + self.precomputed_omega[k] * self.sampling_time
             )
 
-    def add_constraints(self):
+    def _compute_walking_velocities_matrix(self, x_k_next, theta_k, k):
+        """
+        It computes the result of the matrix multiplication in the "walking velocities" constraint defined in the paper
+        as the below expression (formula 8).
+
+          | v_x_min | <= | cos(theta_k)     sin(theta_k) |  |   v_x_k+1     |  <= | v_x_max |
+          | v_y_min |    | -sin(theta_k)    cos(theta_k) |  | s_v * v_y_k+1 |     | v_y_max |
+
+        :param x_k_next: The state of the humanoid's system at time K+1.
+        :param theta_k: The orientation of the humanoid at time K.
+        :param k: The time step in the prediction horizon.
+        """
+        s_v = self.s_v_param[k]
+
+        local_velocities = cs.vertcat(
+            cs.cos(theta_k) * x_k_next[1] + cs.sin(theta_k) * s_v * x_k_next[3],
+            -cs.sin(theta_k) * x_k_next[1] + cs.cos(theta_k) * s_v * x_k_next[3]
+        )
+
+        return local_velocities
+
+    def _compute_leg_reachability_matrix(self, x_k, theta_k):
+        """
+        It computes the result of the matrix multiplication in the "Leg Reachability" constraint defined in the paper
+        as the below expression (formula 9).
+
+          | l_min | <= | cos(theta_k)     sin(theta_k) |  |  p_x_k  |  <= | l_max |
+          | l_max |    | -sin(theta_k)    cos(theta_k) |  |  p_y_k  |     | l_max |
+
+        :param x_k: The state of the humanoid's system at time K.
+        :param theta_k: The orientation of the humanoid at time K.
+        """
+        local_positions = cs.vertcat(
+            cs.cos(theta_k) * x_k[0] + cs.sin(theta_k) * x_k[2],
+            -cs.sin(theta_k) * x_k[0] + cs.cos(theta_k) * x_k[2]
+        )
+
+        return local_positions
+
+    def _compute_maneuverability_terms(self, x_k, theta_k, omega_k):
+        """
+        It computes the left and the right side of the "Maneuverability" constraint inequality defined in the paper
+        as the below expression (formula 10).
+
+          | cos(theta_k)     sin(theta_k) |  |  v_x_k  |   <=   v_x_max - (alpha/pi) * |omega_k|
+                                             |  v_y_k  |
+
+        :param x_k: The state of the humanoid's system at time K.
+        :param theta_k: The orientation of the humanoid at time K.
+        :param omega_k: The turning rate of the humanoid at time K.
+        """
+        velocity_term = cs.cos(theta_k) * x_k[1] + cs.sin(theta_k) * x_k[3]
+        safety_term = V_MAX[0] - (ALPHA / np.pi) * cs.fabs(omega_k)
+
+        return velocity_term, safety_term
+
+    def _compute_ldcbf(self, x_k, obstacle_vertices):
+        """
+        It computes the LDCBF constraints defined in the paper in formula 16.
+        """
+        robot_position = cs.vertcat(x_k[0], x_k[2])  # [px, py]
+
+        constraints = []
+        for i in range(len(obstacle_vertices)):
+            # i-th and (i+1)-th vertices
+            vertex = cs.MX(obstacle_vertices[i])
+            next_vertex = cs.MX(obstacle_vertices[(i + 1) % len(obstacle_vertices)])
+
+            # get the edge between previous vertices
+            edge_vector = next_vertex - vertex
+
+            # get the normal vector to such edge vector
+            normal = cs.vertcat(-edge_vector[1], edge_vector[0])
+            normal /= cs.norm_2(normal)
+
+            to_robot = robot_position - vertex
+            # closest point to the robot in the edge:
+            #       0=cos(90°)=vertex, 1=cos(0°)=next_vertex
+            # all middle values are the point (in percentage)
+            # that lies on edge and is the closest to the robot
+            projection = cs.dot(to_robot, edge_vector) / cs.norm_2(edge_vector) ** 2
+            projection = cs.fmax(0.0, cs.fmin(projection, 1.0))
+
+            # moving along edge_vector from vertex by a projection
+            # between 0 and 1, so it is a percentage of edge_vector
+            closest_point = vertex + projection * edge_vector
+
+            # LDCBF condition: normal vector points away from edge (obv)
+            # so, the following dot product tells us if we are in the safe
+            # region (>0) or not (<0)
+            h = cs.dot(normal, (robot_position - closest_point))
+
+            h_next = h + GAMMA * h
+            constraints.append(h_next >= 0)
+
+        return constraints
+
+    def _add_constraints(self):
+        """
+        Defines and adds to the MPC the constraints that the solution should satisfy in order to be physically feasible.
+        """
         # initial position constraint
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
@@ -179,8 +301,7 @@ class HumanoidMPC:
 
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
-            integration_res = self.integrate(self.X_mpc[:, k], self.U_mpc[:, k],
-                                             self.X_mpc_theta[k], self.U_mpc_omega[k])
+            integration_res = self._integrate(self.X_mpc[:, k], self.U_mpc[:, k])
             self.optim_prob.subject_to(self.X_mpc[:, k + 1] == integration_res)
             # self.optim_prob.subject_to(
             #     cs.eq(
@@ -190,18 +311,18 @@ class HumanoidMPC:
             # )
 
             # leg reachability -> prevent the over-extension of the swing leg
-            reachability = self.leg_reachability(self.X_mpc[:, k], self.X_mpc_theta[k])
+            reachability = self._compute_leg_reachability_matrix(self.X_mpc[:, k], self.X_mpc_theta[k])
             self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
 
             # walking velocities constraint
-            local_velocities = self.walking_velocities(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
+            local_velocities = self._compute_walking_velocities_matrix(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
             self.optim_prob.subject_to(local_velocities <= V_MAX)
             self.optim_prob.subject_to(local_velocities >= V_MIN)
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
-            velocity_term, turning_term = self.maneuverability(self.X_mpc[:, k], self.X_mpc_theta[k],
-                                                               self.U_mpc_omega[k])
+            velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k], self.X_mpc_theta[k],
+                                                                              self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
         # control barrier functions constraint
@@ -211,7 +332,10 @@ class HumanoidMPC:
         #     for constraint in ldcbf_constraints:
         #         self.optim_prob.subject_to(constraint)
 
-    def cost_function(self):
+    def _add_cost_function(self):
+        """
+        Defines and adds to the MPC the cost function to minimize.
+        """
         # control actions cost
         # control_cost = cs.sumsqr(cs.vertcat(self.U_mpc, self.U_mpc_omega))
         control_cost = cs.sumsqr(self.U_mpc)
@@ -224,8 +348,7 @@ class HumanoidMPC:
         distance_cost = cs.power(self.X_mpc[0, 0] - self.goal_loc_coords[0], 2) + cs.power(
             self.X_mpc[2, 0] - self.goal_loc_coords[1], 2)
         for k in range(self.N_horizon):
-            state_kp1 = self.integrate(self.X_mpc[:, k], self.U_mpc[:, k],
-                                       self.X_mpc_theta[k], self.U_mpc_omega[k])
+            state_kp1 = self._integrate(self.X_mpc[:, k], self.U_mpc[:, k])
             distance_cost += cs.power(state_kp1[0] - self.goal_loc_coords[0], 2) + cs.power(
                 state_kp1[2] - self.goal_loc_coords[1], 2)
         # distance_cost = (cs.sumsqr(self.X_mpc[0, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[0])
@@ -234,42 +357,29 @@ class HumanoidMPC:
         self.optim_prob.minimize(distance_cost)
         # self.optim_prob.minimize(distance_cost + control_cost)
 
-    def integrate(self, x_k, u_k, theta_k, omega_k):
+    def _integrate(self, x_k, u_k):
         """
-        :returns Al[:4,:4] * X_woTheta + Bl[:4, :] * U_woOmega, Al[4,4]*theta + Bl[4,2]*U_omega
+        Given the state and the input of the humanoid's system at time K, it computes the state at time K+1.
+
+        :param x_k: The state at time K.
+        :param u_k: The input at time K.
+        :returns: The state at time K+1.
         """
-        Al1 = cs.vertcat(
-            cs.horzcat(COSH, SINH / BETA, 0, 0),
-            cs.horzcat(SINH * BETA, COSH, 0, 0),
-            cs.horzcat(0, 0, COSH, SINH / BETA),
-            cs.horzcat(0, 0, SINH * BETA, COSH),
-            # DEBUG cs.horzcat(COSH, SINH / BETA, 0, 0),
-            # DEBUG cs.horzcat(SINH / BETA, COSH, 0, 0),
-            # DEBUG cs.horzcat(0, 0, COSH, SINH / BETA),
-            # DEBUG cs.horzcat(0, 0, SINH / BETA, COSH),
-        )
-        Al2 = 1
+        return (self.A_l @ x_k) + (self.B_l @ u_k)
 
-        Bl1 = cs.vertcat(
-            cs.horzcat(1 - COSH, 0),
-            cs.horzcat(-BETA * SINH, 0),
-            cs.horzcat(0, 1 - COSH),
-            cs.horzcat(0, -BETA * SINH),
-            # DEBUG cs.horzcat(1 + COSH, 0),
-            # DEBUG cs.horzcat(+BETA * SINH, 0),
-            # DEBUG cs.horzcat(0, 1 + COSH),
-            # DEBUG cs.horzcat(0, +BETA * SINH),
-        )
-        Bl2 = DELTA_T
+    def _plot(self, state_glob, input_glob):
+        """
+        It plots the trajectory of the CoM contained in state_glob and the footsteps prints contained in input_glob.
 
-        # return (Al1 @ x_k) + (Bl1 @ u_k), Al2 * theta_k + Bl2 * omega_k
-        return (Al1 @ x_k) + (Bl1 @ u_k)
-
-    def plot(self, X_pred, U_pred):
+        :param state_glob: A matrix of shape (5xN_simul+1) that represents the state of the humanoid dynamic system at
+        any instant of the simulation. The coordinates system is the one of the inertial RF.
+        :param input_glob: A matrix of shape (3xN_simul) that represents the input of the humanoid dynamic system at
+        any instant of the simulation. The coordinates system is the one of the inertial RF.
+        """
         fix, ax = plt.subplots()
 
         # Plot the start position
-        plt.plot(X_pred[0, 0], X_pred[2, 0], marker='o', color="cornflowerblue", label="Start")
+        plt.plot(state_glob[0, 0], state_glob[2, 0], marker='o', color="cornflowerblue", label="Start")
 
         # Plot the goal position
         plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
@@ -278,12 +388,12 @@ class HumanoidMPC:
         plot_polygon(obstacles)
 
         # Plot the trajectory of the CoM computed by the MPC
-        plt.plot(X_pred[0, :], X_pred[2, :], color="mediumpurple", label="Predicted Trajectory")
+        plt.plot(state_glob[0, :], state_glob[2, :], color="mediumpurple", label="Predicted Trajectory")
 
         # Plot the footsteps plan computed by the MPC
-        # plt.scatter(U_pred[0, :], U_pred[1, :], marker='o', color="forestgreen", label="ZMP")
-        for time_instant, (step_x, step_y, _) in enumerate(U_pred.T):
-            foot_orient = X_pred[4, time_instant]
+        # plt.scatter(input_glob[0, :], input_glob[1, :], marker='o', color="forestgreen", label="ZMP")
+        for time_instant, (step_x, step_y, _) in enumerate(input_glob.T):
+            foot_orient = state_glob[4, time_instant]
 
             # Create rectangle centered at the position
             rect = Rectangle((-FOOT_RECT_WIDTH / 2, -FOOT_RECT_HEIGHT / 2), FOOT_RECT_WIDTH, FOOT_RECT_HEIGHT,
@@ -303,7 +413,12 @@ class HumanoidMPC:
         plt.ylim(-2, 12)
         plt.show()
 
-    def simulation(self):
+    def run_simulation(self):
+        """
+        It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
+        to reach the goal. Then, it plots the obtained results.
+        """
+
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
         U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
         computation_time = np.zeros(self.N_simul)
@@ -359,8 +474,6 @@ class HumanoidMPC:
                                                                          X_pred_glob[0, k],
                                                                          X_pred_glob[2, k])
             U_pred_glob[:2, k] = (trans_mat_loc_to_glob @ np.append(U_pred[:2, k], 1))[:2]
-            # U_pred_glob[2, k] = self.precomputed_omega[0] + (
-            #     U_pred[2, k - 1] if k > 0 else 0)  # TODO: check this formula
             U_pred_glob[2, k] = self.precomputed_omega[0]
 
             # ===== DEBUGGING =====
@@ -372,8 +485,7 @@ class HumanoidMPC:
             # self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
 
             # compute x_k_next using x_k and u_k
-            state_res = self.integrate(X_pred[:4, k], U_pred[:2, k],
-                                       self.precomputed_theta[0], self.precomputed_omega[0])
+            state_res = self._integrate(X_pred[:4, k], U_pred[:2, k])
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
@@ -384,13 +496,12 @@ class HumanoidMPC:
             glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
             glob_vel = (rot_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1]])
             X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
-            X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]  # TODO: check this formula
+            X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]
 
             # Set X_mpc to the state derived from the computed inputs
             self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
             for i in range(self.N_horizon - 1):
-                state_res = self.integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]),
-                                           self.precomputed_theta[0], self.precomputed_omega[0])
+                state_res = self._integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]))
                 self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
 
             # Move the goal wrt the RF with origin in p_k_next and orientation theta_next
@@ -403,70 +514,7 @@ class HumanoidMPC:
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
-        self.plot(X_pred_glob, U_pred_glob)
-
-    # ===== PAPER-SPECIFIC CONSTRAINTS =====
-    def walking_velocities(self, x_k_next, theta_k, k):
-        s_v = self.s_v_param[k]
-
-        local_velocities = cs.vertcat(
-            cs.cos(theta_k) * x_k_next[1] + cs.sin(theta_k) * s_v * x_k_next[3],
-            -cs.sin(theta_k) * x_k_next[1] + cs.cos(theta_k) * s_v * x_k_next[3]
-        )
-
-        return local_velocities
-
-    def leg_reachability(self, x_k, theta_k):
-        local_positions = cs.vertcat(
-            cs.cos(theta_k) * x_k[0] + cs.sin(theta_k) * x_k[2],
-            -cs.sin(theta_k) * x_k[0] + cs.cos(theta_k) * x_k[2]
-        )
-
-        return local_positions
-
-    def maneuverability(self, x_k, theta_k, omega_k):
-        velocity_term = cs.cos(theta_k) * x_k[1] + cs.sin(theta_k) * x_k[3]
-        safety_term = V_MAX[0] - (ALPHA / np.pi) * cs.fabs(omega_k)
-
-        return velocity_term, safety_term
-
-    def compute_ldcbf(self, x_k, obstacle_vertices):
-        robot_position = cs.vertcat(x_k[0], x_k[2])  # [px, py]
-
-        constraints = []
-        for i in range(len(obstacle_vertices)):
-            # i-th and (i+1)-th vertices
-            vertex = cs.MX(obstacle_vertices[i])
-            next_vertex = cs.MX(obstacle_vertices[(i + 1) % len(obstacle_vertices)])
-
-            # get the edge between previous vertices
-            edge_vector = next_vertex - vertex
-
-            # get the normal vector to such edge vector
-            normal = cs.vertcat(-edge_vector[1], edge_vector[0])
-            normal /= cs.norm_2(normal)
-
-            to_robot = robot_position - vertex
-            # closest point to the robot in the edge:
-            #       0=cos(90°)=vertex, 1=cos(0°)=next_vertex
-            # all middle values are the point (in percentage)
-            # that lies on edge and is the closest to the robot
-            projection = cs.dot(to_robot, edge_vector) / cs.norm_2(edge_vector) ** 2
-            projection = cs.fmax(0.0, cs.fmin(projection, 1.0))
-
-            # moving along edge_vector from vertex by a projection
-            # between 0 and 1, so it is a percentage of edge_vector
-            closest_point = vertex + projection * edge_vector
-
-            # LDCBF condition: normal vector points away from edge (obv)
-            # so, the following dot product tells us if we are in the safe
-            # region (>0) or not (<0)
-            h = cs.dot(normal, (robot_position - closest_point))
-
-            h_next = h + GAMMA * h
-            constraints.append(h_next >= 0)
-
-        return constraints
+        self._plot(X_pred_glob, U_pred_glob)
 
 
 if __name__ == "__main__":
@@ -481,13 +529,4 @@ if __name__ == "__main__":
         obstacles=obstacles
     )
 
-    step0 = [0, 0, 0, 0]
-    input0 = [-0.19396392946460198, 0.0]
-    step1 = mpc.integrate(step0, input0, 0, 0)
-    input1 = [0.7343380395416466, 0]
-    step2 = mpc.integrate(step1, input1, 0, 0)
-    input2 = [-0.3879278589277293, 0]
-    step3 = mpc.integrate(step2, input2, 0, 0)
-    print()
-
-    mpc.simulation()
+    mpc.run_simulation()
