@@ -23,7 +23,7 @@ GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
 M_CONVERSION = 1  # everything is expressed wrt meters -> use this to change the unit measure
-ALPHA = 3.6  # paper refers to Digit robot (1.44 or 3.6?)
+ALPHA = 3.66  # paper refers to Digit robot (1.44 or 3.6?)
 GAMMA = 0.3  # used in CBF
 L_MAX = 0.17320508075 * M_CONVERSION  # 0.1*sqrt(3)
 V_MIN = [M_CONVERSION * -0.1, M_CONVERSION * 0.1]  # [-0.1, 0.1]
@@ -103,8 +103,6 @@ class HumanoidMPC:
         self.obstacles = obstacles
         self.precomputed_omega = None
         self.precomputed_theta = None
-        self.precomputed_omega_full = None
-        self.precomputed_theta_full = None
 
         # Make sure that the goal and the obstacles are given
         assert (self.goal is not None and self.obstacles is not None)
@@ -183,17 +181,16 @@ class HumanoidMPC:
         """
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
         goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
-        target_heading_angle = cs.atan2(goal_loc_coords[1] - start_state[2], goal_loc_coords[0] - start_state[0])
+        target_heading_angle = (cs.atan2(goal_loc_coords[1] - start_state[2], goal_loc_coords[0] - start_state[0])
+                                - start_state_theta)
 
-        # omegas (turning rate)
+        # Compute the turning rate for this prediction horizon
         self.precomputed_omega = [
-            cs.fmin(cs.fmax((target_heading_angle - start_state_theta) / self.N_horizon, self.OMEGA_MIN),
-                    self.OMEGA_MAX)
-            # avoid sharp turns
+            cs.fmin(cs.fmax(target_heading_angle, self.OMEGA_MIN), self.OMEGA_MAX)
             for _ in range(self.N_horizon)
         ]
 
-        # thetas (heading angles)
+        # Compute the humanoid's orientation for this prediction horizon
         self.precomputed_theta = [start_state_theta]  # initial theta
         for k in range(self.N_horizon):
             self.precomputed_theta.append(
@@ -538,7 +535,7 @@ if __name__ == "__main__":
         N_horizon=3,
         N_simul=300,
         sampling_time=DELTA_T,
-        goal=(0, 10),
+        goal=(0, 5),
         obstacles=obstacles
     )
 
