@@ -26,7 +26,6 @@ class UnicycleHelper:
         :param k_param: The value of the translational velocity path at 0 and 1, i.e. v_s(0) = v_s(1) = k_param.
         :param is_for_x: Whether it has to compute the path for X or for Y.
         """
-        k_param = 10
         sin_or_cos = np.cos if is_for_x else np.sin
         # Compute the polynomial coefficients
         a = init_coordinate
@@ -113,7 +112,7 @@ class UnicycleHelper:
         v_peak = UnicycleHelper._compute_peak_in_function(s, v_s)
         omega_peak = UnicycleHelper._compute_peak_in_function(s, omega_s)
 
-        return max(v_max / v_peak, omega_max / omega_peak)
+        return min(v_max / v_peak, omega_max / omega_peak)
 
     @staticmethod
     def compute_unicycle_params_trajectory(start_position: np.ndarray, goal_position: np.ndarray,
