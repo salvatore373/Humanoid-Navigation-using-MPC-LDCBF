@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
 
-from HumanoidNavigation.MPC.UnicycleHelper import UnicycleHelper
 from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
 
 """ The width and the height of the rectangle representing the feet in the plot"""
@@ -200,41 +199,6 @@ class HumanoidMPC:
             self.precomputed_theta.append(
                 self.precomputed_theta[-1] + self.precomputed_omega[k] * self.sampling_time
             )
-
-    def _init_precomputation_theta_omega_unicycle(self, start_posit, start_theta):
-        """
-        It computes the theta and omega used by a unicycle to from the given start_posit (where the robot has the
-        orientation start_theta) to the goal position (with any orientation). The duration of the trajectory is N_simul
-        and the velocity bounds of the humanoid are taken into account. Theta is w.r.t. inertial RF.
-
-        :returns: A tuple containing two matrices. Both have dimension (1xN_simul). The matrix at index 0 is the
-         evolution of the orientation of the unicycle while trying to reach the goal. While the matrix at index 1 is the
-         evolution of the rate of change of the orientation of the unicycle while trying to reach the goal.
-        """
-        (_, _, _, _, _, _, theta, _, omega) = UnicycleHelper.compute_unicycle_params_trajectory(
-            start_position=start_posit, start_orientation=start_theta,
-            goal_position=self.optim_prob.value(self.goal_loc_coords), goal_orientation=0.0,
-            num_timesteps=self.N_simul, omega_max=self.OMEGA_MAX, v_max=V_MAX[0],
-        )
-        return theta, omega
-
-    def _precompute_theta_omega_unicycle(self, global_timestep):
-        """
-        It computes the next values of theta and omega along the prediction horizon (according to the current time step
-        in the simulation), defined as the ones of a unicycle that tries to reach the goal position from the initial
-        state.
-
-        :param global_timestep: The time step w.r.t. the simulation horizon.
-        """
-        # Get the values of theta and omega in the inertial RF
-        theta_glob = self.precomputed_theta_full[global_timestep:global_timestep + self.N_horizon + 1]
-        self.precomputed_omega = self.precomputed_omega_full[global_timestep:global_timestep + self.N_horizon + 1]
-
-        # Convert theta from the inertial to the local RF
-        sum_prev_angles = self.precomputed_theta_full[max(global_timestep - 1, 0): global_timestep + self.N_horizon]
-        if global_timestep == 0:  # If global_timestep will have one component less than theta_glob, then add it
-            sum_prev_angles = np.insert(sum_prev_angles, 0, 0)
-        self.precomputed_theta = theta_glob - sum_prev_angles
 
     def _compute_walking_velocities_matrix(self, x_k_next, theta_k, k):
         """
@@ -475,18 +439,13 @@ class HumanoidMPC:
         # The position of the footsteps in the global frame at each step of the simulation
         U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
 
-        # Precompute theta and omega
-        if use_unicycle_precomputation:
-            self.precomputed_theta_full, self.precomputed_omega_full = \
-                self._init_precomputation_theta_omega_unicycle(np.array([0, 0]), 0)
-
         last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
             # Stop searching for the solution if the value of the optimization function with the solution
             # of the previous step is low enough.
             if last_obj_fun_val < 0.05:
-                X_pred_glob = X_pred_glob[:, :k+1]
-                U_pred_glob = U_pred_glob[:, :k+1]
+                X_pred_glob = X_pred_glob[:, :k + 1]
+                U_pred_glob = U_pred_glob[:, :k + 1]
                 break
 
             starting_iter_time = time.time()  # CLOCK
@@ -499,10 +458,7 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon])
 
             # Precompute theta and omega for the current prediction horizon
-            if use_unicycle_precomputation:
-                self._precompute_theta_omega_unicycle(k)
-            else:
-                self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
+            self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
             for i in range(self.N_horizon + 1):
                 self.optim_prob.set_value(self.X_mpc_theta[i], self.precomputed_theta[i])
             for i in range(self.N_horizon):
