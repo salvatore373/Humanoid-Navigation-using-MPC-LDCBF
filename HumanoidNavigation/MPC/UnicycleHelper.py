@@ -11,8 +11,9 @@ class UnicycleHelper:
     """
 
     @staticmethod
-    def _comp_unicycle_pos_vel_acc_component(s, init_coordinate, goal_coordinate, theta_i, theta_f,
-                                             is_for_x: bool = True):
+    def _comp_unicycle_pos_vel_acc_component(s: Symbol, init_coordinate: float, goal_coordinate: float,
+                                             theta_i: float, theta_f: float,
+                                             k_param: float, is_for_x: bool = True):
         """
         Given the initial and goal states of the unicycle, compute the x or y path (in terms of position, velocity and
          acceleration) as functions of a parameter time contained in [0, 1].
@@ -22,15 +23,17 @@ class UnicycleHelper:
         :param goal_coordinate: The final X or Y coordinate of the unicycle.
         :param theta_i: The initial orientation of the unicycle.
         :param theta_f: The final orientation of the unicycle.
+        :param k_param: The value of the translational velocity path at 0 and 1, i.e. v_s(0) = v_s(1) = k_param.
         :param is_for_x: Whether it has to compute the path for X or for Y.
         """
-        k = 10
+        k_param = 10
         sin_or_cos = np.cos if is_for_x else np.sin
         # Compute the polynomial coefficients
         a = init_coordinate
-        b = k * sin_or_cos(theta_i)
-        c = 3 * goal_coordinate - 3 * init_coordinate - k * sin_or_cos(theta_f) - 2 * k * sin_or_cos(theta_i)
-        d = 2 * init_coordinate - 2 * goal_coordinate + k * sin_or_cos(theta_f) + k * sin_or_cos(theta_i)
+        b = k_param * sin_or_cos(theta_i)
+        c = (3 * goal_coordinate - 3 * init_coordinate - k_param * sin_or_cos(theta_f) -
+             2 * k_param * sin_or_cos(theta_i))
+        d = 2 * init_coordinate - 2 * goal_coordinate + k_param * sin_or_cos(theta_f) + k_param * sin_or_cos(theta_i)
 
         # Plug the coefficients in the polynomials to get the path expression
         return (a + b * s + c * np.power(s, 2) + d * np.power(s, 3),  # position path
@@ -38,7 +41,7 @@ class UnicycleHelper:
                 2 * c + 6 * d * s)  # acceleration path
 
     @staticmethod
-    def compute_unicycle_params(s, initial_state, goal_state) -> \
+    def compute_unicycle_params(s: Symbol, initial_state: np.ndarray, goal_state: np.ndarray, init_fin_vel: float) -> \
             tuple[Expr, Expr, Expr, Expr, Expr, Expr, Expr, Expr, Expr]:
         """
         Given the initial and goal states of the unicycle, compute x, y, x_dot, y_dot, theta, v, omega as functions of
@@ -47,6 +50,8 @@ class UnicycleHelper:
         :param s: The parameter of the path: a variable contained in [0, 1].
         :param initial_state: The initial configuration of the unicycle, in the form (x, y, theta).
         :param goal_state: The final configuration of the unicycle, in the form (x, y, theta).
+        :param init_fin_vel: The value of the translational velocity path at 0 and 1,
+        i.e. v_s(0) = v_s(1) = init_fin_vel.
         :return: x, y, x_dot, y_dot, theta, v, omega as functions of a parameter contained in [0, 1].
         """
         # Get the start and goal configurations
@@ -55,9 +60,9 @@ class UnicycleHelper:
 
         # Compute the unicycle parameters
         x, x_dot, x_ddot = UnicycleHelper._comp_unicycle_pos_vel_acc_component(s, x_i, x_f, theta_i, theta_f,
-                                                                               is_for_x=True)
+                                                                               k_param=init_fin_vel, is_for_x=True)
         y, y_dot, y_ddot = UnicycleHelper._comp_unicycle_pos_vel_acc_component(s, y_i, y_f, theta_i, theta_f,
-                                                                               is_for_x=False)
+                                                                               k_param=init_fin_vel, is_for_x=False)
         theta = sym.atan2(y_dot, x_dot)
         v = sym.sqrt(sym.Pow(x_dot, 2) + sym.Pow(y_dot, 2))
         omega = (y_ddot * x_dot - y_dot * x_ddot) / (sym.Pow(x_dot, 2) + sym.Pow(y_dot, 2))
@@ -133,37 +138,24 @@ class UnicycleHelper:
 
         init_state = np.insert(start_position, 2, start_orientation)
         goal_state = np.insert(goal_position, 2, goal_orientation)
-        (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega) = (
-            UnicycleHelper.compute_unicycle_params(s, init_state, goal_state))
-
-        # Prove it visually
-        from sympy.plotting import plot
-        plot(omega, (s, 0, 1))
+        (x_tilde, x_prime, x_second, y_tilde, y_prime, y_second, theta_tilde, v_tilde, omega_tilde) = (
+            UnicycleHelper.compute_unicycle_params(s, init_state, goal_state, v_max))
 
         # Turn the path into a trajectory with a linear timing law
         t = sym.symbols('t', nonnegative=True)
-        alpha = 0.0001
-        # alpha = UnicycleHelper._compute_alpha_for_timing_law(s, v, omega, v_max, omega_max)
+        # alpha = 0.7
+        alpha = UnicycleHelper._compute_alpha_for_timing_law(s, v_tilde, omega_tilde, v_max, omega_max)
         tim_law = alpha * t
         time_interval = np.linspace(0, 1 / alpha, num_timesteps)
         # Turn the path into a trajectory
+        x_dot = x_prime * alpha
+        y_dot = y_prime * alpha
+        x_ddot = x_second * alpha + x_prime * 0
+        y_ddot = y_second * alpha + y_prime * 0
+        v = v_tilde * alpha
+        omega = omega_tilde * alpha
         (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega) = (
-            sym.lambdify(t, f.subs(s, tim_law), 'numpy') for f in (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega))
-
-        # Prove it visually
-        from sympy.plotting import plot
-        plot(omega, (t, 0, 1 / alpha))
+            sym.lambdify(t, f.subs(s, tim_law), 'numpy') for f in
+            (x_tilde, x_dot, x_ddot, y_tilde, y_dot, y_ddot, theta_tilde, v, omega))
 
         return (f(time_interval) for f in (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega))
-
-
-if __name__ == '__main__':
-    UnicycleHelper.compute_unicycle_params_trajectory(
-        (0, 0),
-        (10, 10),
-        0,
-        0,
-        25,
-        5,
-        5,
-    )

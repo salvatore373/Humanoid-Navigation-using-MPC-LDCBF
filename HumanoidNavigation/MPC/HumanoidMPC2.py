@@ -205,7 +205,7 @@ class HumanoidMPC:
         """
         It computes the theta and omega used by a unicycle to from the given start_posit (where the robot has the
         orientation start_theta) to the goal position (with any orientation). The duration of the trajectory is N_simul
-        and the velocity bounds of the humanoid are taken into account.
+        and the velocity bounds of the humanoid are taken into account. Theta is w.r.t. inertial RF.
 
         :returns: A tuple containing two matrices. Both have dimension (1xN_simul). The matrix at index 0 is the
          evolution of the orientation of the unicycle while trying to reach the goal. While the matrix at index 1 is the
@@ -226,7 +226,15 @@ class HumanoidMPC:
 
         :param global_timestep: The time step w.r.t. the simulation horizon.
         """
-        pass
+        # Get the values of theta and omega in the inertial RF
+        theta_glob = self.precomputed_theta_full[global_timestep:global_timestep + self.N_horizon + 1]
+        self.precomputed_omega = self.precomputed_omega_full[global_timestep:global_timestep + self.N_horizon + 1]
+
+        # Convert theta from the inertial to the local RF
+        sum_prev_angles = self.precomputed_theta_full[max(global_timestep - 1, 0): global_timestep + self.N_horizon]
+        if global_timestep == 0:  # If global_timestep will have one component less than theta_glob, then add it
+            sum_prev_angles = np.insert(sum_prev_angles, 0, 0)
+        self.precomputed_theta = theta_glob - sum_prev_angles
 
     def _compute_walking_velocities_matrix(self, x_k_next, theta_k, k):
         """
@@ -488,8 +496,11 @@ class HumanoidMPC:
             # Set whether the following steps should be with right or left foot
             self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon])
 
-            # precompute compute theta and omega
-            self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
+            # Precompute theta and omega for the current prediction horizon
+            if use_unicycle_precomputation:
+                self._precompute_theta_omega_unicycle(k)
+            else:
+                self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
             for i in range(self.N_horizon + 1):
                 self.optim_prob.set_value(self.X_mpc_theta[i], self.precomputed_theta[i])
             for i in range(self.N_horizon):
