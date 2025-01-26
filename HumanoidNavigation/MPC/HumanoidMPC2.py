@@ -485,6 +485,8 @@ class HumanoidMPC:
             # Stop searching for the solution if the value of the optimization function with the solution
             # of the previous step is low enough.
             if last_obj_fun_val < 0.05:
+                X_pred_glob = X_pred_glob[:, :k+1]
+                U_pred_glob = U_pred_glob[:, :k+1]
                 break
 
             starting_iter_time = time.time()  # CLOCK
