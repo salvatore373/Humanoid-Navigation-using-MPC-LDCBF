@@ -442,7 +442,7 @@ class HumanoidMPC:
 
             # Create rectangle centered at the position
             rect = Rectangle((-FOOT_RECT_WIDTH / 2, -FOOT_RECT_HEIGHT / 2), FOOT_RECT_WIDTH, FOOT_RECT_HEIGHT,
-                             color='blue' if self.s_v == self.RIGHT_FOOT else 'green', alpha=0.7)
+                             color='blue' if self.s_v[time_instant] == self.RIGHT_FOOT else 'green', alpha=0.7)
             # Apply rotation
             t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
                  matplotlib.transforms.Affine2D().translate(step_x, step_y) + ax.transData)
