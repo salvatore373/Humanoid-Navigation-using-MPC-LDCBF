@@ -5,8 +5,10 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Rectangle
+from scipy.spatial import ConvexHull
 
-from HumanoidNavigation.Utils.obstacles_no_sympy import generate_random_convex_polygon, plot_polygon
+from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
+from HumanoidNavigation.Utils.obstacles_no_sympy import plot_polygon
 
 """ The width and the height of the rectangle representing the feet in the plot"""
 FOOT_RECT_WIDTH = 0.5
@@ -100,7 +102,7 @@ class HumanoidMPC:
         self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
         self.goal = goal
-        self.obstacles = obstacles
+        self.obstacles: list[ConvexHull] = obstacles
         self.precomputed_omega = None
         self.precomputed_theta = None
 
@@ -253,47 +255,6 @@ class HumanoidMPC:
 
         return velocity_term, safety_term
 
-    def _compute_ldcbf(self, x_k, obstacle_vertices):
-        """
-        It computes the LDCBF constraints defined in the paper in formula 16.
-        """
-        robot_position = cs.vertcat(x_k[0], x_k[2])  # [px, py]
-
-        constraints = []
-        for i in range(len(obstacle_vertices)):
-            # i-th and (i+1)-th vertices
-            vertex = cs.MX(obstacle_vertices[i])
-            next_vertex = cs.MX(obstacle_vertices[(i + 1) % len(obstacle_vertices)])
-
-            # get the edge between previous vertices
-            edge_vector = next_vertex - vertex
-
-            # get the normal vector to such edge vector
-            normal = cs.vertcat(-edge_vector[1], edge_vector[0])
-            normal /= cs.norm_2(normal)
-
-            to_robot = robot_position - vertex
-            # closest point to the robot in the edge:
-            #       0=cos(90°)=vertex, 1=cos(0°)=next_vertex
-            # all middle values are the point (in percentage)
-            # that lies on edge and is the closest to the robot
-            projection = cs.dot(to_robot, edge_vector) / cs.norm_2(edge_vector) ** 2
-            projection = cs.fmax(0.0, cs.fmin(projection, 1.0))
-
-            # moving along edge_vector from vertex by a projection
-            # between 0 and 1, so it is a percentage of edge_vector
-            closest_point = vertex + projection * edge_vector
-
-            # LDCBF condition: normal vector points away from edge (obv)
-            # so, the following dot product tells us if we are in the safe
-            # region (>0) or not (<0)
-            h = cs.dot(normal, (robot_position - closest_point))
-
-            h_next = h + GAMMA * h
-            constraints.append(h_next >= 0)
-
-        return constraints
-
     def _add_constraints(self):
         """
         Defines and adds to the MPC the constraints that the solution should satisfy in order to be physically feasible.
@@ -331,12 +292,25 @@ class HumanoidMPC:
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
-        # control barrier functions constraint
-        # for k in range(self.N_horizon):
-        #     ldcbf_constraints = self.compute_ldcbf(self.X_mpc[:, k], self.obstacles)
-        #
-        #     for constraint in ldcbf_constraints:
-        #         self.optim_prob.subject_to(constraint)
+        # TODO: recompute at each step of the simulation
+        # Add the control barrier functions constraint
+        for k in range(self.N_horizon):
+            # Add one constraint for each obstacle in the map
+            for obstacle in self.obstacles:
+                # TODO:
+                #  Convert the obstacle's points in the local RF (i.e. the one of the state)
+                local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
+                    obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
+                        # TODO: fill here
+                    )
+                )
+                #  Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y)
+                #  Compute the normal vector from (com_x, com_y) to c
+                c, normal_vector = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(
+                    x=self.X_mpc[:, k], polygon=local_obstacle,
+                )
+                #  Define the constraint etaT(x_mpc[k] − c) >= 0 and add it to the problem
+                pass
 
     def _add_cost_function(self):
         """
@@ -529,14 +503,14 @@ class HumanoidMPC:
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacles = generate_random_convex_polygon(5, (3, 4), (13, 4))
+    obstacles = ObstaclesUtils.generate_random_convex_polygon(5, (3, 4), (13, 4))
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=DELTA_T,
         goal=(0, 5),
-        obstacles=obstacles
+        obstacles=[obstacles]
     )
 
     mpc.run_simulation(
