@@ -138,6 +138,11 @@ class HumanoidMPC:
         self.goal_loc_coords = self.optim_prob.parameter(2, 1)  # goal_x, goal_y
         self.optim_prob.set_value(self.goal_loc_coords, (glob_to_loc_mat @ [self.goal[0], self.goal[1], 1])[:2])
 
+        # Define a vector of parameters that can be either 0 or 1, used to activate or deactivate the LCBFs of a
+        # specific simulation timestep.
+        self.lcbf_activation_params = self.optim_prob.parameter(1, self.N_simul)
+        self.optim_prob.set_value(self.lcbf_activation_params, np.ones(self.N_simul))
+
         # Add the constraints to the objective function
         self._add_constraints()
 
@@ -263,8 +268,8 @@ class HumanoidMPC:
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
         # goal constraint (only in position)
-        # self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon] == self.goal[0])
-        # self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon] == self.goal[2])
+        # self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon-1] == self.goal[0])
+        # self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon-1] == self.goal[1])
 
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
@@ -292,44 +297,84 @@ class HumanoidMPC:
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
-    def _add_lcbf_constraint(self, optimization_problem: cs.Opti, glob_theta_k: float,
-                             glob_x_k: float, glob_y_k: float):
+    # def _add_lcbf_constraint(self, simul_k: int, list_c: list[np.ndarray], list_normal_vectors: list[np.ndarray]):
+    def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
+                             glob_y_k: float):
         """
-        Adds the constraint of the Linear Control Barrier Function (LCBF) to the given optimization problem.
+        Adds the constraint of the Linear Control Barrier Function (LCBF) to the optimization problem for the current
+        simulation timestep K.
         This is based on the obstacles that are currently surrounding the robot and on the humanoid's position.
 
-        :param optimization_problem: The instance of the optimization problem where the constraints will be added.
+        :param simul_k: The current simulation timestep.
+        :param loc_x_k: The CoM X-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
+        :param loc_y_k: The CoM Y-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
         :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
         :param glob_x_k: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
         :param glob_y_k: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+
+        :param simul_k: The current simulation timestep.
+        :param list_c: The list of the closest point of each obstacle's edge from the humanoid's position. This is the
+        result of self._get_list_c_and_eta(). The obstacle should be considered in local coordinates.
+        :param list_normal_vectors: The list of the vectors of the humanoid's positions from each obstacle's C point.
+        This is the result of self._get_list_c_and_eta(). The obstacle should be considered in local coordinates.
         """
+        # For each obstacle, determine the point C on the edge closest to the current humanoid's position X,
+        # and the normal vector connecting X to C
+        list_c, list_norm_vecs = self._get_list_c_and_eta(
+            loc_x_k=loc_x_k, loc_y_k=loc_y_k,
+            glob_x_k=glob_x_k, glob_y_k=glob_y_k, glob_theta_k=glob_theta_k,
+        )
+        list_c_and_norm_vecs = zip(list_c, list_norm_vecs)
 
-        # X_pred_glob[4, k + 1],
-        # X_pred_glob[0, k + 1],
-        # X_pred_glob[2, k + 1]
+        # Deactivate all the LCBF constraints relative to the previous simulation timesteps
+        if simul_k > 0:
+            self.optim_prob.set_value(self.lcbf_activation_params[:simul_k], np.zeros(simul_k))
 
-        # TODO: recompute at each step of the simulation
         # Add the control barrier functions constraint
         for k in range(self.N_horizon):
             # Get the vector of the CoM position from the current state
             pos_from_state = np.array([self.X_mpc[0, k], self.X_mpc[2, k]])
+            pos_from_state_cs = cs.vertcat(pos_from_state[0], pos_from_state[1])
 
             # Add one constraint for each obstacle in the map
-            for obstacle in self.obstacles:
-                #  Convert the obstacle's points in the local RF (i.e. the one of the state)
-                local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
-                    obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
-                        glob_theta_k, glob_x_k, glob_y_k
-                    )
+            for c, normal_vector in list_c_and_norm_vecs:
+                lcbf_constr = normal_vector.T @ (pos_from_state_cs - c)
+                self.optim_prob.subject_to(cs.power(lcbf_constr, self.lcbf_activation_params[simul_k]) >= 0)
+
+    def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
+                            glob_y_k: float):
+        """
+        It computes the list of the points C and the normal vectors Eta, which are defined for each obstacle as the
+        point on the obstacle's edge that is closest to the robot's position, and the vector from the robot's position
+        to C.
+
+        :param loc_x_k: The CoM X-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
+        :param loc_y_k: The CoM Y-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
+        :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_x_k: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_y_k: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        """
+        list_c, list_norm_vec = [], []
+        # Get the vector of the CoM position from the current state
+        pos_from_state = np.array([loc_x_k, loc_y_k])
+
+        # Add one constraint for each obstacle in the map
+        for obstacle in self.obstacles:
+            #  Convert the obstacle's points in the local RF (i.e. the one of the state)
+            local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
+                obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
+                    glob_theta_k, glob_x_k, glob_y_k
                 )
-                # Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y) and compute
-                # the normal vector from (com_x, com_y) to c
-                c, normal_vector = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(
-                    x=pos_from_state, polygon=local_obstacle, unitary_normal_vector=True,
-                )
-                # Define the constraint etaT(x_mpc[k] − c) >= 0 and add it to the problem
-                optimization_problem.subject_to(normal_vector.T @ (pos_from_state - c) >= 0)
-                pass
+            )
+            # Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y) and compute
+            # the normal vector from (com_x, com_y) to c
+            c, normal_vector = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(
+                x=pos_from_state, polygon=local_obstacle, unitary_normal_vector=True,
+            )
+            list_c.append(c)
+            list_norm_vec.append(normal_vector)
+
+        return list_c, list_norm_vec
 
     def _add_cost_function(self):
         """
@@ -384,7 +429,8 @@ class HumanoidMPC:
         plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
 
         # Plot the obstacles
-        plot_polygon(obstacles)
+        for obstacle in self.obstacles:
+            plot_polygon(obstacle.points[obstacle.vertices])
 
         # Plot the trajectory of the CoM computed by the MPC
         plt.plot(state_glob[0, :], state_glob[2, :], color="mediumpurple", label="Predicted Trajectory")
@@ -420,6 +466,7 @@ class HumanoidMPC:
         :param use_unicycle_precomputation: Whether the theta and omega values of the humanoid should be the ones of a
          unicycle that tries to reach the goal position.
         """
+        # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
         U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
         computation_time = np.zeros(self.N_simul)
@@ -439,6 +486,11 @@ class HumanoidMPC:
                 break
 
             starting_iter_time = time.time()  # CLOCK
+
+            # Add the LCBF constraints based on the current humanoid's position
+            self._add_lcbf_constraint(k, loc_x_k=X_pred[0, k], loc_y_k=X_pred[2, k],
+                                      glob_x_k=X_pred_glob[0, k], glob_y_k=X_pred_glob[2, k],
+                                      glob_theta_k=X_pred_glob[4, k])
 
             # Set the initial state
             self.optim_prob.set_value(self.x0, X_pred[:4, k])
@@ -466,6 +518,8 @@ class HumanoidMPC:
                 print(self.optim_prob.debug.value(U_pred))
                 print("===== EXCEPTION =====")
                 print(e)
+                print("===== INFEASIBILITIES =====")
+                print(self.optim_prob.debug.show_infeasibilities())
                 exit(1)
 
             # get u_k
