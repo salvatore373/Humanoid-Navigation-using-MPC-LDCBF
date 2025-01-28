@@ -14,41 +14,15 @@ from HumanoidNavigation.Utils.obstacles_no_sympy import plot_polygon
 FOOT_RECT_WIDTH = 0.5
 FOOT_RECT_HEIGHT = 0.2
 
-"""
-    This is the implementation related to our reference paper (3D Lip Dynamics with Heading angle and control barrier functions)
-    humanoid state: [p_x, v_x, p_y, v_y, theta] = [com_pos_x, com_vel_x, com_pos_y, com_vel_y, heading_angle]
-    humanoid control: [f_x, f_y, omega] = [stance_foot_pos_x, stance_foot_pos_y, turning_rate]
-"""
-# SALVO DELTA_T = 1e-3
-DELTA_T = 0.4  # SALVO
+# Definition of some constants related to the humanoid's motion
+DELTA_T = 0.4
 GRAVITY_CONST = 9.81
 COM_HEIGHT = 1
 BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
-M_CONVERSION = 1  # everything is expressed wrt meters -> use this to change the unit measure
-ALPHA = 3.66  # paper refers to Digit robot (1.44 or 3.6?)
-GAMMA = 0.3  # used in CBF
-L_MAX = 0.17320508075 * M_CONVERSION  # 0.1*sqrt(3)
-V_MIN = [M_CONVERSION * -0.1, M_CONVERSION * 0.1]  # [-0.1, 0.1]
-V_MAX = [M_CONVERSION * 0.8, M_CONVERSION * 0.4]  # [0.8, 0.4]
-
-COSH = cs.cosh(BETA * DELTA_T)
-SINH = cs.sinh(BETA * DELTA_T)
-
-AD = cs.vertcat(
-    cs.horzcat(COSH, SINH / BETA, 0, 0, 0),
-    cs.horzcat(SINH * BETA, COSH, 0, 0, 0),
-    cs.horzcat(0, 0, COSH, SINH / BETA, 0),
-    cs.horzcat(0, 0, SINH * BETA, COSH, 0),
-    cs.horzcat(0, 0, 0, 0, 1)
-)
-
-BD = cs.vertcat(
-    cs.horzcat(1 - COSH, 0, 0),
-    cs.horzcat(-BETA * SINH, 0, 0),
-    cs.horzcat(0, 1 - COSH, 0),
-    cs.horzcat(0, -BETA * SINH, 0),
-    cs.horzcat(0, 0, DELTA_T)
-)
+ALPHA = 3.66  # (1.44 or 3.6)
+L_MAX = 0.17320508075  # 0.1*sqrt(3)
+V_MIN = [-0.1, 0.1]
+V_MAX = [0.8, 0.4]
 
 
 class HumanoidMPC:
@@ -66,6 +40,8 @@ class HumanoidMPC:
     OMEGA_MIN = -OMEGA_MAX
 
     # The drift matrix of the humanoid's dynamic model
+    COSH = cs.cosh(BETA * DELTA_T)
+    SINH = cs.sinh(BETA * DELTA_T)
     A_l = cs.vertcat(
         cs.horzcat(COSH, SINH / BETA, 0, 0),
         cs.horzcat(SINH * BETA, COSH, 0, 0),
@@ -81,7 +57,7 @@ class HumanoidMPC:
     )
 
     def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
-                 start_with_right_foot: bool = True):
+                 start_with_right_foot: bool = True, verbosity: int = 1):
         """
         Initialize the MPC.
 
@@ -91,15 +67,11 @@ class HumanoidMPC:
         :param N_simul: The number of time steps in the simulation.
         :param sampling_time: The duration of a single time step in seconds.
         :param start_with_right_foot: Whether the first stance foot should be the right or left one.
+        :param verbosity: The level of verbosity of the logs. It ranges between 1 and 3.
         """
         self.N_horizon = N_horizon
         self.N_simul = N_simul
         self.sampling_time = sampling_time
-
-        self.optim_prob = cs.Opti()
-        p_opts = dict(print_time=False, verbose=True, expand=True)
-        s_opts = dict(print_level=3)
-        self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
         self.goal = goal
         self.obstacles: list[ConvexHull] = obstacles
@@ -111,6 +83,12 @@ class HumanoidMPC:
 
         self.state_dim = 4
         self.control_dim = 2
+
+        # Create the instance of the optimization problem inside the MPC
+        self.optim_prob = cs.Opti()
+        p_opts = dict(print_time=False, verbose=True, expand=True)
+        s_opts = dict(print_level=verbosity)
+        self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
         # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
         # -1 if the stance is the left foot.
@@ -130,7 +108,7 @@ class HumanoidMPC:
         self.x0_theta = self.optim_prob.parameter(1)
 
         # Set the initial state
-        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))  # DEBUG
+        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))  # TODO: get initial state from input
         self.optim_prob.set_value(self.x0_theta, 0)
 
         # Define the goal local coordinates as a parameter
@@ -267,20 +245,10 @@ class HumanoidMPC:
         # initial position constraint
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
-        # goal constraint (only in position)
-        # self.optim_prob.subject_to(self.X_mpc[0, self.N_horizon-1] == self.goal[0])
-        # self.optim_prob.subject_to(self.X_mpc[2, self.N_horizon-1] == self.goal[1])
-
         # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
             integration_res = self._integrate(self.X_mpc[:, k], self.U_mpc[:, k])
             self.optim_prob.subject_to(self.X_mpc[:, k + 1] == integration_res)
-            # self.optim_prob.subject_to(
-            #     cs.eq(
-            #         cs.vertcat(self.X_mpc[:, k + 1]),
-            #         integration_res
-            #     )
-            # )
 
             # leg reachability -> prevent the over-extension of the swing leg
             reachability = self._compute_leg_reachability_matrix(self.X_mpc[:, k], self.X_mpc_theta[k])
@@ -297,7 +265,6 @@ class HumanoidMPC:
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
-    # def _add_lcbf_constraint(self, simul_k: int, list_c: list[np.ndarray], list_normal_vectors: list[np.ndarray]):
     def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
                              glob_y_k: float):
         """
@@ -436,7 +403,6 @@ class HumanoidMPC:
         plt.plot(state_glob[0, :], state_glob[2, :], color="mediumpurple", label="Predicted Trajectory")
 
         # Plot the footsteps plan computed by the MPC
-        # plt.scatter(input_glob[0, :], input_glob[1, :], marker='o', color="forestgreen", label="ZMP")
         for time_instant, (step_x, step_y, _) in enumerate(input_glob.T):
             foot_orient = state_glob[4, time_instant]
 
@@ -452,19 +418,14 @@ class HumanoidMPC:
             ax.add_patch(rect)
 
         plt.legend()
-        # plt.xlim(-1 - self.goal[0], self.goal[0] + 1)
-        # plt.ylim(-1 - self.goal[2], self.goal[2] + 1)
         plt.xlim(-5, 7)
         plt.ylim(-2, 12)
         plt.show()
 
-    def run_simulation(self, use_unicycle_precomputation: bool = False):
+    def run_simulation(self):
         """
         It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
         to reach the goal. Then, it plots the obtained results.
-
-        :param use_unicycle_precomputation: Whether the theta and omega values of the humanoid should be the ones of a
-         unicycle that tries to reach the goal position.
         """
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
@@ -537,10 +498,6 @@ class HumanoidMPC:
             # print(kth_solution.value(self.X_mpc))
             # print(kth_solution.value(self.U_mpc))
 
-            # assign to X_mpc and U_mpc the relative values
-            # self.optim_prob.set_initial(self.X_mpc, kth_solution.value(self.X_mpc))
-            # self.optim_prob.set_initial(self.U_mpc, kth_solution.value(self.U_mpc))
-
             # compute x_k_next using x_k and u_k
             state_res = self._integrate(X_pred[:4, k], U_pred[:2, k])
             X_pred[:4, k + 1] = state_res.full().squeeze(-1)
@@ -588,9 +545,8 @@ if __name__ == "__main__":
         obstacles=[
             obstacle1,
             # obstacle2,
-        ]
+        ],
+        verbosity=1
     )
 
-    mpc.run_simulation(
-        use_unicycle_precomputation=True
-    )
+    mpc.run_simulation()
