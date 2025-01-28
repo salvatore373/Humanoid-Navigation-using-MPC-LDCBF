@@ -31,16 +31,12 @@ class ObstaclesUtils:
 
         :param unitary_normal_vector: Whether the returned normal vector should be a unitary vector.
         """
-        generators = np.concatenate((polygon.points, np.expand_dims(x, axis=0)), axis=0)
-
-        hull = ConvexHull(points=generators,
-                          qhull_options=f'QG{len(polygon.vertices)}')
         # Compute the projection of X on the polygon and the closest point on the edge
         closest_point: np.ndarray = None
         min_dist: float = float('inf')
-        for visible_facet in hull.simplices[hull.good]:  # Iterate throught the polygon edges visible from X
+        for visible_facet in polygon.simplices:  # Iterate throught the polygon edges visible from X
             # Get the coords of the endpoints of the edge
-            endpoint1, endpoint2 = hull.points[visible_facet[0]], hull.points[visible_facet[1]]
+            endpoint1, endpoint2 = polygon.points[visible_facet[0]], polygon.points[visible_facet[1]]
 
             # In comments below assume that A and B are the endpoints of the edge and P~X.
             # Compute the point on AB closest to P
@@ -52,6 +48,7 @@ class ObstaclesUtils:
             projection_param = max(0, min(1, projection_param))
             # Compute the point C corresponding to the projection of AP on AB
             point_c = endpoint1 + projection_param * ep1ToEp2
+            point_c = point_c.reshape(2,1)
 
             # Compute the length of the segment from X to C
             dist = np.linalg.norm(point_c - x)
@@ -63,8 +60,8 @@ class ObstaclesUtils:
 
         # Define the vector from X to C
         normal_vector = np.array([
-            closest_point[0] - x[0],
-            closest_point[1] - x[1]
+            x[0] - closest_point[0],
+            x[1] - closest_point[1]
         ]).reshape(2, 1)
 
         # Make the normal vector unitary if requested

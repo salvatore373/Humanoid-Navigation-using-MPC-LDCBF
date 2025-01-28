@@ -324,7 +324,7 @@ class HumanoidMPC:
             loc_x_k=loc_x_k, loc_y_k=loc_y_k,
             glob_x_k=glob_x_k, glob_y_k=glob_y_k, glob_theta_k=glob_theta_k,
         )
-        list_c_and_norm_vecs = zip(list_c, list_norm_vecs)
+        list_c_and_norm_vecs = list(zip(list_c, list_norm_vecs))
 
         # Deactivate all the LCBF constraints relative to the previous simulation timesteps
         if simul_k > 0:
@@ -576,14 +576,19 @@ class HumanoidMPC:
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacles = ObstaclesUtils.generate_random_convex_polygon(5, (3, 4), (13, 4))
+    # obstacle1 = ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))
+    obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
+    # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=DELTA_T,
         goal=(0, 5),
-        obstacles=[obstacles]
+        obstacles=[
+            obstacle1,
+            # obstacle2,
+        ]
     )
 
     mpc.run_simulation(
