@@ -299,8 +299,8 @@ class FootstepPlanner:
         d = 2 * init_coordinate - 2 * goal_coordinate + k * sin_or_cos(theta_f) + k * sin_or_cos(theta_i)
 
         # Plug the coefficients in the polynomials to get the path expression
-        return (a + b * s + c * np.pow(s, 2) + d * np.pow(s, 3),  # position path
-                b + 2 * c * s + 3 * d * np.pow(s, 2),  # velocity path
+        return (a + b * s + c * np.power(s, 2) + d * np.power(s, 3),  # position path
+                b + 2 * c * s + 3 * d * np.power(s, 2),  # velocity path
                 2 * c + 6 * d * s)  # acceleration path
 
     @staticmethod
@@ -366,6 +366,10 @@ class FootstepPlanner:
         # DEBUG move_and_plot_unicycle(x, y, theta, path_to_gif='../Assets/Animations/unicycle.gif',
         # DEBUG                        triangle_height=1, triangle_width=0.8)
 
+        # Prove it visually
+        from sympy.plotting import plot
+        plot(omega, (s, 0, 1))
+
         # Use a linear timing law
         t = sym.symbols('t', nonnegative=True)
         alpha = 0.5
@@ -374,6 +378,11 @@ class FootstepPlanner:
         # Turn the path into a trajectory
         (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega) = (
             sym.lambdify(t, f.subs(s, tim_law), 'numpy') for f in (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega))
+
+        # Prove it visually
+        from sympy.plotting import plot
+        plot(omega, (t, 0, 1 / alpha))
+
         (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega) = (
             f(time_interval) for f in (x, x_dot, x_ddot, y, y_dot, y_ddot, theta, v, omega))
 
