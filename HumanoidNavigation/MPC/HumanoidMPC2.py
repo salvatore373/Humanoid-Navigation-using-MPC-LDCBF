@@ -292,24 +292,43 @@ class HumanoidMPC:
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
+    def _add_lcbf_constraint(self, optimization_problem: cs.Opti, glob_theta_k: float,
+                             glob_x_k: float, glob_y_k: float):
+        """
+        Adds the constraint of the Linear Control Barrier Function (LCBF) to the given optimization problem.
+        This is based on the obstacles that are currently surrounding the robot and on the humanoid's position.
+
+        :param optimization_problem: The instance of the optimization problem where the constraints will be added.
+        :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_x_k: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_y_k: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        """
+
+        # X_pred_glob[4, k + 1],
+        # X_pred_glob[0, k + 1],
+        # X_pred_glob[2, k + 1]
+
         # TODO: recompute at each step of the simulation
         # Add the control barrier functions constraint
         for k in range(self.N_horizon):
+            # Get the vector of the CoM position from the current state
+            pos_from_state = np.array([self.X_mpc[0, k], self.X_mpc[2, k]])
+
             # Add one constraint for each obstacle in the map
             for obstacle in self.obstacles:
-                # TODO:
                 #  Convert the obstacle's points in the local RF (i.e. the one of the state)
                 local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
                     obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
-                        # TODO: fill here
+                        glob_theta_k, glob_x_k, glob_y_k
                     )
                 )
-                #  Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y)
-                #  Compute the normal vector from (com_x, com_y) to c
+                # Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y) and compute
+                # the normal vector from (com_x, com_y) to c
                 c, normal_vector = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(
-                    x=self.X_mpc[:, k], polygon=local_obstacle,
+                    x=pos_from_state, polygon=local_obstacle, unitary_normal_vector=True,
                 )
-                #  Define the constraint etaT(x_mpc[k] − c) >= 0 and add it to the problem
+                # Define the constraint etaT(x_mpc[k] − c) >= 0 and add it to the problem
+                optimization_problem.subject_to(normal_vector.T @ (pos_from_state - c) >= 0)
                 pass
 
     def _add_cost_function(self):

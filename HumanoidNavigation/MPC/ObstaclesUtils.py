@@ -21,11 +21,14 @@ class ObstaclesUtils:
         return ConvexHull(points)
 
     @staticmethod
-    def get_closest_point_and_normal_vector_from_obs(x: np.ndarray, polygon: ConvexHull) \
+    def get_closest_point_and_normal_vector_from_obs(x: np.ndarray, polygon: ConvexHull,
+                                                     unitary_normal_vector: bool = False) \
             -> tuple[np.ndarray[(1, 2)], np.ndarray[(2, 2)]]:
         """
         Given a point X and a ConvexHull polygon, it returns the point on the boundary of polygon closest to X and the
         normal vector connecting X to the polygon.
+
+        :param unitary_normal_vector: Whether the returned normal vector should be a unitary vector.
         """
         generators = np.concatenate((polygon.points, np.expand_dims(x, axis=0)), axis=0)
 
@@ -63,12 +66,21 @@ class ObstaclesUtils:
             [x[1], closest_point[1]]
         ])
 
+        # Make the normal vector unitary if requested
+        if unitary_normal_vector:
+            normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
         return closest_point, normal_vector
 
     @staticmethod
-    def transform_obstacle_from_glob_to_loc_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray)\
+    def transform_obstacle_from_glob_to_loc_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray) \
             -> ConvexHull:
-        pass
+        # Get the vertices of the obstacle
+        glob_vertices = obstacle.points
+        # Convert all the vertices from global to local coordinates with the given transformation matrix
+        loc_vertices = transformation_matrix @ np.insert(glob_vertices.T, 2, 1, axis=0)
+        # Create a new obstacle with the new vertices (excluding the last component of the just computed vertices)
+        return ConvexHull(loc_vertices[:-1, :].T)
 
 
 if __name__ == "__main__":
@@ -82,7 +94,7 @@ if __name__ == "__main__":
                                     [0.4, 0.4],
                                     [0.4, 0.2], ]))
 
-    c, normal_vec = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(x, obstacle)
+    c, normal_vec = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(x, obstacle, unitary_normal_vector=True)
 
     # Plot the results
     fig = plt.figure()
