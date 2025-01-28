@@ -1,6 +1,8 @@
 MPC:
-1. Apply the same approach to the Humanoid Model (E)
-2. (CHECK) Build Humanoid MPC (D)
+1. Add a parameter to the CBF that tells how much close the robot can get to the obstacles
+2. Provide initial state as input to the MPC
+3. Make an animation of the Humanoid's motion
+4. Provide seed to obstacles generation
 
 BONUS:
 1. RRT*
@@ -8,4 +10,3 @@ BONUS:
 3. Global plan 
 4. Subgoals
 5. 3D simulation
-6. Use Unicycle theta and omega as precomputed theta/omega
