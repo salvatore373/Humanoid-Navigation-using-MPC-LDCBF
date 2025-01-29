@@ -86,7 +86,7 @@ class HumanoidMPC:
 
         # Create the instance of the optimization problem inside the MPC
         self.optim_prob = cs.Opti()
-        p_opts = dict(print_time=False, verbose=False, expand=True)
+        p_opts = dict(print_time=False, verbose=True if verbosity > 1 else False, expand=True)
         s_opts = dict(print_level=verbosity)
         self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
