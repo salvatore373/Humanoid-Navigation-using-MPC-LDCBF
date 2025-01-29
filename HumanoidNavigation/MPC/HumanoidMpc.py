@@ -153,7 +153,6 @@ class HumanoidMPC:
         :param x_k: The global x-coordinate position of the humanoid at step K.
         :param y_k: The global y-coordinate position of the humanoid at step K.
         """
-        # np.linalg.inv(HumanoidMPC._get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
         return np.array([
             [np.cos(theta_k), np.sin(theta_k), -x_k * np.cos(theta_k) - y_k * np.sin(theta_k)],
             [-np.sin(theta_k), np.cos(theta_k), x_k * np.sin(theta_k) - y_k * np.cos(theta_k)],
@@ -364,10 +363,6 @@ class HumanoidMPC:
         """
         Defines and adds to the MPC the cost function to minimize.
         """
-        # control actions cost
-        # control_cost = cs.sumsqr(cs.vertcat(self.U_mpc, self.U_mpc_omega))
-        control_cost = cs.sumsqr(self.U_mpc)
-
         # (p_x - g_x)^2 + (p_y - g_y)^2 distance of a sequence of predicted states from the goal position
         # distance_cost = (cs.sumsqr(self.X_mpc[0, :-1] - cs.DM.ones(1, self.N_horizon) * self.goal[0])
         #                  + cs.sumsqr(self.X_mpc[2, :-1] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
@@ -383,7 +378,6 @@ class HumanoidMPC:
         #                  + cs.sumsqr(self.X_mpc[2, 1:] - cs.DM.ones(1, self.N_horizon) * self.goal[2]))
 
         self.optim_prob.minimize(distance_cost)
-        # self.optim_prob.minimize(distance_cost + control_cost)
 
     def _integrate(self, x_k, u_k):
         """
