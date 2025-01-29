@@ -10,26 +10,26 @@ from scipy.spatial import ConvexHull
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.obstacles_no_sympy import plot_polygon
 
-""" The width and the height of the rectangle representing the feet in the plot"""
-FOOT_RECT_WIDTH = 0.25
-FOOT_RECT_HEIGHT = 0.1
-
-# Definition of some constants related to the humanoid's motion
-DELTA_T = 0.4
-GRAVITY_CONST = 9.81
-COM_HEIGHT = 1
-BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
-ALPHA = 3.66  # (1.44 or 3.6)
-L_MAX = 0.17320508075  # 0.1*sqrt(3)
-V_MIN = [-0.1, 0.1]
-V_MAX = [0.8, 0.4]
-
 
 class HumanoidMPC:
     """
     The implementation of the MPC defined in the paper "Real-Time Safe Bipedal Robot Navigation using Linear Discrete
     Control Barrier Functions" by Peng et al.
     """
+
+    # The width and the height of the rectangle representing the feet in the plot
+    FOOT_RECT_WIDTH = 0.25
+    FOOT_RECT_HEIGHT = 0.1
+
+    # Definition of some constants related to the humanoid's motion
+    DELTA_T = 0.4
+    GRAVITY_CONST = 9.81
+    COM_HEIGHT = 1
+    BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
+    ALPHA = 3.66  # (1.44 or 3.6)
+    L_MAX = 0.17320508075  # 0.1*sqrt(3)
+    V_MIN = [-0.1, 0.1]
+    V_MAX = [0.8, 0.4]
 
     # The constants used to represent the left and right feet
     RIGHT_FOOT = 1
@@ -155,8 +155,8 @@ class HumanoidMPC:
         """
         # np.linalg.inv(HumanoidMPC._get_local_to_glob_rf_trans_mat(theta_k, x_k, y_k))
         return np.array([
-            [np.cos(theta_k), np.sin(theta_k), -x_k*np.cos(theta_k) - y_k*np.sin(theta_k)],
-            [-np.sin(theta_k), np.cos(theta_k), x_k*np.sin(theta_k) - y_k*np.cos(theta_k)],
+            [np.cos(theta_k), np.sin(theta_k), -x_k * np.cos(theta_k) - y_k * np.sin(theta_k)],
+            [-np.sin(theta_k), np.cos(theta_k), x_k * np.sin(theta_k) - y_k * np.cos(theta_k)],
             [0, 0, 1, ],
         ])
 
@@ -239,7 +239,7 @@ class HumanoidMPC:
         :param omega_k: The turning rate of the humanoid at time K.
         """
         velocity_term = cs.cos(theta_k) * x_k[1] + cs.sin(theta_k) * x_k[3]
-        safety_term = V_MAX[0] - (ALPHA / np.pi) * cs.fabs(omega_k)
+        safety_term = self.V_MAX[0] - (self.ALPHA / np.pi) * cs.fabs(omega_k)
 
         return velocity_term, safety_term
 
@@ -257,18 +257,30 @@ class HumanoidMPC:
 
             # leg reachability -> prevent the over-extension of the swing leg
             reachability = self._compute_leg_reachability_matrix(self.X_mpc[:, k], self.X_mpc_theta[k])
-            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(L_MAX, L_MAX)))
-            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-L_MAX, -L_MAX)))
+            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(self.L_MAX, self.L_MAX)))
+            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-self.L_MAX, -self.L_MAX)))
 
             # walking velocities constraint
             local_velocities = self._compute_walking_velocities_matrix(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
-            self.optim_prob.subject_to(local_velocities <= V_MAX)
-            self.optim_prob.subject_to(local_velocities >= V_MIN)
+            self.optim_prob.subject_to(local_velocities <= self.V_MAX)
+            self.optim_prob.subject_to(local_velocities >= self.V_MIN)
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
             velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k], self.X_mpc_theta[k],
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
+
+    @staticmethod
+    def _compute_single_lcbf(x, eta, c):
+        """
+        It returns the value of the LCBF h(x) as defined in formula (16) of the paper.
+
+        :param x: The current position of the humanoid in local coordinates.
+        :param eta: The vector normal to the line that defines the half plane of the LCBF, pointing towards the
+         direction where h(x) > 0.
+        :param c: The point on one obstacle's edge that is closest to x.
+        """
+        return eta.T @ (x - c)
 
     def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
                              glob_y_k: float):
@@ -310,7 +322,7 @@ class HumanoidMPC:
 
             # Add one constraint for each obstacle in the map
             for c, normal_vector in list_c_and_norm_vecs:
-                lcbf_constr = normal_vector.T @ (pos_from_state_cs - c)
+                lcbf_constr = self._compute_single_lcbf(pos_from_state_cs, normal_vector, c)
                 self.optim_prob.subject_to(cs.power(lcbf_constr, self.lcbf_activation_params[simul_k]) >= 0)
 
     def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
@@ -412,7 +424,8 @@ class HumanoidMPC:
             foot_orient = state_glob[4, time_instant]
 
             # Create rectangle centered at the position
-            rect = Rectangle((-FOOT_RECT_WIDTH / 2, -FOOT_RECT_HEIGHT / 2), FOOT_RECT_WIDTH, FOOT_RECT_HEIGHT,
+            rect = Rectangle((-self.FOOT_RECT_WIDTH / 2, -self.FOOT_RECT_HEIGHT / 2),
+                             self.FOOT_RECT_WIDTH, self.FOOT_RECT_HEIGHT,
                              color='blue' if self.s_v[time_instant] == self.RIGHT_FOOT else 'green', alpha=0.7)
             # Apply rotation
             t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
@@ -538,22 +551,22 @@ class HumanoidMPC:
 
 if __name__ == "__main__":
     # only one and very far away
-    # obstacle1 = ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))
-    obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
+    obstacle1 = ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))
+    # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
-        sampling_time=DELTA_T,
+        sampling_time=HumanoidMPC.DELTA_T,
         goal=(0, 5),
         obstacles=[
             obstacle1,
             # obstacle2,
             # obstacle3,
         ],
-        verbosity=1
+        verbosity=0
     )
 
     mpc.run_simulation()
