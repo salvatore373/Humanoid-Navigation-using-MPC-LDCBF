@@ -2,8 +2,8 @@
 
 \begin{document}
 
-\section{LIP}\label{sec:introduction}
-
+\section{LIP}\label{sec:lip_eugenio}
+Eugenio:\\
 This reduced model assumes that during the motion the Center of Mass (CoM) will have a constant height H.
 \begin{equation}
     \dot{v}_{x} = \frac{g}{H}(p_{x} - f_{x})
@@ -71,5 +71,24 @@ Where the two matrices are defined as follows:
         0 & 0 & T
     \end{bmatrix}
 \end{equation}
+
+
+
+
+\section{3D-LIP Model with Heading Angles}\label{sec:lip}
+Salvatore:\\
+If the full dynamic model of the humanoid is used to simulate its motion, it becomes computationally impossible to perform joint path and gait planning, due to its high dimensionality and non-linearity. Therefore, a simplifying model must be used. For this scope Peng et al. introduced the "3D-LIP Model with Heading Angle", which describes the discrete dynamics of the Center of Mass (CoM) similarly to the one of an inverted pendulum in three dimensions.
+
+\subsection{Local Robot Reference Frame}
+The state $\mathbf{x}$ and the input $\mathbf{u}$ of the dynamic model are defined as:
+
+$$ \mathbf{x} := \begin{bmatrix} p_x & v_x & p_y & v_y & \theta \end{bmatrix}^T \in X \subset \mathbb{R}^5 , $$
+$$ \mathbf{u} := \begin{bmatrix} f_x & f_y & \omega \end{bmatrix}^T \in U \subset \mathbb{R}^5 , $$
+
+where $(p_x, v_x)$ are the CoM position and linear translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position (and analogously for the $y$-components), $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $X$ is the set of the allowed states, while $U$ is the set of the admissible inputs.\\
+Both the state and the input are expressed in the local coordinates of the robot. It means that $(p_x, p_y)$ represents the position of the CoM in the reference frame (RF) that originates from the CoM position at the previous time step. The RF at the next time step will be rotated by an angle $\theta$ around the $z$-axis with respect to the previous frame. The relation between the vectors in different reference frames is represented in Figure TODO.\\
+The reference frame at time step 0 is considered the "inertial" or "global" frame. The transformation of the components of the state and of the input must be handled in different ways:
+
+\subsection{Model Definition}
 
 \end{document}
