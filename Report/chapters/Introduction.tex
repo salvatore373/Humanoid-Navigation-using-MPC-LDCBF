@@ -1,3 +1,13 @@
+\documentclass[main.tex]{subfiles}
+
+\begin{document}
+
+\section{Introduction}\label{sec:introduction}
+Eugenio:\\
 Humanoid robots are inherently underactuated thanks to to unilateral ground contacts thus a strong coupling exists between path planning and gait control. A path is considered safe if the robot does not collide with any obstacle and its dynamics and physical limitations are respected.
 Due to the high complexity of humanoids, we cannot decouple path planning from motion control without taking into account the dynamics. We should solve gait optimization problems based on the robot's full order model or the reduced one. Due to computational complexity, reduced order models such the Linear Inverted Pendulum (LIP) are often employed. In our case, since Control Barrier Functions are employed to ensure safety in path planning, we will pre-compute heading angles ans use approximated linead DCBFs.
 This is needed since we may have problems at computation level due to the non linearity of kinematics and path constraints.
+
+\cite{hsu1989dynamic}
+
+\end{document}
