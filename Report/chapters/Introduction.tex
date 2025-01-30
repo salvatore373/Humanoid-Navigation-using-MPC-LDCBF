@@ -7,7 +7,11 @@ Eugenio:\\
 Humanoid robots are inherently underactuated thanks to to unilateral ground contacts thus a strong coupling exists between path planning and gait control. A path is considered safe if the robot does not collide with any obstacle and its dynamics and physical limitations are respected.
 Due to the high complexity of humanoids, we cannot decouple path planning from motion control without taking into account the dynamics. We should solve gait optimization problems based on the robot's full order model or the reduced one. Due to computational complexity, reduced order models such the Linear Inverted Pendulum (LIP) are often employed. In our case, since Control Barrier Functions are employed to ensure safety in path planning, we will pre-compute heading angles ans use approximated linead DCBFs.
 This is needed since we may have problems at computation level due to the non linearity of kinematics and path constraints.
-
-\cite{hsu1989dynamic}
+\\\\
+Salvatore:\\
+The term \textit{humanoid} refers to a robot with structure and kinematics similar to a human body. It is designed for locomanipulation and represent the best choice to navigate and interact in an environment that is structured for humans.
+\\Real-time safe navigation is a crucial task for humanoid robots in real-world applications. A path is considered safe if it does not collide with any obstacle while fulfilling the robot's dynamics and physical constraints. In order to carry out such complex task in real-time, path planning is usually decoupled from gait control, resulting in a significant reduction of the computational load.
+\\The aim of this work is to implement the solution proposed by Peng et al. in "Real-Time Safe Bipedal Robot Navigation using Linear Discrete Control Barrier Functions", which consists in a unified safe path and gait planning framework to be executed in real-time. It models the humanoid's walking dynamics by a Linear Inverted Pendulum, and leverages Model Predictive Control and Control Barrier Functions to deliver a collision-free path while satisfying specific constraints.
+\\In the following chapters, we will delve into the details of this approach, discuss the results, and propose some improvements.
 
 \end{document}
