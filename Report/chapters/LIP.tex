@@ -82,12 +82,55 @@ If the full dynamic model of the humanoid is used to simulate its motion, it bec
 \subsection{Local Robot Reference Frame}
 The state $\mathbf{x}$ and the input $\mathbf{u}$ of the dynamic model are defined as:
 
-$$ \mathbf{x} := \begin{bmatrix} p_x & v_x & p_y & v_y & \theta \end{bmatrix}^T \in X \subset \mathbb{R}^5 , $$
-$$ \mathbf{u} := \begin{bmatrix} f_x & f_y & \omega \end{bmatrix}^T \in U \subset \mathbb{R}^5 , $$
+$$ \mathbf{x} := \left( p_x,\; v_x,\; p_y,\; v_y,\; \theta \right)^T \in X \subset \mathbb{R}^5 , $$
+$$ \mathbf{u} := \left( f_x,\; f_y,\; \omega \right)^T \in U \subset \mathbb{R}^3 , $$
 
-where $(p_x, v_x)$ are the CoM position and linear translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position (and analogously for the $y$-components), $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $X$ is the set of the allowed states, while $U$ is the set of the admissible inputs.\\
-Both the state and the input are expressed in the local coordinates of the robot. It means that $(p_x, p_y)$ represents the position of the CoM in the reference frame (RF) that originates from the CoM position at the previous time step. The RF at the next time step will be rotated by an angle $\theta$ around the $z$-axis with respect to the previous frame. The relation between the vectors in different reference frames is represented in Figure TODO.\\
-The reference frame at time step 0 is considered the "inertial" or "global" frame. The transformation of the components of the state and of the input must be handled in different ways:
+where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position, $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $X$ is the set of the allowed states, while $U$ is the set of the admissible inputs.\\
+Both the state and the input are expressed in the local coordinates of the robot. It means that $(p_x, p_y)$ represents the position of the CoM in the reference frame (RF) that originates from the CoM position at the previous time step. The RF at the next time step will be rotated by an angle $\theta$ around the $z$-axis with respect to the previous frame. The relation between the vectors in different reference frames is represented in Figure \ref{fig:loc_to_glob_tfm}.\\
+The reference frame at time step 0 is considered the "inertial" or "global" frame. A transformation between the inertial and moving frames is necessary to obtain the position of the humanoid in the global map and to deal with obstacles. Transformations are performed as follows:
+$$
+T_k = \begin{pmatrix}
+\cos\theta_k & -\sin\theta_k & p_{x,\,k,\,\text{glob}} \\
+\sin\theta_k & \cos\theta_k &  p_{y,\,k,\,\text{glob}} \\
+0 & 0 & 1
+\end{pmatrix},
+$$
+
+$$
+\begin{pmatrix} f_{x,\,k,\,\text{glob} } \\ f_{y,\,k,\,\text{glob}} \\ 1 \end{pmatrix} = \; T_k \;
+\begin{pmatrix}
+f_{x,\,k,\,\text{loc} } \\ f_{y,\,k,\,\text{loc}} \\ 1
+\end{pmatrix},
+$$
+
+$$
+\begin{pmatrix} p_{x,\,k+1,\,\text{glob} } \\ p_{y,\,k+1,\,\text{glob}} \\ 1 \end{pmatrix} = \; T_k \;
+\begin{pmatrix}
+p_{x,\,k+1,\,\text{loc} } \\ p_{y,\,k+1,\,\text{loc}} \\ 1
+\end{pmatrix},
+$$
+
+$$
+\begin{pmatrix} v_{x,\,k+1,\,\text{glob} } \\ v_{y,\,k+1,\,\text{glob}}\end{pmatrix} = \; \begin{pmatrix} \cos\theta_k & -\sin\theta_k \\ \sin\theta_k & \cos\theta_k \end{pmatrix}\;
+\begin{pmatrix}
+v_{x,\,k+1,\,\text{loc} } \\ v_{y,\,k+1,\,\text{loc}}
+\end{pmatrix},
+$$
+
+$$ 
+\theta_{k+1, \text{glob}} = \theta_{k, \text{glob}} + \theta_{k+1, \text{loc}},
+\qquad
+\omega_{\text{glob}} = \omega_{\text{loc}}.
+$$
+
+The positional vectors are roto-translated using a $3\times3$ homogeneous matrix. The velocity vectors are only rotated around the z-axis (indeed, a translation would change their magnitude) using a rotation matrix. The global robot's orientation is obtained by summing the latest local variation to the previous global angle. The angular velocity does not need to be transformed because it is along the $z$-axis, which is fixed.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{figures/LIP/loc_to_glob_tfm.pdf}
+    \caption{An example of the evolution of the 3D-LIP model's state, highlighting the relationship between local and global coordinates. The initial state is $\mathbf{0}$ and the RF $(x_0,\, y_0)$ is the inertial frame. The local RF translates and rotates: the position of the RF $(x_2,\, y_2)$ related to time step 1 is given by the position of $p_{1, \text{glob}}$, while its orientation is given by $\theta_{1, glob}$. The pose of the successive frames is computed analogously.}
+    \label{fig:loc_to_glob_tfm}
+\end{figure}
 
 \subsection{Model Definition}
 
