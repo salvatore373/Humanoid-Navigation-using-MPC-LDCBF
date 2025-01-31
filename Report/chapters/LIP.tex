@@ -89,7 +89,7 @@ where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$
 Both the state and the input are expressed in the local coordinates of the robot. It means that $(p_x, p_y)$ represents the position of the CoM in the reference frame (RF) that originates from the CoM position at the previous time step. The RF at the next time step will be rotated by an angle $\theta$ around the $z$-axis with respect to the previous frame. The relation between the vectors in different reference frames is represented in Figure \ref{fig:loc_to_glob_tfm}.\\
 The reference frame at time step 0 is considered the "inertial" or "global" frame. A transformation between the inertial and moving frames is necessary to obtain the position of the humanoid in the global map and to deal with obstacles. Transformations are performed as follows:
 $$
-T_k = \begin{pmatrix}
+\mathbf{T_k} = \begin{pmatrix}
 \cos\theta_k & -\sin\theta_k & p_{x,\,k,\,\text{glob}} \\
 \sin\theta_k & \cos\theta_k &  p_{y,\,k,\,\text{glob}} \\
 0 & 0 & 1
@@ -97,14 +97,14 @@ T_k = \begin{pmatrix}
 $$
 
 $$
-\begin{pmatrix} f_{x,\,k,\,\text{glob} } \\ f_{y,\,k,\,\text{glob}} \\ 1 \end{pmatrix} = \; T_k \;
+\begin{pmatrix} f_{x,\,k,\,\text{glob} } \\ f_{y,\,k,\,\text{glob}} \\ 1 \end{pmatrix} = \; \mathbf{T_k} \;
 \begin{pmatrix}
 f_{x,\,k,\,\text{loc} } \\ f_{y,\,k,\,\text{loc}} \\ 1
 \end{pmatrix},
 $$
 
 $$
-\begin{pmatrix} p_{x,\,k+1,\,\text{glob} } \\ p_{y,\,k+1,\,\text{glob}} \\ 1 \end{pmatrix} = \; T_k \;
+\begin{pmatrix} p_{x,\,k+1,\,\text{glob} } \\ p_{y,\,k+1,\,\text{glob}} \\ 1 \end{pmatrix} = \; \mathbf{T_k} \;
 \begin{pmatrix}
 p_{x,\,k+1,\,\text{loc} } \\ p_{y,\,k+1,\,\text{loc}} \\ 1
 \end{pmatrix},
@@ -125,7 +125,7 @@ $$
 
 The positional vectors are roto-translated using a $3\times3$ homogeneous matrix. The velocity vectors are only rotated around the z-axis (indeed, a translation would change their magnitude) using a rotation matrix. The global robot's orientation is obtained by summing the latest local variation to the previous global angle. The angular velocity does not need to be transformed because it is along the $z$-axis, which is fixed.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{figures/LIP/loc_to_glob_tfm.pdf}
     \caption{An example of the evolution of the 3D-LIP model's state, highlighting the relationship between local and global coordinates. The initial state is $\mathbf{0}$ and the RF $(x_0,\, y_0)$ is the inertial frame. The local RF translates and rotates: the position of the RF $(x_2,\, y_2)$ related to time step 1 is given by the position of $p_{1, \text{glob}}$, while its orientation is given by $\theta_{1, glob}$. The pose of the successive frames is computed analogously.}
@@ -133,5 +133,50 @@ The positional vectors are roto-translated using a $3\times3$ homogeneous matrix
 \end{figure}
 
 \subsection{Model Definition}
+Assuming that the height $H$ of the CoM is constant during the motion, according to \cite{peng_main_paper} we can express the CoM velocity along the $x$-axis as:
+$$
+\dot{v}_x = \frac{g}{H}\left(p_x - f_x\right),
+$$
+
+with $g$ as the magnitude of the gravitational acceleration. Since by definition $\dot{\theta} \coloneqq \omega$, by Euler integration we obtain that:
+$$
+\theta_{k+1} = \theta_k + \omega \, T,
+$$
+
+where $T$ is the duration of the sampling interval. By further assuming that the duration of a single humanoid's step is fixed and equal to $T$, we can derive the closed-form step-to-step discrete dynamics of the 3D-LIP model:
+
+$$
+\mathbf{x}_{k+1} = \mathbf{A_L} \, \mathbf{x}_k + \mathbf{B_L} \, \mathbf{u}_k,
+$$
+with:
+$$
+\mathbf{A_L} \coloneqq 
+\begin{pmatrix}
+\mathbf{A_d} & \mathbf{0} & 0 \\
+\mathbf{0} & \mathbf{A_d} & 0 \\
+\mathbf{0} & \mathbf{0} & 1 \\
+\end{pmatrix}, \qquad
+\mathbf{B_L} \coloneqq 
+\begin{pmatrix}
+\mathbf{B_d} & \mathbf{0} & 0 \\
+\mathbf{0} & \mathbf{B_d} & 0 \\
+0 & 0 & T
+\end{pmatrix},
+$$
+$$
+\mathbf{A_d} \coloneqq 
+\begin{pmatrix}
+\cosh{\beta \, T} & \frac{\sinh{\beta \, T}}{\beta}  \\
+\beta \, \sinh{\beta \, T} & \cosh{\beta \, T}
+\end{pmatrix}, \qquad
+\mathbf{B_d} \coloneqq 
+\begin{pmatrix}
+1 - \cosh{\beta \, T} \\
+-\beta \, \sinh{\beta \, T}
+\end{pmatrix}, \qquad
+\beta \coloneqq \sqrt{\frac{g}{H}}
+$$
+\\
+In the following chapter, these dynamics will be used as the internal process representation of an MPC. Along with the constraints, they will grant that the found solution is meaningful to the humanoid motion.
 
 \end{document}
