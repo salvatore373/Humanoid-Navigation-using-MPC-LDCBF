@@ -121,5 +121,36 @@ v_{y_k}
 
 \subsection{Control Barrier Functions}
 
+\subsubsection{Definitions}
+Considering a continuous and differentiable function $h: \mathbb{R}^n \rightarrow \mathbb{R}$, we can define the \textit{safety set} $S$ and its boundary $\partial S$ as:
+\begin{align*}
+S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) \geq 0\right\}, \notag \\
+\partial S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) = 0\right\}. \notag  \\
+\end{align*}
+
+According to \cite{zeng2021safetycriticalmodelpredictivecontrol}, % formula 5 + remark 1
+assume that there exists a class $\mathcal{K}$ function $\gamma$ such that
+$$
+0 < \gamma(h(\mathbf{x})) \leq h(\mathbf{x}),
+$$
+and the following holds:
+\begin{gather}
+\Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \coloneqq h(\mathbf{x}_{k+1}) - h(\mathbf{x}_{k}), \notag \\
+\forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma(h(\mathbf{x}_k)). \label{eq:dcbf_def_constr}
+\end{gather}
+
+Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take $\gamma$ as a scalar such that $0 < \gamma \leq 1$, and (\ref{eq:dcbf_def_constr}) becomes:
+
+\begin{gather*}
+    \forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma * h(\mathbf{x}_k). 
+\end{gather*}
+
+%%% TODO: not sure about it
+It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant.
+\\
+After this theoretical discussion, it is worth mentioning that it is often convenient to choose $h(\cdot)$ as a function of the robot's configuration, which is greater than $0$ in configurations such that the robot does not collide with any obstacle in the workspace, equal to $0$ when the robot touches the boundary of an obstacle, and lower than $0$ if it is inside the obstacle. This is the case in our project, where the DCBF is a function of the Cartesian position of the CoM.
+
+\subsubsection{Linear Discrete Control Barrier Functions}
+
 
 \end{document}
