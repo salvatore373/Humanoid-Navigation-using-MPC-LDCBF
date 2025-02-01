@@ -145,9 +145,9 @@ $$
 
 where $T$ is the duration of the sampling interval. By further assuming that the duration of a single humanoid's step is fixed and equal to $T$, we can derive the closed-form step-to-step discrete dynamics of the 3D-LIP model:
 
-$$
+\begin{equation}\label{eq:lip_dyanmics}
 \mathbf{x}_{k+1} = \mathbf{A_L} \, \mathbf{x}_k + \mathbf{B_L} \, \mathbf{u}_k,
-$$
+\end{equation}
 with:
 $$
 \mathbf{A_L} \coloneqq 
