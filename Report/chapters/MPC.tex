@@ -17,7 +17,7 @@ Minimizing the cost function means that the robot is moving towards the goal pos
 
 \section{LIP-MPC: Gait planning with Model Predictive Control}\label{sec:mpc}
 Salvatore:\\
-The LIP dynamics defined in (\ref{eq:lip_dyanmics}) is used as a model of the process inside a Model Predictive Control (MPC) scheme. The MPC controller uses that model to predict the future output along a \textit{prediction horizon}, namely the predefined number of time steps to look out in the future. Based on those forecasts and the provided constraints, the MPC computes the sequence of control actions that optimize a given cost function during the prediction horizon. Then, only the first input of that sequence is taken and provided to the process. The real output will be used at the next time step to compute the new predictions and control actions.\\
+The LIP dynamics defined in (\ref{eq:lip_dyanmics}) is used as a model of the process inside a Model Predictive Control (MPC) scheme. The MPC controller uses that model to predict the future output along a \textit{prediction horizon} $N$, namely the predefined number of time steps to look out in the future. Based on those forecasts and the provided constraints, the MPC computes the sequence of control actions that optimize a given cost function during the prediction horizon. Then, only the first input of that sequence is taken and provided to the process. The real output will be used at the next time step to compute the new predictions and control actions.\\
  In our case, the LIP-MPC is used to respond instantaneously to the changes in the humanoid's state, while providing optimal stepping positions for stable locomotion and safe navigation. It is formulated as follows:
 
 \begin{align}
@@ -37,5 +37,89 @@ q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^
 $$
 
 where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
+
+\subsection{Heading Angle Preprocessing}
+Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, and it is often sufficient to linearize some constraints.\\
+The values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC. Instead, their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
+
+\begin{gather}
+\omega_k = \max \left\{ \min \left\{ \operatorname{atan2}(g_y - p_y,\, g_x - p_x) - \theta,\, \quad \omega_{max} \right\} ,\quad \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\
+\theta_0 = \theta, \qquad \theta_k = \theta_{k-1} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
+\end{gather}
+
+where $p_x, p_y$ and $\theta$ are the position and orientation of the humanoid at the start of the simulation time step, $T$ is the sampling time, and the goal position is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate: they must be added due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
+
+\subsection{Kinematic Constraints}
+The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, Peng et al. decided to enforce the walking velocities, leg reachability, and maneuverability constraints defined as follows.
+
+\subsubsection{Walking Velocities Constraint}
+\[
+\begin{pmatrix}
+v_{x_{\min}} \\
+v_{y_{\min}}
+\end{pmatrix}
+\le
+\begin{pmatrix}
+\cos \theta_k & \sin \theta_k \\
+-\sin \theta_k & \cos \theta_k
+\end{pmatrix}
+\begin{pmatrix}
+v_{x_{k+1}} \\
+s_v v_{y_{k+1}}
+\end{pmatrix}
+\le
+\begin{pmatrix}
+v_{x_{\max}} \\
+v_{y_{\max}}
+\end{pmatrix}
+\qquad \forall k \in \left[ 0,\, N-1\right],
+\]
+The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to $RF_{k}$. 
+%%%%%%%% TODO: explain why  %%%%%%%%%%%%%%%
+Then, it ensures that the velocity is within the lateral and longitudinal limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
+$s_v$ is $1$ if stance foot is the right, $-1$ otherwise. It is meant to limit the lateral velocity in such a way that, at the end of each step, the stance foot on the opposite side.
+%% TODO: decide whether the text below should be removed
+For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
+
+
+\subsubsection{Leg Reachability Constraint}
+\[
+\begin{pmatrix}
+-l_{\max} \\
+-l_{\max}
+\end{pmatrix}
+\le
+\begin{pmatrix}
+\cos \theta_k & \sin \theta_k \\
+-\sin \theta_k & \cos \theta_k
+\end{pmatrix}
+\begin{pmatrix}
+p_{x_k} \\
+p_{y_k}
+\end{pmatrix}
+\le
+\begin{pmatrix}
+l_{\max} \\
+l_{\max}
+\end{pmatrix}
+\qquad \forall k \in \left[0,\, N-1 \right],
+\]
+%% TODO
+\subsubsection{Maneuverability Constraint}
+\[
+\begin{pmatrix}
+\cos \theta_k & \sin \theta_k
+\end{pmatrix}
+\begin{pmatrix}
+v_{x_k} \\
+v_{y_k}
+\end{pmatrix}
+\leq v_{x_{\max}} - \frac{\alpha}{\pi} |\omega_k|
+\qquad \forall k \in \left[0,\, N-1 \right],
+\]
+%% TODO
+
+\subsection{Control Barrier Functions}
+
 
 \end{document}
