@@ -128,6 +128,7 @@ S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) \geq 0\right\}, \notag 
 \partial S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) = 0\right\}. \notag  \\
 \end{align*}
 
+They are the region and its perimeter where the robot can freely move without colliding with obstacles.
 According to \cite{zeng2021safetycriticalmodelpredictivecontrol}, % formula 5 + remark 1
 assume that there exists a class $\mathcal{K}$ function $\gamma$ such that
 $$
@@ -149,45 +150,52 @@ Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take
 It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant.
 
 \subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}
-Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
+Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of $\vec{x}$, the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
 However, if $F(\cdot)$ is a non-linear function, we obtain a non-linear DCBF constraint, which should be avoided for the reasons exposed before.\\
-Peng et al. in \cite{peng_main_paper} linearized the DCBF by approximating the safe region. The plane is partitioned in two halves: one containing the obstacle and the other containing the robot (Fig. ). %%%%% TODO: add figure
+Peng et al. in \cite{peng_main_paper} linearized the DCBF by approximating the safe region. The plane is partitioned in two halves: one containing the obstacle and the other containing the robot (as shown in Fig. \ref{fig:example_LDCBF}).
 The safe region is the latter, and it is defined as:
 
 \begin{equation} \notag
-h\left(\mathbf{x}\right) = \eta^T \left(\mathbf{x} - c\right) \geq 0,
+h\left(\vec{x}\right) = \eta^T \left(\vec{x} - c\right) \geq 0,
 \end{equation}
 
-where $c \in \mathbb{R}^2$ is the point on the obstacle's edge that is closest to the CoM position $\mathbf{x}$, while $\eta \in \mathbb{R}^2$ is the normal vector that connects $\mathbf{x}$ to the boundary. Hence, $\eta$ is also the vector orthogonal to the line that defines the half-planes, pointing toward the safe region. All of these components are shown in Figure (\ref{fig:example_LDCBF}).\\
+where $c \in \mathbb{R}^2$ is the point on the obstacle's edge that is closest to the CoM position $\vec{x}$, while $\eta \in \mathbb{R}^2$ is the normal vector that connects $\vec{x}$ to the boundary. Hence, $\eta$ is also the vector orthogonal to the line that defines the half-planes, pointing toward the safe region. All of these components are shown in Figure (\ref{fig:example_LDCBF}).\\
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.75\linewidth]{figures//MPC/example_lcbf.pdf}
-    \caption{In this plot, the CoM is represented as a green point, and the obstacle is a blue rectangle. The point on the obstacle's boundary that is closest to $\mathbf{x}$ is the red one, which represents $c$. The red vector connecting $c$ to $\mathbf{x}$ is $\eta$. The half-plane defined by this LDCBF is the gray area. In that area, the humanoid's CoM is free to move without hitting any obstacle.}
+    \caption{In this plot, the CoM is represented as a green point, and the obstacle is a blue rectangle. The point on the obstacle's boundary that is closest to $\vec{x}$ is the red one, which represents $c$. The red vector connecting $c$ to $\vec{x}$ is $\eta$. The safe region defined by this LDCBF is the gray area. In that half-plane, the humanoid's CoM is free to move without hitting any obstacle.}
     \label{fig:example_LDCBF}
 \end{figure}
 
 If multiple obstacles are in the environment, the safe region is the intersection of the regions produced by each LDCBF.\\
-By enforcing that the states $\mathbf{x}_{1...N+1}$ produced by the optimal inputs $\mathbf{u}_{0...N}$ computed by the MPC satisfy $h(\mathbf{x})>0$, we guarantee that, during the motion, the humanoid's CoM does never collide with the obstacles.\\
+By enforcing that the states $\mathbf{x}_{1...N+1}$ produced by the optimal inputs $\mathbf{u}_{0...N}$ computed by the MPC satisfy $h(\vec{x})>0$, we guarantee that, during the motion, the humanoid's CoM does never collide with the obstacles.\\
 
-Vectors $\eta$ and $c$ are computed as follows. Indicating with $A$ and $B$ the endpoints of the edge of the obstacle that is closest to $\mathbf{x}$ we have:
+Vectors $\eta$ and $c$ are computed as follows. Indicating with $A$ and $B$ the endpoints of the edge of the obstacle that is closest to $\vec{x}$ we have:
 \begin{gather*}
-    \overrightarrow{AX} \coloneqq \mathbf{x} - A, \qquad \overrightarrow{AB} \coloneqq B - A, \\
-    t \coloneqq \frac{\overrightarrow{AX} \cdot \overrightarrow{AB}}{\lvert \overrightarrow{AB} \rvert ^2}, \qquad \tilde{t} = \max \left\{0,\; \min \left\{ 1,\; t\right\}\right\}, \\
+    \overrightarrow{AX} \coloneqq \vec{x} - A, \qquad \overrightarrow{AB} \coloneqq B - A, \\
+    t \coloneqq \frac{\overrightarrow{AX} \cdot \overrightarrow{AB}}{\left\lVert \overrightarrow{AB} \right\rVert ^2}, \qquad \tilde{t} = \max \left\{0,\; \min \left\{ 1,\; t\right\}\right\}, \\
     c \coloneqq A\, +\, \tilde{t}*\overrightarrow{AB}, \\
-    \eta = \mathbf{x} - c.
+    \eta \coloneqq \vec{x} - c.
 \end{gather*}
 
-Due to the presence of $\min$ and $\max$, the specified expressions of $c$ and $\eta$ are non-linear. However, the constraint enforced on the MPC solution at simulation time $k$ is based on the values of $c$ and $\eta$ computed at the beginning of the time step. Therefore, they are included in the constraint as constants, and the LDCBF becomes a linear combination of $\mathbf{x}$.
+Due to the presence of $\min$ and $\max$, the specified expressions of $c$ and $\eta$ are non-linear. However, the constraint enforced on the MPC solution at simulation time $k$ is based on the values of $c$ and $\eta$ computed at the beginning of the time step. Therefore, they are included in the constraint as constants, and the LDCBF becomes a linear combination of $\vec{x}$.
 
 \subsubsection{Our variation of the LDCBF}
 From Figure (\ref{fig:example_LDCBF}) it is evident that a such defined LDCBF constraint allows the humanoid to get very close to the obstacle's boundary. And, even though the CoM will not collide with it, the footstep positions provided by the MPC will likely overlap with the obstacle. Therefore, we developed a variant of the LDCBF proposed by Peng et al., defined as follows:
 
-\begin{equation} \notag
-h\left(\mathbf{x}\right) = \eta^T \left(\mathbf{x} - c\right) - \delta \geq 0,
+\begin{equation} \label{eq:ldcbf_variant}
+h\left(\vec{x}\right) = \eta^T \left(\vec{x} - c\right) - \delta \geq 0,
 \end{equation}
 
-where $c$ and $\eta$ are the vectors previously defined, while $\delta$ is the distance that the CoM must keep from the $c$ (i.e., from the obstacle's boundary) to satisfy the constraint.\\
+where $c$ and $\eta$ are the previously defined vectors, while $\delta$ is the distance that the CoM must keep from the $c$ (i.e., from the obstacle's boundary) to satisfy the constraint. The result is shown in Figure \ref{fig:example_LDCBF_variant}\\
 Forcing the control barrier function not to take values below a threshold allows us to take into account the footstep positions, and to generate trajectories that are not only feasible for the CoM, but for the motion of the whole humanoid.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.75\linewidth]{figures//MPC/example_ldcbf_variant.pdf}
+    \caption{This plot shows the same environment of Figure \ref{fig:example_LDCBF}, but here expression (\ref{eq:ldcbf_variant}) with $\delta > 0$ was used as LDCBF. It is clear that the safe zone is not adjacent to the obstacle, and $\vec{x}$ maintains a distance $\delta$ from the obstacle.}
+    \label{fig:example_LDCBF_variant}
+\end{figure}
 
 \end{document}
