@@ -281,8 +281,8 @@ class HumanoidMPC:
         """
         return eta.T @ (x - c)
 
-    def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
-                             glob_y_k: float):
+    def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float,
+                             glob_y_km1: float):
         """
         Adds the constraint of the Linear Control Barrier Function (LCBF) to the optimization problem for the current
         simulation timestep K.
@@ -292,8 +292,8 @@ class HumanoidMPC:
         :param loc_x_k: The CoM X-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
         :param loc_y_k: The CoM Y-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
         :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
-        :param glob_x_k: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
-        :param glob_y_k: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_x_km1: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
+        :param glob_y_km1: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
 
         :param simul_k: The current simulation timestep.
         :param list_c: The list of the closest point of each obstacle's edge from the humanoid's position. This is the
@@ -305,7 +305,7 @@ class HumanoidMPC:
         # and the normal vector connecting X to C
         list_c, list_norm_vecs = self._get_list_c_and_eta(
             loc_x_k=loc_x_k, loc_y_k=loc_y_k,
-            glob_x_k=glob_x_k, glob_y_k=glob_y_k, glob_theta_k=glob_theta_k,
+            glob_x_km1=glob_x_km1, glob_y_km1=glob_y_km1, glob_theta_k=glob_theta_k,
         )
         list_c_and_norm_vecs = list(zip(list_c, list_norm_vecs))
 
@@ -324,8 +324,8 @@ class HumanoidMPC:
                 lcbf_constr = self._compute_single_lcbf(pos_from_state_cs, normal_vector, c)
                 self.optim_prob.subject_to(cs.power(lcbf_constr, self.lcbf_activation_params[simul_k]) >= 0)
 
-    def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_k: float,
-                            glob_y_k: float):
+    def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float,
+                            glob_y_km1: float):
         """
         It computes the list of the points C and the normal vectors Eta, which are defined for each obstacle as the
         point on the obstacle's edge that is closest to the robot's position, and the vector from the robot's position
@@ -334,8 +334,8 @@ class HumanoidMPC:
         :param loc_x_k: The CoM X-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
         :param loc_y_k: The CoM Y-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
         :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
-        :param glob_x_k: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
-        :param glob_y_k: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k in the simulation.
+        :param glob_x_km1: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
+        :param glob_y_km1: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
         """
         list_c, list_norm_vec = [], []
         # Get the vector of the CoM position from the current state
@@ -346,7 +346,7 @@ class HumanoidMPC:
             #  Convert the obstacle's points in the local RF (i.e. the one of the state)
             local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
                 obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
-                    glob_theta_k, glob_x_k, glob_y_k
+                    glob_theta_k, glob_x_km1, glob_y_km1
                 )
             )
             # Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y) and compute
@@ -462,7 +462,8 @@ class HumanoidMPC:
 
             # Add the LCBF constraints based on the current humanoid's position
             self._add_lcbf_constraint(k, loc_x_k=X_pred[0, k], loc_y_k=X_pred[2, k],
-                                      glob_x_k=X_pred_glob[0, k], glob_y_k=X_pred_glob[2, k],
+                                      glob_x_km1=X_pred_glob[0, k - 1] if k > 0 else 0,  # TODO: change to init state
+                                      glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else 0,  # TODO: change to init state
                                       glob_theta_k=X_pred_glob[4, k])
 
             # Set the initial state
@@ -500,10 +501,13 @@ class HumanoidMPC:
             U_pred[2, k] = self.precomputed_omega[0]
 
             # Compute u_k in the global frame
-            trans_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
-                                                                         X_pred_glob[0, k],
-                                                                         X_pred_glob[2, k])
-            U_pred_glob[:2, k] = (trans_mat_loc_to_glob @ np.append(U_pred[:2, k], 1))[:2]
+            if k == 0:
+                U_pred_glob[:2, 0] = U_pred[:2, 0]  # TODO: change with initial state
+            else:
+                trans_mat_loc_to_glob_input = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                                                   X_pred_glob[0, k - 1],
+                                                                                   X_pred_glob[2, k - 1])
+                U_pred_glob[:2, k] = (trans_mat_loc_to_glob_input @ np.append(U_pred[:2, k], 1))[:2]
             U_pred_glob[2, k] = self.precomputed_omega[0]
 
             # ===== DEBUGGING =====
@@ -516,13 +520,15 @@ class HumanoidMPC:
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
             # Compute x_k_next in the global frame
-            rot_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
-                                                                       X_pred_glob[0, k],
-                                                                       X_pred_glob[2, k])[:2, :2]
+            X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]
+            trans_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k + 1],
+                                                                         X_pred_glob[0, k],
+                                                                         X_pred_glob[2, k])
+            rot_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k + 1],
+                                                                       0, 0)[:2, :2]
             glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
             glob_vel = (rot_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1]])
             X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
-            X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]
 
             # Set X_mpc to the state derived from the computed inputs
             self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
@@ -532,8 +538,8 @@ class HumanoidMPC:
 
             # Move the goal wrt the RF with origin in p_k_next and orientation theta_next
             glob_to_loc_trans_mat = self._get_glob_to_loc_rf_trans_mat(X_pred_glob[4, k + 1],
-                                                                       X_pred_glob[0, k + 1],
-                                                                       X_pred_glob[2, k + 1])
+                                                                       X_pred_glob[0, k],
+                                                                       X_pred_glob[2, k])
             goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
             self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
 
@@ -545,7 +551,7 @@ class HumanoidMPC:
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacle1 = ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))
+    obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
