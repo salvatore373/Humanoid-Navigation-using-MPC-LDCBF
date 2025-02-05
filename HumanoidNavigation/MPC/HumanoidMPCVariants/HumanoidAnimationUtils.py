@@ -153,6 +153,8 @@ class HumanoidAnimationUtils:
         for obs in self.obstacles:
             self._plot_polygon(ax, obs)
 
+        # TODO: show the goal and c and eta for each obstacle
+
         def update(frame):
             """Update the triangle's vertices, barycenter and trajectory at each frame."""
             # Update the CoM triangle position

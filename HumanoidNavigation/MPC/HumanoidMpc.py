@@ -7,6 +7,7 @@ import numpy as np
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 
+from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.obstacles_no_sympy import plot_polygon
 
@@ -282,7 +283,7 @@ class HumanoidMPC:
         return eta.T @ (x - c)
 
     def _add_lcbf_constraint(self, simul_k: int, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float,
-                             glob_y_km1: float):
+                             glob_y_km1: float) -> list[tuple[np.ndarray, np.ndarray]]:
         """
         Adds the constraint of the Linear Control Barrier Function (LCBF) to the optimization problem for the current
         simulation timestep K.
@@ -294,12 +295,7 @@ class HumanoidMPC:
         :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
         :param glob_x_km1: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
         :param glob_y_km1: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
-
-        :param simul_k: The current simulation timestep.
-        :param list_c: The list of the closest point of each obstacle's edge from the humanoid's position. This is the
-        result of self._get_list_c_and_eta(). The obstacle should be considered in local coordinates.
-        :param list_normal_vectors: The list of the vectors of the humanoid's positions from each obstacle's C point.
-        This is the result of self._get_list_c_and_eta(). The obstacle should be considered in local coordinates.
+        :returns: The list of the c and eta vectors computed for each obstacle (in local coordinates).
         """
         # For each obstacle, determine the point C on the edge closest to the current humanoid's position X,
         # and the normal vector connecting X to C
@@ -324,8 +320,10 @@ class HumanoidMPC:
                 lcbf_constr = self._compute_single_lcbf(pos_from_state_cs, normal_vector, c)
                 self.optim_prob.subject_to(cs.power(lcbf_constr, self.lcbf_activation_params[simul_k]) >= 0)
 
+        return list_c_and_norm_vecs
+
     def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float,
-                            glob_y_km1: float):
+                            glob_y_km1: float) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """
         It computes the list of the points C and the normal vectors Eta, which are defined for each obstacle as the
         point on the obstacle's edge that is closest to the robot's position, and the vector from the robot's position
@@ -449,6 +447,9 @@ class HumanoidMPC:
         # The position of the footsteps in the global frame at each step of the simulation
         U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
 
+        # The list of the lists of vectors c and eta computed for each obstacle at each simulation step
+        c_and_eta_lists: list[list[tuple[np.ndarray, np.ndarray]]] = []
+
         last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
             # Stop searching for the solution if the value of the optimization function with the solution
@@ -461,10 +462,12 @@ class HumanoidMPC:
             starting_iter_time = time.time()  # CLOCK
 
             # Add the LCBF constraints based on the current humanoid's position
-            self._add_lcbf_constraint(k, loc_x_k=X_pred[0, k], loc_y_k=X_pred[2, k],
-                                      glob_x_km1=X_pred_glob[0, k - 1] if k > 0 else 0,  # TODO: change to init state
-                                      glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else 0,  # TODO: change to init state
-                                      glob_theta_k=X_pred_glob[4, k])
+            list_of_c_and_eta = (
+                self._add_lcbf_constraint(k, loc_x_k=X_pred[0, k], loc_y_k=X_pred[2, k],
+                                          glob_x_km1=X_pred_glob[0, k - 1] if k > 0 else 0,  # TODO: change to init st
+                                          glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else 0,  # TODO: change to init st
+                                          glob_theta_k=X_pred_glob[4, k]))
+            c_and_eta_lists.append(list_of_c_and_eta)
 
             # Set the initial state
             self.optim_prob.set_value(self.x0, X_pred[:4, k])
@@ -546,7 +549,35 @@ class HumanoidMPC:
             computation_time[k] = time.time() - starting_iter_time  # CLOCK
 
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
-        self._plot(X_pred_glob, U_pred_glob)
+
+        # Convert the c and eta vectors of each simulation timestep to global coords
+        c_and_eta_lists_global = []
+        for k, list_k in enumerate(c_and_eta_lists):
+            glob_list_k = []
+            for obs_i_c, obs_i_eta in list_k:
+                tf_mat = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
+                                                              # TODO: change with init state
+                                                              X_pred_glob[0, k - 1] if k > 0 else 0,
+                                                              X_pred_glob[2, k - 1] if k > 0 else 0)
+                glob_c = (tf_mat @ np.insert(obs_i_c, 2, 1))[:2]
+                glob_eta = (tf_mat @ np.insert(obs_i_eta, 2, 1))[:2]
+
+                glob_list_k.append((glob_c, glob_eta))
+            c_and_eta_lists_global.append(glob_list_k)
+
+        # Display the obtained results in an animation
+        # self._plot(X_pred_glob, U_pred_glob)
+        animator = HumanoidAnimationUtils(goal_position=self.goal, obstacles=self.obstacles)
+        for k in range(X_pred_glob.shape[1]):
+            animator.add_frame_data(
+                com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
+                humanoid_orientation=X_pred_glob[4, k],
+                footstep_position=U_pred_glob[:2, k],
+                which_footstep=self.s_v[k],
+            )
+        animator.plot_animation('/Users/salvatore/Downloads/res.gif')
+
+
 
 
 if __name__ == "__main__":
