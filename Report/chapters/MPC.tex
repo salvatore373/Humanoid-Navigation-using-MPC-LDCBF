@@ -52,7 +52,9 @@ where $p_x, p_y$ and $\theta$ are the position and orientation of the humanoid a
 \subsection{Kinematic Constraints}
 The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, Peng et al. decided to enforce the walking velocities, leg reachability, and maneuverability constraints defined as follows.
 
+%% TODO: not sure about any of the constraints explainations
 \subsubsection{Walking Velocities Constraint}
+
 \[
 \begin{pmatrix}
 v_{x_{\min}} \\
@@ -72,15 +74,14 @@ s_v v_{y_{k+1}}
 v_{x_{\max}} \\
 v_{y_{\max}}
 \end{pmatrix}
-\qquad \forall k \in \left[ 0,\, N-1\right],
-\]
-The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to $RF_{k}$. 
-%%%%%%%% TODO: explain why  %%%%%%%%%%%%%%%
-Then, it ensures that the velocity is within the lateral and longitudinal limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
-$s_v$ is $1$ if stance foot is the right, $-1$ otherwise. It is meant to limit the lateral velocity in such a way that, at the end of each step, the stance foot on the opposite side.
+\qquad \forall k \in \left[ 0,\, N-1\right].
+\]\\
+
+
+The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to the orientation of $RF_{k}$. In the vector resulting from the transformation, the first component is the forward velocity, while the second is the lateral velocity, both in $RF_k$. At this point, the constraint imposes that the velocity is within the lateral and longitudinal limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
+$s_v$ is $1$ if stance foot is the right one, $-1$ otherwise. It is meant to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side but the humanoid does not lose balance.
 %% TODO: decide whether the text below should be removed
 For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
-
 
 \subsubsection{Leg Reachability Constraint}
 \[
@@ -104,7 +105,10 @@ l_{\max}
 \end{pmatrix}
 \qquad \forall k \in \left[0,\, N-1 \right],
 \]
-%% TODO
+
+As stated before, the matrix in this constraint transforms the orientation of $(p_{x_k},\,p_{y_k})$ to the one of $RF_{k-1}$. It prevents the inputs computed at time $k$ from moving the CoM too far away from $(p_{x_{k-1}},\,p_{y_{k-1}})$. Indeed, the distance between the previous and the new position cannot be farther than $l_{\max}$, which is the maximum reachable distance of the swing foot in both directions on the ground.
+
+
 \subsubsection{Maneuverability Constraint}
 \[
 \begin{pmatrix}
@@ -117,7 +121,8 @@ v_{y_k}
 \leq v_{x_{\max}} - \frac{\alpha}{\pi} |\omega_k|
 \qquad \forall k \in \left[0,\, N-1 \right],
 \]
-%% TODO
+
+This constraint is meant to reduce the humanoid's walking speed while it is turning. For this reason, it combines the longitudinal and angular velocities. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vectors projection on the left side) is lower than a quantity that depends on the turning rate and some constant values. $\alpha$ is a simulation parameter.
 
 \subsection{Control Barrier Functions}
 
