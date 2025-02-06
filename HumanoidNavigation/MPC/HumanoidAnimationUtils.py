@@ -282,20 +282,3 @@ class HumanoidAnimationUtils:
         plt.xlim(-5, 7)
         plt.ylim(-2, 12)
         plt.show()
-
-
-if __name__ == '__main__':
-    animator = HumanoidAnimationUtils(
-        goal_position=np.array([10, 10]),
-        obstacles=[ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))],
-    )
-
-    for i in range(10):
-        animator.add_frame_data(
-            com_position=np.array([i, i]),
-            humanoid_orientation=(np.pi / 2) * (i / 9),
-            footstep_position=np.array([-i, i]),
-            which_footstep=i % 2,
-        )
-
-    animator.plot_animation(path_to_gif='/Users/salvatore/Downloads/res.gif')

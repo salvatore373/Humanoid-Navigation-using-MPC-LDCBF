@@ -4,7 +4,7 @@ import casadi as cs
 import numpy as np
 from scipy.spatial import ConvexHull
 
-from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidAnimationUtils import HumanoidAnimationUtils
+from HumanoidNavigation.MPC.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 
 
