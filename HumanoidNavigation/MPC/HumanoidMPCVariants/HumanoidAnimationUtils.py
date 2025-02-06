@@ -3,7 +3,6 @@ import numpy as np
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 
@@ -30,7 +29,7 @@ class HumanoidAnimationUtils:
         """
 
         def __init__(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                     which_footstep: int):
+                     which_footstep: int, list_point_c: list[np.ndarray]):
             # The global position of the CoM in the map
             self.com_position = com_position
             # The global orientation of the humanoid in the map
@@ -39,6 +38,8 @@ class HumanoidAnimationUtils:
             self.footstep_position = footstep_position
             # 1 if the stance foot is the right one, -1 otherwise
             self.which_footstep = which_footstep
+            # The list of the points c on the edge of the obstacles in the map.
+            self.list_point_c = list_point_c
             # TODO: add c, eta and half plane for each obstacle
 
     def __init__(self, goal_position: np.ndarray, obstacles: list[ConvexHull] = []):
@@ -54,7 +55,7 @@ class HumanoidAnimationUtils:
         self.goal_position: np.ndarray = goal_position
 
     def add_frame_data(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                       which_footstep: int) -> None:
+                       which_footstep: int, list_point_c: list[np.ndarray]) -> None:
         """
         Adds to the sequence of frame all the data referred to the current frame of the animation.
 
@@ -62,9 +63,10 @@ class HumanoidAnimationUtils:
         :param humanoid_orientation: The global orientation of the humanoid in the map.
         :param footstep_position: The global position of the stance foot in the map.
         :param which_footstep: 1 if the stance foot is the right one, -1 otherwise.
+        :param list_point_c: The list of the points c on the edge of the obstacles in the map.
         """
         self._frames_data.append(HumanoidAnimationUtils._HumanoidAnimationFrame(
-            com_position, humanoid_orientation, footstep_position, which_footstep
+            com_position, humanoid_orientation, footstep_position, which_footstep, list_point_c
         ))
 
     @staticmethod
@@ -127,6 +129,9 @@ class HumanoidAnimationUtils:
         for ind, footstep in enumerate(footsteps.T):
             # Build the rectangle associated to this footstep
             x, y = footstep[0], footstep[1]
+            # In the last frame, the input is not computed and no footstep is available
+            if x is None and y is None:
+                continue
             # Create rectangle centered at the position with the humanoid's orientation
             rect = Rectangle((-self.FOOT_RECTANGLE_WIDTH / 2, -self.FOOT_RECTANGLE_HEIGHT / 2),
                              self.FOOT_RECTANGLE_WIDTH, self.FOOT_RECTANGLE_HEIGHT,
@@ -145,15 +150,28 @@ class HumanoidAnimationUtils:
         ax.add_patch(triangle_patch)
 
         # Initialize the plots of the barycenter and its trajectory
-        barycenter_point, = ax.plot([], [], 'ro', label="Barycenter")
+        barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue')
         # trajectory_line, = ax.plot([], [], 'r-', lw=1, label="Trajectory")
-        trajectory_line, = ax.plot([], [], '--k', lw=1, label="Trajectory")
+        trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory")
+
+        # Plot the goal point
+        ax.plot(self.goal_position[0], self.goal_position[1], 'o', color='darkorange', label='Goal Position')
 
         # Show all the obstacles
         for obs in self.obstacles:
             self._plot_polygon(ax, obs)
 
-        # TODO: show the goal and c and eta for each obstacle
+        # Put all the c points in a tensor
+        point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
+        for frame_num, frame_data in enumerate(self._frames_data):
+            for obs_num, c in enumerate(frame_data.list_point_c):
+                point_c_per_frame[frame_num, obs_num] = c
+        # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
+        points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
+                              color='red', label="Points c")
+
+        # Show the legend (at the most appropriate location)
+        plt.legend()
 
         def update(frame):
             """Update the triangle's vertices, barycenter and trajectory at each frame."""
@@ -166,9 +184,12 @@ class HumanoidAnimationUtils:
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
 
+            # Update the position of points c on the obstacles' edges
+            points_c.set_offsets(point_c_per_frame[frame, :])
+
             # Update the footsteps opacity
             for i in range(frame):
-                footsteps_rectangles[i].set_alpha(footsteps_rectangles[i].get_alpha() * .85)
+                footsteps_rectangles[i].set_alpha(footsteps_rectangles[i].get_alpha() * .95)
             # Display the rectangles
             footsteps_rectangles[frame].set_visible(True)
 

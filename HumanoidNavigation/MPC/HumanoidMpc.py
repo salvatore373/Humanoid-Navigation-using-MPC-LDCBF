@@ -452,14 +452,7 @@ class HumanoidMPC:
 
         last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
-            # Stop searching for the solution if the value of the optimization function with the solution
-            # of the previous step is low enough.
-            if last_obj_fun_val < 0.05:
-                X_pred_glob = X_pred_glob[:, :k + 1]
-                U_pred_glob = U_pred_glob[:, :k + 1]
-                break
-
-            starting_iter_time = time.time()  # CLOCK
+            starting_iter_time = time.time()  # CLOCK  #DEBUG
 
             # Add the LCBF constraints based on the current humanoid's position
             list_of_c_and_eta = (
@@ -468,6 +461,13 @@ class HumanoidMPC:
                                           glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else 0,  # TODO: change to init st
                                           glob_theta_k=X_pred_glob[4, k]))
             c_and_eta_lists.append(list_of_c_and_eta)
+
+            # Stop searching for the solution if the value of the optimization function with the solution
+            # of the previous step is low enough.
+            if last_obj_fun_val < 0.05:
+                X_pred_glob = X_pred_glob[:, :k + 1]
+                U_pred_glob = U_pred_glob[:, :k]
+                break
 
             # Set the initial state
             self.optim_prob.set_value(self.x0, X_pred[:4, k])
@@ -546,9 +546,8 @@ class HumanoidMPC:
             goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
             self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
 
-            computation_time[k] = time.time() - starting_iter_time  # CLOCK
-
-        print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")
+        computation_time[k] = time.time() - starting_iter_time  # CLOCK
+        print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")  # DEBUG
 
         # Convert the c and eta vectors of each simulation timestep to global coords
         c_and_eta_lists_global = []
@@ -562,7 +561,8 @@ class HumanoidMPC:
                 glob_c = (tf_mat @ np.insert(obs_i_c, 2, 1))[:2]
                 glob_eta = (tf_mat @ np.insert(obs_i_eta, 2, 1))[:2]
 
-                glob_list_k.append((glob_c, glob_eta))
+                # glob_list_k.append((glob_c, glob_eta))
+                glob_list_k.append(glob_c)
             c_and_eta_lists_global.append(glob_list_k)
 
         # Display the obtained results in an animation
@@ -572,12 +572,11 @@ class HumanoidMPC:
             animator.add_frame_data(
                 com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
                 humanoid_orientation=X_pred_glob[4, k],
-                footstep_position=U_pred_glob[:2, k],
+                footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                 which_footstep=self.s_v[k],
+                list_point_c=c_and_eta_lists_global[k]
             )
         animator.plot_animation('/Users/salvatore/Downloads/res.gif')
-
-
 
 
 if __name__ == "__main__":
