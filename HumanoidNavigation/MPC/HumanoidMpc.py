@@ -1,15 +1,11 @@
 import time
 
 import casadi as cs
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
-from HumanoidNavigation.Utils.obstacles_no_sympy import plot_polygon
 
 
 class HumanoidMPC:
@@ -387,55 +383,13 @@ class HumanoidMPC:
         """
         return (self.A_l @ x_k) + (self.B_l @ u_k)
 
-    def _plot(self, state_glob, input_glob):
-        """
-        It plots the trajectory of the CoM contained in state_glob and the footsteps prints contained in input_glob.
-
-        :param state_glob: A matrix of shape (5xN_simul+1) that represents the state of the humanoid dynamic system at
-        any instant of the simulation. The coordinates system is the one of the inertial RF.
-        :param input_glob: A matrix of shape (3xN_simul) that represents the input of the humanoid dynamic system at
-        any instant of the simulation. The coordinates system is the one of the inertial RF.
-        """
-        fix, ax = plt.subplots()
-
-        # Plot the start position
-        plt.plot(state_glob[0, 0], state_glob[2, 0], marker='o', color="cornflowerblue", label="Start")
-
-        # Plot the goal position
-        plt.plot(self.goal[0], self.goal[1], marker='o', color="darkorange", label="Goal")
-
-        # Plot the obstacles
-        for obstacle in self.obstacles:
-            plot_polygon(obstacle.points[obstacle.vertices])
-
-        # Plot the trajectory of the CoM computed by the MPC
-        plt.plot(state_glob[0, :], state_glob[2, :], color="mediumpurple", label="Predicted Trajectory")
-
-        # Plot the footsteps plan computed by the MPC
-        for time_instant, (step_x, step_y, _) in enumerate(input_glob.T):
-            foot_orient = state_glob[4, time_instant]
-
-            # Create rectangle centered at the position
-            rect = Rectangle((-self.FOOT_RECT_WIDTH / 2, -self.FOOT_RECT_HEIGHT / 2),
-                             self.FOOT_RECT_WIDTH, self.FOOT_RECT_HEIGHT,
-                             color='blue' if self.s_v[time_instant] == self.RIGHT_FOOT else 'green', alpha=0.7)
-            # Apply rotation
-            t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
-                 matplotlib.transforms.Affine2D().translate(step_x, step_y) + ax.transData)
-            rect.set_transform(t)
-
-            # Add rectangle to the plot
-            ax.add_patch(rect)
-
-        plt.legend()
-        plt.xlim(-5, 7)
-        plt.ylim(-2, 12)
-        plt.show()
-
-    def run_simulation(self):
+    def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True):
         """
         It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
         to reach the goal. Then, it plots the obtained results.
+
+        :param path_to_gif: The path to the GIF file where the animation of this simulation will be saved.
+        :param make_fast_plot: Whether to show a static (though fast) plot of the simulation before the animation.
         """
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
@@ -552,21 +506,20 @@ class HumanoidMPC:
         # Convert the c and eta vectors of each simulation timestep to global coords
         c_and_eta_lists_global = []
         for k, list_k in enumerate(c_and_eta_lists):
-            glob_list_k = []
+            glob_list_c_k = []
             for obs_i_c, obs_i_eta in list_k:
                 tf_mat = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
                                                               # TODO: change with init state
                                                               X_pred_glob[0, k - 1] if k > 0 else 0,
                                                               X_pred_glob[2, k - 1] if k > 0 else 0)
                 glob_c = (tf_mat @ np.insert(obs_i_c, 2, 1))[:2]
-                glob_eta = (tf_mat @ np.insert(obs_i_eta, 2, 1))[:2]
 
-                # glob_list_k.append((glob_c, glob_eta))
-                glob_list_k.append(glob_c)
-            c_and_eta_lists_global.append(glob_list_k)
+                glob_list_c_k.append(glob_c)
+            c_and_eta_lists_global.append(glob_list_c_k)
 
-        # Display the obtained results in an animation
-        # self._plot(X_pred_glob, U_pred_glob)
+        # Display the obtained results
+        if make_fast_plot:
+            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, self.goal, self.obstacles, self.s_v)
         animator = HumanoidAnimationUtils(goal_position=self.goal, obstacles=self.obstacles)
         for k in range(X_pred_glob.shape[1]):
             animator.add_frame_data(
@@ -574,14 +527,15 @@ class HumanoidMPC:
                 humanoid_orientation=X_pred_glob[4, k],
                 footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                 which_footstep=self.s_v[k],
-                list_point_c=c_and_eta_lists_global[k]
+                list_point_c=c_and_eta_lists_global[k],
             )
-        animator.plot_animation('/Users/salvatore/Downloads/res.gif')
+        animator.plot_animation(path_to_gif)
 
 
 if __name__ == "__main__":
     # only one and very far away
     obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
+    obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
@@ -593,10 +547,10 @@ if __name__ == "__main__":
         goal=(0, 5),
         obstacles=[
             obstacle1,
-            # obstacle2,
+            obstacle2,
             # obstacle3,
         ],
         verbosity=0
     )
 
-    mpc.run_simulation()
+    mpc.run_simulation(path_to_gif='/Users/salvatore/Downloads/res.gif', make_fast_plot=True)
