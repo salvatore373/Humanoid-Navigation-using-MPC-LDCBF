@@ -306,7 +306,7 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.lcbf_activation_params[:simul_k], np.zeros(simul_k))
 
         # Add the control barrier functions constraint
-        for k in range(self.N_horizon):
+        for k in range(self.N_horizon+1):
             # Get the vector of the CoM position from the current state
             pos_from_state = np.array([self.X_mpc[0, k], self.X_mpc[2, k]])
             pos_from_state_cs = cs.vertcat(pos_from_state[0], pos_from_state[1])
@@ -527,14 +527,15 @@ class HumanoidMPC:
                 humanoid_orientation=X_pred_glob[4, k],
                 footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                 which_footstep=self.s_v[k],
-                list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[k-1],
+                list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
+                    k - 1],
             )
         animator.plot_animation(path_to_gif)
 
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacle1 = ConvexHull(np.array([[-0.8, 2], [-0.8, 4], [2, 2], [2, 4]]))
+    obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
@@ -544,7 +545,7 @@ if __name__ == "__main__":
         N_horizon=3,
         N_simul=300,
         sampling_time=HumanoidMPC.DELTA_T,
-        goal=(-3, 3),
+        goal=(-1, 3),
         obstacles=[
             obstacle1,
             # obstacle2,
