@@ -12,7 +12,7 @@ class HumanoidAnimationUtils:
     The class that handles the animation of the humanoid's motion.
     """
     # The width and height of the triangle representing the pose of the CoM in the animation
-    TRIANGLE_HEIGHT = 0.4
+    TRIANGLE_HEIGHT = 0.45
     TRIANGLE_WIDTH = 0.35
 
     # The height and the width of the rectangle that represents the stance foot in the animation plot
@@ -137,7 +137,7 @@ class HumanoidAnimationUtils:
             # Create rectangle centered at the position with the humanoid's orientation
             rect = Rectangle((-self.FOOT_RECTANGLE_WIDTH / 2, -self.FOOT_RECTANGLE_HEIGHT / 2),
                              self.FOOT_RECTANGLE_WIDTH, self.FOOT_RECTANGLE_HEIGHT,
-                             color='blue' if footstep[2] == self.RIGHT_FOOT else 'green', alpha=0.7)
+                             color='blue' if footstep[2] == self.RIGHT_FOOT else 'green', alpha=0.7, zorder=3)
             t = (matplotlib.transforms.Affine2D().rotate(theta_trajectory[ind]) +
                  matplotlib.transforms.Affine2D().translate(x, y) + ax.transData)
             rect.set_transform(t)
@@ -148,13 +148,12 @@ class HumanoidAnimationUtils:
             ax.add_patch(rect)
 
         # Initialize the triangle
-        triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='green')
+        triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='cornflowerblue', zorder=4)
         ax.add_patch(triangle_patch)
 
         # Initialize the plots of the barycenter and its trajectory
-        barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue')
-        # trajectory_line, = ax.plot([], [], 'r-', lw=1, label="Trajectory")
-        trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory")
+        barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue', zorder=5)
+        trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
 
         # Plot the goal point
         ax.plot(self.goal_position[0], self.goal_position[1], 'o', color='darkorange', label='Goal Position')
@@ -170,8 +169,8 @@ class HumanoidAnimationUtils:
                 point_c_per_frame[frame_num, obs_num] = c
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
-                              color='red', label="Points c")
-        segments_eta = [ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None)[0]
+                              color='red', label="Points c", zorder=3)
+        segments_eta = [ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None, zorder=3)[0]
                         for i in range(len(self.obstacles))]
 
         # For each obstacle, initialize the half plane representing the safe area of its CBF
@@ -211,7 +210,7 @@ class HumanoidAnimationUtils:
                 eta /= np.linalg.norm(eta)
                 eta_x, eta_y = eta
                 condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
-                half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1.5],
+                half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
                                                    colors='gray', alpha=0.5)
 
             # Update the footsteps opacity
@@ -244,7 +243,7 @@ class HumanoidAnimationUtils:
         :param obstacles: The ConvexHulls representing the obstacles in the map, in global coordinates
         :param s_v: The evolution of the s_v parameter of the humanoid.
         """
-        fix, ax = plt.subplots()
+        fix, ax = plt.subplots(dpi=1000)
 
         # Plot the start position
         plt.plot(state_glob[0, 0], state_glob[2, 0], marker='o', color="cornflowerblue", label="Start")
