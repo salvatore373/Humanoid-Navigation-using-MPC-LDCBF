@@ -1,8 +1,8 @@
 import time
-from typing import Union
-import yaml
-import casadi as cs
 import numpy as np
+import casadi as cs
+from typing import Union
+from yaml import safe_load
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.MPC.HumanoidAnimationUtils import HumanoidAnimationUtils
@@ -11,11 +11,10 @@ from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 ASSETS_PATH = "../../Assets/Animations/res.gif"
 
 with open('../config.yml', 'r') as file:
-    conf = yaml.safe_load(file)
+    conf = safe_load(file)
 conf["BETA"] = np.sqrt(conf["GRAVITY_CONST"] / conf["COM_HEIGHT"])
 conf["OMEGA_MAX"] = 0.156*cs.pi
 conf["OMEGA_MIN"] = -conf["OMEGA_MAX"]
-print(conf)
 
 class HumanoidMPC:
     """

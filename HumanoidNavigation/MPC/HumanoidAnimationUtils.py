@@ -1,27 +1,19 @@
 import matplotlib
 import numpy as np
+from yaml import safe_load
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 
+with open('../config.yml', 'r') as file:
+    conf = safe_load(file)
 
 class HumanoidAnimationUtils:
     """
     The class that handles the animation of the humanoid's motion.
     """
-    # The width and height of the triangle representing the pose of the CoM in the animation
-    TRIANGLE_HEIGHT = 0.45
-    TRIANGLE_WIDTH = 0.35
-
-    # The height and the width of the rectangle that represents the stance foot in the animation plot
-    FOOT_RECTANGLE_WIDTH = 0.3
-    FOOT_RECTANGLE_HEIGHT = 0.15
-
-    # The constants used to represent the left and right feet
-    RIGHT_FOOT = 1
-    LEFT_FOOT = -1
 
     class _HumanoidAnimationFrame:
         """
@@ -102,7 +94,7 @@ class HumanoidAnimationUtils:
 
         # Define the vertices representing a triangle with the base laying on the X-axis and the other vertex on
         # the positive Y-axis.
-        vert = np.array([[self.TRIANGLE_HEIGHT, 0], [0, self.TRIANGLE_WIDTH / 2], [0, -self.TRIANGLE_WIDTH / 2]]).T
+        vert = np.array([[conf["TRIANGLE_HEIGHT"], 0], [0, conf["TRIANGLE_WIDTH"] / 2], [0, -conf["TRIANGLE_WIDTH"] / 2]]).T
         # Compute the barycenter of the triangle and put it in the origin
         barycenter = np.mean(vert, axis=1)[..., np.newaxis]
         vert = vert - barycenter
@@ -135,9 +127,9 @@ class HumanoidAnimationUtils:
             if x is None and y is None:
                 continue
             # Create rectangle centered at the position with the humanoid's orientation
-            rect = Rectangle((-self.FOOT_RECTANGLE_WIDTH / 2, -self.FOOT_RECTANGLE_HEIGHT / 2),
-                             self.FOOT_RECTANGLE_WIDTH, self.FOOT_RECTANGLE_HEIGHT,
-                             color='blue' if footstep[2] == self.RIGHT_FOOT else 'green', alpha=0.7, zorder=3)
+            rect = Rectangle((-conf["FOOT_RECTANGLE_WIDTH"] / 2, -conf["FOOT_RECTANGLE_HEIGHT"] / 2),
+                             conf["FOOT_RECTANGLE_WIDTH"], conf["FOOT_RECTANGLE_HEIGHT"],
+                             color='blue' if footstep[2] == conf["RIGHT_FOOT"] else 'green', alpha=0.7, zorder=3)
             t = (matplotlib.transforms.Affine2D().rotate(theta_trajectory[ind]) +
                  matplotlib.transforms.Affine2D().translate(x, y) + ax.transData)
             rect.set_transform(t)
@@ -263,11 +255,11 @@ class HumanoidAnimationUtils:
             foot_orient = state_glob[4, time_instant]
 
             # Create rectangle centered at the position
-            rect = Rectangle((-HumanoidAnimationUtils.FOOT_RECTANGLE_WIDTH / 2,
-                              -HumanoidAnimationUtils.FOOT_RECTANGLE_HEIGHT / 2),
-                             HumanoidAnimationUtils.FOOT_RECTANGLE_WIDTH,
-                             HumanoidAnimationUtils.FOOT_RECTANGLE_HEIGHT,
-                             color='blue' if s_v[time_instant] == HumanoidAnimationUtils.RIGHT_FOOT else 'green',
+            rect = Rectangle((-conf["FOOT_RECTANGLE_WIDTH"] / 2,
+                              -conf["FOOT_RECTANGLE_HEIGHT"] / 2),
+                             conf["FOOT_RECTANGLE_WIDTH"],
+                             conf["FOOT_RECTANGLE_HEIGHT"],
+                             color='blue' if s_v[time_instant] == conf["RIGHT_FOOT"] else 'green',
                              alpha=0.7)
             # Apply rotation
             t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
