@@ -1,20 +1,25 @@
+import os
 import time
-import numpy as np
-import casadi as cs
 from typing import Union
-from yaml import safe_load
+
+import casadi as cs
+import numpy as np
 from scipy.spatial import ConvexHull
+from yaml import safe_load
 
 from HumanoidNavigation.MPC.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 
-ASSETS_PATH = "../../Assets/Animations/res.gif"
-
-with open('../config.yml', 'r') as file:
+this_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(this_dir)
+with open(config_dir + '/config.yml', 'r') as file:
     conf = safe_load(file)
 conf["BETA"] = np.sqrt(conf["GRAVITY_CONST"] / conf["COM_HEIGHT"])
-conf["OMEGA_MAX"] = 0.156*cs.pi
+conf["OMEGA_MAX"] = 0.156 * cs.pi
 conf["OMEGA_MIN"] = -conf["OMEGA_MAX"]
+
+ASSETS_PATH = os.path.dirname(config_dir) + "/Assets/Animations/res.gif"
+
 
 class HumanoidMPC:
     """
@@ -181,18 +186,20 @@ class HumanoidMPC:
         """
         # we are pre-computing the heading angle as the direction from the current position towards the goal position
         goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
-        target_heading_angle = (cs.atan2(goal_loc_coords[1] - start_state[2], goal_loc_coords[0] - start_state[0])
-                                - start_state_theta)
-
-        # Compute the turning rate for this prediction horizon
-        self.precomputed_omega = [
-            cs.fmin(cs.fmax(target_heading_angle, conf["OMEGA_MIN"]), conf["OMEGA_MAX"])
-            for _ in range(self.N_horizon)
-        ]
 
         # Compute the humanoid's orientation for this prediction horizon
         self.precomputed_theta = [start_state_theta]  # initial theta
+        self.precomputed_omega = []
         for k in range(self.N_horizon):
+            target_heading_angle = (cs.atan2(goal_loc_coords[1] - start_state[2],
+                                             goal_loc_coords[0] - start_state[0])
+                                    - self.precomputed_theta[-1])
+
+            # Compute the turning rate for this prediction horizon
+            self.precomputed_omega.append(
+                cs.fmin(cs.fmax(target_heading_angle, conf["OMEGA_MIN"]), conf["OMEGA_MAX"])
+            )
+
             self.precomputed_theta.append(
                 self.precomputed_theta[-1] + self.precomputed_omega[k] * self.sampling_time
             )
@@ -524,7 +531,7 @@ class HumanoidMPC:
         goal = self.goal
         if self.null_to_init_state_transf is not None and self.init_state_to_null_transf is not None:
             # Transform the state
-            X_pred_glob[[0,2]] = (self.null_to_init_state_transf @ np.insert(X_pred_glob[[0, 2]], 2, 1, axis=0))[:-1]
+            X_pred_glob[[0, 2]] = (self.null_to_init_state_transf @ np.insert(X_pred_glob[[0, 2]], 2, 1, axis=0))[:-1]
             X_pred_glob[[1, 3]] = self.null_to_init_state_transf[:2, :2] @ X_pred_glob[[1, 3]]
             X_pred_glob[4] += self.init_state[4]
             # Transform the inputs
@@ -577,7 +584,7 @@ if __name__ == "__main__":
         N_simul=300,
         sampling_time=conf["DELTA_T"],
         goal=(-1, 3),
-        init_state=(-1, 0, 2, 0, np.pi),
+        init_state=(-5, 0, 3, 0, np.pi * 3 / 2),
         obstacles=[
             obstacle1,
             # obstacle2,

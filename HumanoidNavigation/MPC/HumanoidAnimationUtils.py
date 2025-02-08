@@ -1,14 +1,19 @@
+import os
+
 import matplotlib
 import numpy as np
-from yaml import safe_load
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
+from yaml import safe_load
 
-with open('../config.yml', 'r') as file:
+this_dir = os.path.dirname(os.path.realpath(__file__))
+config_dir = os.path.dirname(this_dir)
+with open(config_dir + '/config.yml', 'r') as file:
     conf = safe_load(file)
+
 
 class HumanoidAnimationUtils:
     """
@@ -94,7 +99,8 @@ class HumanoidAnimationUtils:
 
         # Define the vertices representing a triangle with the base laying on the X-axis and the other vertex on
         # the positive Y-axis.
-        vert = np.array([[conf["TRIANGLE_HEIGHT"], 0], [0, conf["TRIANGLE_WIDTH"] / 2], [0, -conf["TRIANGLE_WIDTH"] / 2]]).T
+        vert = np.array(
+            [[conf["TRIANGLE_HEIGHT"], 0], [0, conf["TRIANGLE_WIDTH"] / 2], [0, -conf["TRIANGLE_WIDTH"] / 2]]).T
         # Compute the barycenter of the triangle and put it in the origin
         barycenter = np.mean(vert, axis=1)[..., np.newaxis]
         vert = vert - barycenter
