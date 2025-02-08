@@ -5,7 +5,7 @@ FOOT_RECT_HEIGHT : 0.1
 DELTA_T : 0.4
 GRAVITY_CONST : 9.81
 COM_HEIGHT : 1
-ALPHA : 3.66  # (1.44 or 3.6)
+ALPHA : 1.44  # (1.44 or 3.6)
 L_MAX : 0.17320508075  # 0.1*sqrt(3)
 V_MIN : [-0.1, 0.1]
 V_MAX : [0.8, 0.4]
