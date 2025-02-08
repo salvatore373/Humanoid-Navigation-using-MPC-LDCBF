@@ -12,6 +12,10 @@ ASSETS_PATH = "../../Assets/Animations/res.gif"
 
 with open('../config.yml', 'r') as file:
     conf = yaml.safe_load(file)
+conf["BETA"] = np.sqrt(conf["GRAVITY_CONST"] / conf["COM_HEIGHT"])
+conf["OMEGA_MAX"] = 0.156*cs.pi
+conf["OMEGA_MIN"] = -conf["OMEGA_MAX"]
+print(conf)
 
 class HumanoidMPC:
     """
@@ -19,43 +23,21 @@ class HumanoidMPC:
     Control Barrier Functions" by Peng et al.
     """
 
-    # The width and the height of the rectangle representing the feet in the plot
-    FOOT_RECT_WIDTH = 0.25
-    FOOT_RECT_HEIGHT = 0.1
-
-    # Definition of some constants related to the humanoid's motion
-    DELTA_T = 0.4
-    GRAVITY_CONST = 9.81
-    COM_HEIGHT = 1
-    BETA = np.sqrt(GRAVITY_CONST / COM_HEIGHT)
-    ALPHA = 3.66  # (1.44 or 3.6)
-    L_MAX = 0.17320508075  # 0.1*sqrt(3)
-    V_MIN = [-0.1, 0.1]
-    V_MAX = [0.8, 0.4]
-
-    # The constants used to represent the left and right feet
-    RIGHT_FOOT = 1
-    LEFT_FOOT = -1
-
-    # The minimum and maximum turning rate allowed by the humanoid's system
-    OMEGA_MAX = 0.156 * cs.pi  # unit: rad/s
-    OMEGA_MIN = -OMEGA_MAX
-
     # The drift matrix of the humanoid's dynamic model
-    COSH = cs.cosh(BETA * DELTA_T)
-    SINH = cs.sinh(BETA * DELTA_T)
+    COSH = cs.cosh(conf["BETA"] * conf["DELTA_T"])
+    SINH = cs.sinh(conf["BETA"] * conf["DELTA_T"])
     A_l = cs.vertcat(
-        cs.horzcat(COSH, SINH / BETA, 0, 0),
-        cs.horzcat(SINH * BETA, COSH, 0, 0),
-        cs.horzcat(0, 0, COSH, SINH / BETA),
-        cs.horzcat(0, 0, SINH * BETA, COSH),
+        cs.horzcat(COSH, SINH / conf["BETA"], 0, 0),
+        cs.horzcat(SINH * conf["BETA"], COSH, 0, 0),
+        cs.horzcat(0, 0, COSH, SINH / conf["BETA"]),
+        cs.horzcat(0, 0, SINH * conf["BETA"], COSH),
     )
     # The control matrix of the humanoid's dynamic model
     B_l = cs.vertcat(
         cs.horzcat(1 - COSH, 0),
-        cs.horzcat(-BETA * SINH, 0),
+        cs.horzcat(-conf["BETA"] * SINH, 0),
         cs.horzcat(0, 1 - COSH),
-        cs.horzcat(0, -BETA * SINH),
+        cs.horzcat(0, -conf["BETA"] * SINH),
     )
 
     def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
@@ -126,7 +108,7 @@ class HumanoidMPC:
         # Define which step should be right and which left
         self.s_v_param = self.optim_prob.parameter(1, self.N_horizon)
         for i in range(self.N_simul + self.N_horizon - 1):
-            self.s_v.append(self.RIGHT_FOOT if i % 2 == (0 if start_with_right_foot else 1) else self.LEFT_FOOT)
+            self.s_v.append(conf["RIGHT_FOOT"] if i % 2 == (0 if start_with_right_foot else 1) else conf["LEFT_FOOT"])
 
         # Define the state and the control variables (without theta and omega)
         self.X_mpc = self.optim_prob.variable(self.state_dim, self.N_horizon + 1)
@@ -205,7 +187,7 @@ class HumanoidMPC:
 
         # Compute the turning rate for this prediction horizon
         self.precomputed_omega = [
-            cs.fmin(cs.fmax(target_heading_angle, self.OMEGA_MIN), self.OMEGA_MAX)
+            cs.fmin(cs.fmax(target_heading_angle, conf["OMEGA_MIN"]), conf["OMEGA_MAX"])
             for _ in range(self.N_horizon)
         ]
 
@@ -268,7 +250,7 @@ class HumanoidMPC:
         :param omega_k: The turning rate of the humanoid at time K.
         """
         velocity_term = cs.cos(theta_k) * x_k[1] + cs.sin(theta_k) * x_k[3]
-        safety_term = self.V_MAX[0] - (self.ALPHA / np.pi) * cs.fabs(omega_k)
+        safety_term = conf["V_MAX"][0] - (conf["ALPHA"] / np.pi) * cs.fabs(omega_k)
 
         return velocity_term, safety_term
 
@@ -286,13 +268,13 @@ class HumanoidMPC:
 
             # leg reachability -> prevent the over-extension of the swing leg
             reachability = self._compute_leg_reachability_matrix(self.X_mpc[:, k], self.X_mpc_theta[k])
-            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(self.L_MAX, self.L_MAX)))
-            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-self.L_MAX, -self.L_MAX)))
+            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(conf["L_MAX"], conf["L_MAX"])))
+            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-conf["L_MAX"], -conf["L_MAX"])))
 
             # walking velocities constraint
             local_velocities = self._compute_walking_velocities_matrix(self.X_mpc[:, k + 1], self.X_mpc_theta[k], k)
-            self.optim_prob.subject_to(local_velocities <= self.V_MAX)
-            self.optim_prob.subject_to(local_velocities >= self.V_MIN)
+            self.optim_prob.subject_to(local_velocities <= conf["V_MAX"])
+            self.optim_prob.subject_to(local_velocities >= conf["V_MIN"])
 
             # maneuverability constraint (right now using the same v_max of the walking constraint)
             velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k], self.X_mpc_theta[k],
@@ -594,7 +576,7 @@ if __name__ == "__main__":
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
-        sampling_time=HumanoidMPC.DELTA_T,
+        sampling_time=conf["DELTA_T"],
         goal=(-1, 3),
         init_state=(-1, 0, 2, 0, np.pi),
         obstacles=[

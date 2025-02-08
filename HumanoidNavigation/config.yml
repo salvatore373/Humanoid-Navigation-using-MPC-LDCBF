@@ -5,15 +5,10 @@ FOOT_RECT_HEIGHT : 0.1
 DELTA_T : 0.4
 GRAVITY_CONST : 9.81
 COM_HEIGHT : 1
-BETA : np.sqrt(GRAVITY_CONST / COM_HEIGHT)
 ALPHA : 3.66  # (1.44 or 3.6)
 L_MAX : 0.17320508075  # 0.1*sqrt(3)
 V_MIN : [-0.1, 0.1]
 V_MAX : [0.8, 0.4]
-
-# The minimum and maximum turning rate allowed by the humanoid's system
-OMEGA_MAX : 0.156 * cs.pi  # unit: rad/s
-OMEGA_MIN : -OMEGA_MAX
 
 # ============| SIMULATION |============ 
 
