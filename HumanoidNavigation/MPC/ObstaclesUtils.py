@@ -70,7 +70,7 @@ class ObstaclesUtils:
         return closest_point, normal_vector
 
     @staticmethod
-    def transform_obstacle_from_glob_to_loc_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray) \
+    def transform_obstacle_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray) \
             -> ConvexHull:
         # Get the vertices of the obstacle
         glob_vertices = obstacle.points

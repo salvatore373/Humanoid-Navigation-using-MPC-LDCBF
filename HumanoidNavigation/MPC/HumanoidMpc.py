@@ -1,4 +1,5 @@
 import time
+from typing import Union
 
 import casadi as cs
 import numpy as np
@@ -54,12 +55,14 @@ class HumanoidMPC:
     )
 
     def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
+                 init_state: Union[np.ndarray, tuple[float, float, float, float, float]] = None,
                  start_with_right_foot: bool = True, verbosity: int = 1):
         """
         Initialize the MPC.
 
         :param goal: The position that the humanoid should reach.
         :param obstacles: The obstacles in the environment.
+        :param init_state: The initial position, velocity and orientation of the humanoid, as a 5D vector.
         :param N_horizon: The length of the prediction horizon.
         :param N_simul: The number of time steps in the simulation.
         :param sampling_time: The duration of a single time step in seconds.
@@ -69,6 +72,32 @@ class HumanoidMPC:
         self.N_horizon = N_horizon
         self.N_simul = N_simul
         self.sampling_time = sampling_time
+
+        # If an initial state different from the null vector was provided, transform the goal and the obstacles to move
+        # the initial state to the origin
+        self.init_state_to_null_transf = None
+        self.null_to_init_state_transf = None
+        self.init_state = init_state
+        if init_state is not None:
+            if isinstance(init_state, np.ndarray):
+                assert init_state.shape == (5, 1) and init_state.dtype == np.float32, \
+                    "The initial state must be a vector with 5 components, containing only floats."
+            elif isinstance(init_state, tuple):
+                assert len(init_state) == 5 and all(isinstance(el, float) or isinstance(el, int) for el in init_state), \
+                    "The initial state must be a vector with 5 components, containing only floats."
+
+            if ((isinstance(init_state, np.ndarray) and init_state != np.zeros((5, 1))) or
+                    (isinstance(init_state, tuple) and init_state != (0, 0, 0, 0, 0))):
+                # The transformation matrix to change the coordinates from the RF in the origin
+                # to the one in the provided initial state, and vice versa.
+                self.init_state_to_null_transf = \
+                    self._get_glob_to_loc_rf_trans_mat(init_state[4], init_state[0], init_state[2])
+                self.null_to_init_state_transf = \
+                    self._get_local_to_glob_rf_trans_mat(init_state[4], init_state[0], init_state[2])
+                # Transform the provided obstacles and goal to the RF in the origin
+                obstacles = [ObstaclesUtils.transform_obstacle_coords(obs, self.init_state_to_null_transf)
+                             for obs in obstacles]
+                goal = (self.init_state_to_null_transf @ np.insert(goal, 2, 1))[:2]
 
         self.goal = goal
         self.obstacles: list[ConvexHull] = obstacles
@@ -104,12 +133,12 @@ class HumanoidMPC:
         self.U_mpc_omega = self.optim_prob.parameter(1, self.N_horizon)
         self.x0_theta = self.optim_prob.parameter(1)
 
-        # Set the initial state
-        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))  # TODO: get initial state from input
+        # Set the initial state (always in the origin)
+        self.optim_prob.set_value(self.x0, np.zeros((self.state_dim, 1)))
         self.optim_prob.set_value(self.x0_theta, 0)
 
         # Define the goal local coordinates as a parameter
-        glob_to_loc_mat = HumanoidMPC._get_glob_to_loc_rf_trans_mat(0, 0, 0)  # TODO: get theta,x,y from init state
+        glob_to_loc_mat = HumanoidMPC._get_glob_to_loc_rf_trans_mat(0, 0, 0)
         self.goal_loc_coords = self.optim_prob.parameter(2, 1)  # goal_x, goal_y
         self.optim_prob.set_value(self.goal_loc_coords, (glob_to_loc_mat @ [self.goal[0], self.goal[1], 1])[:2])
 
@@ -306,7 +335,7 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.lcbf_activation_params[:simul_k], np.zeros(simul_k))
 
         # Add the control barrier functions constraint
-        for k in range(self.N_horizon+1):
+        for k in range(self.N_horizon + 1):
             # Get the vector of the CoM position from the current state
             pos_from_state = np.array([self.X_mpc[0, k], self.X_mpc[2, k]])
             pos_from_state_cs = cs.vertcat(pos_from_state[0], pos_from_state[1])
@@ -338,7 +367,7 @@ class HumanoidMPC:
         # Add one constraint for each obstacle in the map
         for obstacle in self.obstacles:
             #  Convert the obstacle's points in the local RF (i.e. the one of the state)
-            local_obstacle = ObstaclesUtils.transform_obstacle_from_glob_to_loc_coords(
+            local_obstacle = ObstaclesUtils.transform_obstacle_coords(
                 obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
                     glob_theta_k, glob_x_km1, glob_y_km1
                 )
@@ -411,8 +440,8 @@ class HumanoidMPC:
             # Add the LCBF constraints based on the current humanoid's position
             list_of_c_and_eta = (
                 self._add_lcbf_constraint(k, loc_x_k=X_pred[0, k], loc_y_k=X_pred[2, k],
-                                          glob_x_km1=X_pred_glob[0, k - 1] if k > 0 else 0,  # TODO: change to init st
-                                          glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else 0,  # TODO: change to init st
+                                          glob_x_km1=X_pred_glob[0, k - 1] if k > 0 else X_pred_glob[0, k],
+                                          glob_y_km1=X_pred_glob[2, k - 1] if k > 0 else X_pred_glob[2, k],
                                           glob_theta_k=X_pred_glob[4, k]))
             c_and_eta_lists.append(list_of_c_and_eta)
 
@@ -459,7 +488,7 @@ class HumanoidMPC:
 
             # Compute u_k in the global frame
             if k == 0:
-                U_pred_glob[:2, 0] = U_pred[:2, 0]  # TODO: change with initial state
+                U_pred_glob[:2, 0] = U_pred[:2, 0]
             else:
                 trans_mat_loc_to_glob_input = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
                                                                                    X_pred_glob[0, k - 1],
@@ -503,15 +532,30 @@ class HumanoidMPC:
         computation_time[k] = time.time() - starting_iter_time  # CLOCK
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")  # DEBUG
 
+        # Change the coordinates from the RF in the origin to the one in the initial state
+        obstacles = self.obstacles
+        goal = self.goal
+        if self.null_to_init_state_transf is not None and self.init_state_to_null_transf is not None:
+            # Transform the state
+            X_pred_glob[[0,2]] = (self.null_to_init_state_transf @ np.insert(X_pred_glob[[0, 2]], 2, 1, axis=0))[:-1]
+            X_pred_glob[[1, 3]] = self.null_to_init_state_transf[:2, :2] @ X_pred_glob[[1, 3]]
+            X_pred_glob[4] += self.init_state[4]
+            # Transform the inputs
+            U_pred_glob[:2] = (self.null_to_init_state_transf @ np.insert(U_pred_glob[:2], 2, 1, axis=0))[:-1]
+            # Transform the obstacles (for plotting)
+            obstacles = [ObstaclesUtils.transform_obstacle_coords(obs, self.null_to_init_state_transf)
+                         for obs in obstacles]
+            # Transform the goal (for plotting)
+            goal = (self.null_to_init_state_transf @ np.insert(goal, 2, 1))[:2]
+
         # Convert the c and eta vectors of each simulation timestep to global coords
         c_and_eta_lists_global = []
         for k, list_k in enumerate(c_and_eta_lists):
             glob_list_c_k = []
             for obs_i_c, obs_i_eta in list_k:
                 tf_mat = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k],
-                                                              # TODO: change with init state
-                                                              X_pred_glob[0, k - 1] if k > 0 else 0,
-                                                              X_pred_glob[2, k - 1] if k > 0 else 0)
+                                                              X_pred_glob[0, k - 1] if k > 0 else X_pred_glob[0, k],
+                                                              X_pred_glob[2, k - 1] if k > 0 else X_pred_glob[2, k])
                 glob_c = (tf_mat @ np.insert(obs_i_c, 2, 1))[:2]
 
                 glob_list_c_k.append(glob_c)
@@ -519,8 +563,8 @@ class HumanoidMPC:
 
         # Display the obtained results
         if make_fast_plot:
-            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, self.goal, self.obstacles, self.s_v)
-        animator = HumanoidAnimationUtils(goal_position=self.goal, obstacles=self.obstacles)
+            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles, self.s_v)
+        animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles)
         for k in range(X_pred_glob.shape[1]):
             animator.add_frame_data(
                 com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
@@ -546,6 +590,7 @@ if __name__ == "__main__":
         N_simul=300,
         sampling_time=HumanoidMPC.DELTA_T,
         goal=(-1, 3),
+        init_state=(-1, 0, 2, 0, np.pi),
         obstacles=[
             obstacle1,
             # obstacle2,
