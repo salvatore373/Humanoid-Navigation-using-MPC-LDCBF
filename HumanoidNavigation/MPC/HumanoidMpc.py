@@ -448,8 +448,6 @@ class HumanoidMPC:
             # Stop searching for the solution if the value of the optimization function with the solution
             # of the previous step is low enough.
             if last_obj_fun_val < 0.05:
-                X_pred_glob = X_pred_glob[:, :k + 1]
-                U_pred_glob = U_pred_glob[:, :k]
                 break
 
             # Set the initial state
@@ -480,7 +478,7 @@ class HumanoidMPC:
                 print(e)
                 print("===== INFEASIBILITIES =====")
                 print(self.optim_prob.debug.show_infeasibilities())
-                exit(1)
+                break
 
             # get u_k
             U_pred[:2, k] = kth_solution.value(self.U_mpc[:, 0])
@@ -528,6 +526,10 @@ class HumanoidMPC:
                                                                        X_pred_glob[2, k])
             goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
             self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
+
+        # Remove empty portions from X_pred_glob and U_pred_glob
+        X_pred_glob = X_pred_glob[:, :k + 1]
+        U_pred_glob = U_pred_glob[:, :k]
 
         computation_time[k] = time.time() - starting_iter_time  # CLOCK
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")  # DEBUG
