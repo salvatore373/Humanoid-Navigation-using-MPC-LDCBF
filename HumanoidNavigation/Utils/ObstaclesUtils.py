@@ -73,7 +73,10 @@ class ObstaclesUtils:
     def transform_obstacle_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray) \
             -> ConvexHull:
         # Get the vertices of the obstacle
-        glob_vertices = obstacle.points
+        if isinstance(obstacle, ConvexHull):
+            glob_vertices = obstacle.points
+        else:
+            glob_vertices = np.array(obstacle)
         # Convert all the vertices from global to local coordinates with the given transformation matrix
         loc_vertices = transformation_matrix @ np.insert(glob_vertices.T, 2, 1, axis=0)
         # Create a new obstacle with the new vertices (excluding the last component of the just computed vertices)

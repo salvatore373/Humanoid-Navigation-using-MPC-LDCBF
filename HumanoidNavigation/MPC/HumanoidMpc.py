@@ -573,23 +573,31 @@ class HumanoidMPC:
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
+    # obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
+    from HumanoidNavigation.Utils.obstacles import generate_obstacles
+
+    start=(-3, 7)
+    goal=(4, -4)
+
+    obstacles = generate_obstacles(
+        start=start,
+        goal=goal,
+        num_obstacles=3
+    )
+
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
-        goal=(-1, 3),
-        init_state=(-5, 0, 3, 0, np.pi * 3 / 2),
-        obstacles=[
-            obstacle1,
-            # obstacle2,
-            # obstacle3,
-        ],
+        goal=goal,
+        init_state=(start[0], 0, start[1], 0, np.pi * 3 / 2),
+        # obstacles=[ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))],
+        obstacles=obstacles,
         verbosity=0
     )
 
