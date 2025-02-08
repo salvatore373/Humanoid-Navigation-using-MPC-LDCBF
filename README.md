@@ -1,15 +1,28 @@
 # Humanoid Navigation using Control Barrier Functions
 
-## CREATE Virtual Environment and install Libraries
+# Installation/Quick start
+First you need to create your python environment with <code style="color : GreenYellow">conda</code> and install <code style="color : GreenYellow">pip</code> for the packages:
+```
+conda create -n amr_mpc
+conda install pip
+```
+Then you need to activate your environment as follows:
+```
+conda activate amr_mpc
+```
+In order to install everything you just need to execute the following command inside the repository:
+```
+python -m pip install -e .
+```
+Or you can directly use the standard virtual environment <code style="color : GreenYellow">.venv</code> as follows:
 
-- Enter the following commands:
-    1. ```python3 -m venv venv```
-    2. ```source .venv/bin/activate```
-    3. ```pip install -r requirements.txt```
+```
+python3 -m venv .venv
 
-## Install the Package
+source .venv/bin/activate
 
-- Enter this command: ```pip install -e .```
+pip install -e .
+```
 
 ## CONTAINER INSTRUCTIONS
 

@@ -3,13 +3,10 @@ name = "HumanoidNavigation"
 version = "0.1.0"
 description = "Humanoid Navigation using Mpc with Control Barrier Functions"
 readme = "README.md"
-dependencies = [
-    "numpy",
-    "matplotlib",
-    "casadi",
-    "scipy",
-    "sympy",
-]
+
+dynamic = ["dependencies"]
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
 [build-system]
 requires = ["setuptools>=61.0"]
