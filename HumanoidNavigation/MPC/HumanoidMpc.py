@@ -7,8 +7,8 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from yaml import safe_load
 
-from HumanoidNavigation.MPC.HumanoidAnimationUtils import HumanoidAnimationUtils
-from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
+from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
+from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
