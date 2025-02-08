@@ -1,6 +1,6 @@
 import time
 from typing import Union
-
+import yaml
 import casadi as cs
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -8,6 +8,10 @@ from scipy.spatial import ConvexHull
 from HumanoidNavigation.MPC.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 
+ASSETS_PATH = "../../Assets/Animations/res.gif"
+
+with open('../config.yml', 'r') as file:
+    conf = yaml.safe_load(file)
 
 class HumanoidMPC:
     """
@@ -601,4 +605,4 @@ if __name__ == "__main__":
         verbosity=0
     )
 
-    mpc.run_simulation(path_to_gif='/Users/salvatore/Downloads/res.gif', make_fast_plot=True)
+    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True)

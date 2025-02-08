@@ -243,7 +243,7 @@ class HumanoidAnimationUtils:
         :param obstacles: The ConvexHulls representing the obstacles in the map, in global coordinates
         :param s_v: The evolution of the s_v parameter of the humanoid.
         """
-        fix, ax = plt.subplots(dpi=1000)
+        fix, ax = plt.subplots()
 
         # Plot the start position
         plt.plot(state_glob[0, 0], state_glob[2, 0], marker='o', color="cornflowerblue", label="Start")
