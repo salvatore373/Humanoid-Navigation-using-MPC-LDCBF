@@ -412,6 +412,8 @@ class HumanoidMPC:
 
         :param path_to_gif: The path to the GIF file where the animation of this simulation will be saved.
         :param make_fast_plot: Whether to show a static (though fast) plot of the simulation before the animation.
+        :return: A tuple, where the first matrix is the evolution of the state throughout the simulation, while the
+         second one is the evolution of the inputs computed by the MPC.
         """
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
@@ -571,11 +573,13 @@ class HumanoidMPC:
             )
         animator.plot_animation(path_to_gif)
 
+        return X_pred_glob, U_pred_glob
+
 
 if __name__ == "__main__":
     ObstaclesUtils.set_random_seed(1)
     set_seed(1)
-    
+
     # only one and very far away
     # obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
@@ -600,6 +604,7 @@ if __name__ == "__main__":
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
+        # sampling_time=1e-2,
         goal=goal,
         init_state=start,
         obstacles=obstacles,
