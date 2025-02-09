@@ -114,7 +114,7 @@ class HumanoidAnimationUtils:
         barycenter_traj = barycenter + np.array([[x_trajectory, y_trajectory]]).T
 
         # Set up the plot
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(dpi=500)
         min_x, max_x = min(min(x_trajectory), min(footsteps[0, :])), max(max(x_trajectory), max(footsteps[0, :]))
         min_y, max_y = min(min(y_trajectory), min(footsteps[1, :])), max(max(y_trajectory), max(footsteps[1, :]))
         min_coord, max_coord = min(min_x, min_y), max(max_x, max_y)
