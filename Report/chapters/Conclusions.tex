@@ -3,6 +3,34 @@
 \begin{document}
 
 \section{Conclusion}\label{sec:conclusions}
-This is the conclusion.
+In this project, we successfully reproduced the methodology presented in Peng et al. \cite{peng_main_paper}, implementing a real-time
+safe navigation framework for bipedal robots using Linear Discrete Control Barrier Functions (LDCBFs).
+Our implementation validated the feasibility of using a Linear Inverted Pendulum (LIP) model combined with Model Predictive Control (MPC) to achieve stable and dynamically feasible locomotion in cluttered environments.
+
+Minding about social robotics, beyond reproducing the original work, we introduced an additional
+\textit{safety margin} in the computation of LDCBF constraints.
+This modification aimed to enhance obstacle avoidance robustness, ensuring a more conservative approach to collision prevention while maintaining real-time performance.
+Our simulations demonstrated that this adjustment effectively increased the reliability of navigation without
+introducing significant computational overhead; anyway this novelty results in additional system tweaking, so to
+obtain the best safety margin over the environment.
+
+Further refinement of the safety margin parameter could provide an optimal trade-off between conservatism and
+maneuverability; an environment-based dynamic safety margin will be the best suited for that task.
+For example, someone can tweak it based on the number of obstacles inside the FOV, or based on the width of
+the available walking space.
+
+Moreover, for safe gait planning with limited FOV, we leveraged LiDAR scans of the surrounding scene and applied DBSCAN
+algorithm so to obtain a convex obstacle dynamically computed.
+In this way, due to the flexibility of our system, this can be deployed in dynamic environments with walking humans,
+enhancing its usage in social robotics environments.
+
+Despite these improvements, certain limitations remain.
+The precomputed turning rates, while simplifying real-time computation, may reduce flexibility in highly constrained environments.
+Future work could explore adaptive strategies for obstacle avoidance, integrating learning-based methods to enhance decision-making in dynamic environments.
+
+Overall, this project provided valuable insights into safe gait planning for bipedal robots and reinforced the effectiveness of LDCBF-based navigation.
+Our contributions offer a promising direction for improving safety-critical real-time locomotion, with potential applications in both simulation and real-world robotic deployments.
+
+
 
 \end{document}
