@@ -9,6 +9,7 @@ from yaml import safe_load
 
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
+from HumanoidNavigation.Utils.obstacles import generate_obstacles, set_seed
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
@@ -572,6 +573,9 @@ class HumanoidMPC:
 
 
 if __name__ == "__main__":
+    ObstaclesUtils.set_random_seed(1)
+    set_seed(1)
+    
     # only one and very far away
     # obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
@@ -579,25 +583,31 @@ if __name__ == "__main__":
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
-    from HumanoidNavigation.Utils.obstacles import generate_obstacles
-
-    start=(-3, 7)
-    goal=(4, -4)
+    start = (0, 0, 0, 0, np.pi * 3 / 2)
+    goal = (5, 5)
 
     obstacles = generate_obstacles(
-        start=start,
+        start=(start[0], start[2]),
         goal=goal,
-        num_obstacles=3
+        num_obstacles=5,
+        x_range=(0, 5),
+        y_range=(0, 5)
     )
+
+    obstacles = obstacles[1:2]
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
         goal=goal,
-        init_state=(start[0], 0, start[1], 0, np.pi * 3 / 2),
-        # obstacles=[ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))],
+        init_state=start,
         obstacles=obstacles,
+        # obstacles=[
+        #     obstacle1,
+        #     # obstacle2,
+        #     # obstacle3,
+        # ],
         verbosity=0
     )
 

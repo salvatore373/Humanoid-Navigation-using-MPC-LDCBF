@@ -10,6 +10,13 @@ class ObstaclesUtils:
     """
 
     @staticmethod
+    def set_random_seed(seed: int) -> None:
+        """
+        Sets the seed of the random number generator
+        """
+        random.seed(seed)
+
+    @staticmethod
     def generate_random_convex_polygon(num_points: int, x_range: tuple[float, float],
                                        y_range: tuple[float, float]) -> ConvexHull:
         """
