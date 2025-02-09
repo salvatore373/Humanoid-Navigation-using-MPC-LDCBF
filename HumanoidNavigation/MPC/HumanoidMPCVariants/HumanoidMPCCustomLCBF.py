@@ -30,24 +30,23 @@ class HumanoidMPCCustomLCBF(HumanoidMPC):
 
 if __name__ == "__main__":
     # only one and very far away
-    obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle1 = ConvexHull(np.array([[-0.5, 2], [-0.5, 4], [2, 2], [2, 4]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
-    # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
+    obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
     mpc = HumanoidMPCCustomLCBF(
         N_horizon=3,
         N_simul=300,
         sampling_time=HumanoidMPC.DELTA_T,
-        goal=(-1, 3),
+        goal=(0, 5),
         obstacles=[
-            obstacle1,
+            # obstacle1,
             # obstacle2,
-            # obstacle3,
+            obstacle3,
         ],
         verbosity=0,
-        distance_from_obstacles=.5
+        distance_from_obstacles=1.0
     )
 
-    mpc.run_simulation(path_to_gif='/Users/salvatore/Downloads/re2.gif', make_fast_plot=True)
+    mpc.run_simulation()

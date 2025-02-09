@@ -103,7 +103,7 @@ p_{y_k}
 l_{\max} \\
 l_{\max}
 \end{pmatrix}
-\qquad \forall k \in \left[0,\, N-1 \right].
+\qquad \forall k \in \left[0,\, N-1 \right],
 \]
 
 As stated before, the matrix in this constraint transforms the orientation of $(p_{x_k},\,p_{y_k})$ to the one of $RF_{k-1}$. It prevents the inputs computed at time $k$ from moving the CoM too far away from $(p_{x_{k-1}},\,p_{y_{k-1}})$. Indeed, the distance between the previous and the new position cannot be farther than $l_{\max}$, which is the maximum reachable distance of the swing foot in both directions on the ground.
@@ -119,7 +119,7 @@ v_{x_k} \\
 v_{y_k}
 \end{pmatrix}
 \leq v_{x_{\max}} - \frac{\alpha}{\pi} |\omega_k|
-\qquad \forall k \in \left[0,\, N-1 \right].
+\qquad \forall k \in \left[0,\, N-1 \right],
 \]
 
 This constraint is meant to reduce the humanoid's walking speed while it is turning. For this reason, it combines the longitudinal and angular velocities. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vectors projection on the left side) is lower than a quantity that depends on the turning rate and some constant values. $\alpha$ is a simulation parameter.
