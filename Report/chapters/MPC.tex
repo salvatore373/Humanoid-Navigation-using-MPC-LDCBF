@@ -181,9 +181,10 @@ Vectors $\eta$ and $c$ are computed as follows. Indicating with $A$ and $B$ the 
     \overrightarrow{AX} \coloneqq \vec{x} - A, \qquad \overrightarrow{AB} \coloneqq B - A, \\
     t \coloneqq \frac{\overrightarrow{AX} \cdot \overrightarrow{AB}}{\left\lVert \overrightarrow{AB} \right\rVert ^2}, \qquad \tilde{t} = \max \left\{0,\; \min \left\{ 1,\; t\right\}\right\}, \\
     c \coloneqq A\, +\, \tilde{t}*\overrightarrow{AB}, \\
-    \eta \coloneqq \vec{x} - c.
+    \eta \coloneqq \left(-1\right)^{\gamma} * \left( \vec{x} - c \right),
 \end{gather*}
 
+where $\gamma=1$ if $\vec{x}$ is inside the obstacle, otherwise it is $0$.
 Due to the presence of $\min$ and $\max$, the specified expressions of $c$ and $\eta$ are non-linear. However, the constraint enforced on the MPC solution at simulation time $k$ is based on the values of $c$ and $\eta$ computed at the beginning of the time step. Therefore, they are included in the constraint as constants, and the LDCBF becomes a linear combination of $\vec{x}$.
 
 \subsubsection{Our variation of the LDCBF}

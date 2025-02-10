@@ -1,6 +1,7 @@
 import random
 
 import numpy as np
+from matplotlib.path import Path
 from scipy.spatial import ConvexHull
 
 
@@ -26,6 +27,16 @@ class ObstaclesUtils:
         """
         points = [(random.uniform(*x_range), random.uniform(*y_range)) for _ in range(num_points)]
         return ConvexHull(points)
+
+    @staticmethod
+    def _is_point_inside_polygon(point: np.ndarray, polygon: ConvexHull) -> bool:
+        """
+        Checks if a 2D point is inside the given convex hull.
+        """
+        # Get the ordered vertices of the convex hull.
+        hull_vertices = polygon.points[polygon.vertices]
+        path = Path(hull_vertices)
+        return path.contains_point(point)
 
     @staticmethod
     def get_closest_point_and_normal_vector_from_obs(x: np.ndarray, polygon: ConvexHull,
@@ -73,6 +84,9 @@ class ObstaclesUtils:
         # Make the normal vector unitary if requested
         if unitary_normal_vector:
             normal_vector = normal_vector / np.linalg.norm(normal_vector)
+
+        if ObstaclesUtils._is_point_inside_polygon(x, polygon):
+            normal_vector *= -1
 
         return closest_point, normal_vector
 
