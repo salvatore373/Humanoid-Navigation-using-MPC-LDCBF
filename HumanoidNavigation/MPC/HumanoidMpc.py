@@ -1,5 +1,6 @@
 import os
 import time
+from enum import Enum
 from typing import Union
 
 import casadi as cs
