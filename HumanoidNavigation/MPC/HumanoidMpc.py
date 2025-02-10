@@ -576,6 +576,84 @@ class HumanoidMPC:
         return X_pred_glob, U_pred_glob
 
 
+
+
+
+class Scenario(Enum):
+    CROWDED=0
+    CROWDED_START=1
+    CROWDED_END=2
+    START_CLOSE_TO_OBSTACLE=3
+    END_CLOSE_TO_OBSTACLE=4
+    HORIZONTAL_WALL=5
+    VERTICAL_SLALOM=6
+    MAZE=7
+
+def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
+    start, goal, obstacles = start, goal, None
+
+    if scenario == Scenario.CROWDED:
+        start=(0, 0)
+        goal=(5, 5)
+        obstacles = generate_obstacles(
+            start=start,
+            goal=goal,
+            num_obstacles=10, # 100?
+            x_range=(0.1, 5),
+            y_range=(0.1, 5)
+        )
+    if scenario == Scenario.CROWDED_START:
+        start=(0, 0)
+        goal=(5, 5)
+        obstacles = generate_obstacles(
+            start=start,
+            goal=goal,
+            num_obstacles=10,
+            x_range=(0.1, 2),
+            y_range=(0.1, 2)
+        )
+    if scenario == Scenario.CROWDED_END:
+        start=(0, 0)
+        goal=(5, 5)
+        obstacles = generate_obstacles(
+            start=start,
+            goal=goal,
+            num_obstacles=10,
+            x_range=(3, 4.9),
+            y_range=(3, 4.9)
+        )
+    if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
+        start=(0, 0)
+        goal=(5, 0)
+        obstacles = [
+            ConvexHull(np.array([[0.1, -3], [0.1, 3], [1, 3], [1, -3]]))
+        ]
+    if scenario == Scenario.END_CLOSE_TO_OBSTACLE:
+        start=(0, 0)
+        goal=(5, 0)
+        obstacles = [
+            ConvexHull(np.array([[4.9, -3], [4.9, 3], [4, 3], [4, -3]]))
+        ]
+    if scenario == Scenario.HORIZONTAL_WALL:
+        start=(0, 0)
+        goal=(5, 0)
+        obstacles = [
+            ConvexHull(np.array([[1, -10], [1, 10], [3, 10], [3, -10]]))
+        ]
+    if scenario == Scenario.VERTICAL_SLALOM:
+        start=(0, 0)
+        goal=(5, 0)
+        obstacles = [
+            ConvexHull(np.array([[1, -1], [1, 10], [2, 10], [2, -1]])),
+            ConvexHull(np.array([[3, 1], [3, -10], [4, -10], [4, 1]]))
+        ]
+    if scenario == Scenario.MAZE:
+        raise NotImplementedError()
+
+    return start, goal, obstacles
+
+
+
 if __name__ == "__main__":
     ObstaclesUtils.set_random_seed(1)
     set_seed(1)
@@ -587,18 +665,19 @@ if __name__ == "__main__":
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
-    start = (0, 0, 0, 0, np.pi * 3 / 2)
-    goal = (5, 5)
+    start, goal, obstacles = load_scenario(Scenario.CROWDED_START)
 
-    obstacles = generate_obstacles(
-        start=(start[0], start[2]),
-        goal=goal,
-        num_obstacles=5,
-        x_range=(0, 5),
-        y_range=(0, 5)
-    )
+    initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
-    obstacles = obstacles[1:2]
+    # obstacles = generate_obstacles(
+    #     start=initial_state,
+    #     goal=goal,
+    #     num_obstacles=5,
+    #     x_range=(0, 5),
+    #     y_range=(0, 5)
+    # )
+    #
+    # obstacles = obstacles[1:2]
 
     mpc = HumanoidMPC(
         N_horizon=3,
