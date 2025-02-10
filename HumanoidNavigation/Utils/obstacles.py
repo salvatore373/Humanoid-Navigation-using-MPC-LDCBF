@@ -1,7 +1,13 @@
 import random
-from scipy.spatial import ConvexHull
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.spatial import ConvexHull
+
+
+def set_seed(seed):
+    random.seed(seed)
+
 
 # generate ONE random convex polygon
 def generate_random_convex_polygon(num_points, x_range, y_range):
@@ -31,11 +37,10 @@ def is_point_inside_polygon(point, polygon):
     return True
 
 
-
 # shortest distance from a point P to a segment VW
 def point_to_segment_distance(p, v, w):
     # segment len
-    l2 = (w[0] - v[0])**2 + (w[1] - v[1])**2
+    l2 = (w[0] - v[0]) ** 2 + (w[1] - v[1]) ** 2
 
     # avoid zero division (I think can be deleted)
     if l2 == 0: return np.hypot(p[0] - v[0], p[1] - v[1])
@@ -45,8 +50,8 @@ def point_to_segment_distance(p, v, w):
     t = max(0, min(1, ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2))
 
     # t can be seen as a percentage where the point lies in the egment
-    projection = (v[0]+t*(w[0]-v[0]), v[1]+t*(w[1]-v[1]))
-    return np.hypot(p[0]-projection[0], p[1]-projection[1])
+    projection = (v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1]))
+    return np.hypot(p[0] - projection[0], p[1] - projection[1])
 
 
 # compute the distance from a point to a polygon
@@ -58,6 +63,7 @@ def point_to_polygon_distance(point, polygon):
         for i in range(len(polygon))
     )
 
+
 # if three points P, Q, R are arranged in a counter-clockwise order
 def ccw(p, q, r):
     return (r[1] - p[1]) * (q[0] - p[0]) > (q[1] - p[1]) * (r[0] - p[0])
@@ -66,6 +72,7 @@ def ccw(p, q, r):
 # test if the outmost points of one segment AB straddle the other segment CD
 def segment_intersection(a, b, c, d):
     return ccw(a, c, d) != ccw(b, c, d) and ccw(a, b, c) != ccw(a, b, d)
+
 
 # check if a segment intersect with another polygon by checking
 # for each edge of the polygon, if it intersects the given segment
@@ -134,10 +141,11 @@ def polygons_intersect(polygon1, polygon2):
             segment2 = (polygon2[j], polygon2[(j + 1) % len(polygon2)])
             # FIXME: maybe the segment check can be fully replaced by the point check
             if segment_intersects_polygon(segment1, [segment2[0], segment2[1]]) or \
-                is_point_inside_polygon(polygon1[i], polygon2) or \
-                is_point_inside_polygon(polygon2[j], polygon1):
+                    is_point_inside_polygon(polygon1[i], polygon2) or \
+                    is_point_inside_polygon(polygon2[j], polygon1):
                 return True
     return False
+
 
 # plotting funtion
 def plot_polygon(polygon, color='blue', label=None):
@@ -172,11 +180,7 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
 
         polygons.append(np.array(poly))
 
-
     return polygons
-
-
-
 
 
 # ===== PLOTTING OBSTACLES FROM OTHER FILES =====
@@ -185,5 +189,3 @@ def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10
     polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
 
     return polygons
-
-

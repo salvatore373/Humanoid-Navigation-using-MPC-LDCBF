@@ -1,6 +1,5 @@
 import os
 import time
-from enum import Enum
 from typing import Union
 
 import casadi as cs
@@ -10,7 +9,7 @@ from yaml import safe_load
 
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
-from HumanoidNavigation.Utils.obstacles import generate_obstacles
+from HumanoidNavigation.Utils.obstacles import generate_obstacles, set_seed
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
@@ -413,6 +412,8 @@ class HumanoidMPC:
 
         :param path_to_gif: The path to the GIF file where the animation of this simulation will be saved.
         :param make_fast_plot: Whether to show a static (though fast) plot of the simulation before the animation.
+        :return: A tuple, where the first matrix is the evolution of the state throughout the simulation, while the
+         second one is the evolution of the inputs computed by the MPC.
         """
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
@@ -567,119 +568,51 @@ class HumanoidMPC:
                 humanoid_orientation=X_pred_glob[4, k],
                 footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                 which_footstep=self.s_v[k],
-                list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[k-1],
+                list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
+                    k - 1],
             )
         animator.plot_animation(path_to_gif)
 
-
-
-class Scenario(Enum):
-    CROWDED=0
-    CROWDED_START=1
-    CROWDED_END=2
-    START_CLOSE_TO_OBSTACLE=3
-    END_CLOSE_TO_OBSTACLE=4
-    HORIZONTAL_WALL=5
-    VERTICAL_SLALOM=6
-    MAZE=7
-
-def load_scenario(scenario):
-    start, goal, obstacles = None, None, None
-
-    if scenario == Scenario.CROWDED:
-        start=(0, 0)
-        goal=(5, 5)
-        obstacles = generate_obstacles(
-            start=start,
-            goal=goal,
-            num_obstacles=10, # 100?
-            x_range=(0.1, 5),
-            y_range=(0.1, 5)
-        )
-    if scenario == Scenario.CROWDED_START:
-        start=(0, 0)
-        goal=(5, 5)
-        obstacles = generate_obstacles(
-            start=start,
-            goal=goal,
-            num_obstacles=10,
-            x_range=(0.1, 2),
-            y_range=(0.1, 2)
-        )
-    if scenario == Scenario.CROWDED_END:
-        start=(0, 0)
-        goal=(5, 5)
-        obstacles = generate_obstacles(
-            start=start,
-            goal=goal,
-            num_obstacles=10,
-            x_range=(3, 4.9),
-            y_range=(3, 4.9)
-        )
-    if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
-        start=(0, 0)
-        goal=(5, 0)
-        obstacles = [
-            ConvexHull(np.array([[0.1, -3], [0.1, 3], [1, 3], [1, -3]]))
-        ]
-    if scenario == Scenario.END_CLOSE_TO_OBSTACLE:
-        start=(0, 0)
-        goal=(5, 0)
-        obstacles = [
-            ConvexHull(np.array([[4.9, -3], [4.9, 3], [4, 3], [4, -3]]))
-        ]
-    if scenario == Scenario.HORIZONTAL_WALL:
-        start=(0, 0)
-        goal=(5, 0)
-        obstacles = [
-            ConvexHull(np.array([[1, -10], [1, 10], [3, 10], [3, -10]]))
-        ]
-    if scenario == Scenario.VERTICAL_SLALOM:
-        start=(0, 0)
-        goal=(5, 0)
-        obstacles = [
-            ConvexHull(np.array([[1, -1], [1, 10], [2, 10], [2, -1]])),
-            ConvexHull(np.array([[3, 1], [3, -10], [4, -10], [4, 1]]))
-        ]
-    if scenario == Scenario.MAZE:
-        raise NotImplementedError()
-
-    return start, goal, obstacles
-
-
-
-
+        return X_pred_glob, U_pred_glob
 
 
 if __name__ == "__main__":
+    ObstaclesUtils.set_random_seed(1)
+    set_seed(1)
+
+    # only one and very far away
     # obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
     # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
     # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
     # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
     # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
 
-    # start and goal positions
-    # start=(0, 0)
-    # goal=(5, 5)
-    #
-    # obstacles = generate_obstacles(
-    #     start=start,
-    #     goal=goal,
-    #     num_obstacles=5,
-    #     x_range=(0, 5),
-    #     y_range=(0, 5)
-    # )
+    start = (0, 0, 0, 0, np.pi * 3 / 2)
+    goal = (5, 5)
 
-    start, goal, obstacles = load_scenario(Scenario.CROWDED_END)
+    obstacles = generate_obstacles(
+        start=(start[0], start[2]),
+        goal=goal,
+        num_obstacles=5,
+        x_range=(0, 5),
+        y_range=(0, 5)
+    )
+
+    obstacles = obstacles[1:2]
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
+        # sampling_time=1e-2,
         goal=goal,
-        init_state=(start[0], 0, start[1], 0, np.pi * 3 / 2),
-        # obstacles=[ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))],
+        init_state=start,
         obstacles=obstacles,
+        # obstacles=[
+        #     obstacle1,
+        #     # obstacle2,
+        #     # obstacle3,
+        # ],
         verbosity=0
     )
 
