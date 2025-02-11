@@ -406,13 +406,14 @@ class HumanoidMPC:
         """
         return (self.A_l @ x_k) + (self.B_l @ u_k)
 
-    def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True):
+    def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True, animation: bool = False):
         """
         It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
         to reach the goal. Then, it plots the obtained results.
 
         :param path_to_gif: The path to the GIF file where the animation of this simulation will be saved.
         :param make_fast_plot: Whether to show a static (though fast) plot of the simulation before the animation.
+        :param animation: Whether to show and save the animation ot not
         :return: A tuple, where the first matrix is the evolution of the state throughout the simulation, while the
          second one is the evolution of the inputs computed by the MPC.
         """
@@ -562,17 +563,18 @@ class HumanoidMPC:
         # Display the obtained results
         if make_fast_plot:
             HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles, self.s_v)
-        animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles)
-        for k in range(X_pred_glob.shape[1]):
-            animator.add_frame_data(
-                com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
-                humanoid_orientation=X_pred_glob[4, k],
-                footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
-                which_footstep=self.s_v[k],
-                list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
-                    k - 1],
-            )
-        animator.plot_animation(path_to_gif)
+        if animation:
+            animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles)
+            for k in range(X_pred_glob.shape[1]):
+                animator.add_frame_data(
+                    com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
+                    humanoid_orientation=X_pred_glob[4, k],
+                    footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
+                    which_footstep=self.s_v[k],
+                    list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
+                        k - 1],
+                )
+            animator.plot_animation(path_to_gif)
 
         return X_pred_glob, U_pred_glob
 
@@ -581,26 +583,9 @@ if __name__ == "__main__":
     ObstaclesUtils.set_random_seed(1)
     set_seed(1)
 
-    # only one and very far away
-    # obstacle1 = ConvexHull(np.array([[0, 2], [0, 4], [2, 2], [2, 4]]))
-    # obstacle2 = ConvexHull(np.array([[-2, 2], [-2, 4], [-4, 2], [-4, 2]]))
-    # obstacle1 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.5, 0.5), (2, 4))
-    # obstacle2 = ObstaclesUtils.generate_random_convex_polygon(5, (-1.2, -0.5), (2, 4))
-    # obstacle3 = ObstaclesUtils.generate_random_convex_polygon(5, (-0.1, 0.5), (2, 4))
-
-    start, goal, obstacles = load_scenario(Scenario.CROWDED_START)
+    start, goal, obstacles = load_scenario(Scenario.FEW_OBSTACLES)
 
     initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
-
-    # obstacles = generate_obstacles(
-    #     start=initial_state,
-    #     goal=goal,
-    #     num_obstacles=5,
-    #     x_range=(0, 5),
-    #     y_range=(0, 5)
-    # )
-    #
-    # obstacles = obstacles[1:2]
 
     mpc = HumanoidMPC(
         N_horizon=3,
@@ -619,4 +604,4 @@ if __name__ == "__main__":
         verbosity=0
     )
 
-    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True)
+    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, animation=False)

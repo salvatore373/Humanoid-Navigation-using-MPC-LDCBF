@@ -15,6 +15,8 @@ class Scenario(Enum):
     HORIZONTAL_WALL = 5
     VERTICAL_SLALOM = 6
     MAZE = 7
+    EMPTY = 8
+    FEW_OBSTACLES = 9
 
 
 def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
@@ -77,5 +79,18 @@ def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
         ]
     if scenario == Scenario.MAZE:
         raise NotImplementedError()
+    
+    if scenario == Scenario.EMPTY:
+        start = (0,0)
+        goal = (5,5)
+        obstacles = []
+        
+    if scenario == Scenario.FEW_OBSTACLES:
+        start = (0,0)
+        goal = (5,5)
+        obstacles = [
+            ConvexHull(np.array([[3, 2], [5, 4], [2, 2], [2, 4]])),
+            ConvexHull(np.array([[4, 1], [5, 0.5], [7, 3], [6, 2.5]]))
+        ]
 
     return start, goal, obstacles
