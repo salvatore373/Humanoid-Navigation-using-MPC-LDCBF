@@ -74,12 +74,11 @@ def create_convex_hull(points):
     if np.linalg.matrix_rank(points - points[0]) < 2:
         return None
 
-
     try:
         hull = ConvexHull(points)
         return points[hull.vertices]
     except scipy.spatial.qhull.QhullError:
-        # edge cases safely
+        # handle edge cases safely
         return None
 
 
