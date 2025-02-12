@@ -1,10 +1,12 @@
 import math
+
+import scipy
 from scipy.spatial import ConvexHull
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import DBSCAN
 
-from HumanoidNavigation.Utils.obstacles_no_sympy import line_polygon_intersection, plot_polygon, generate_obstacles, segment_intersects_polygon
+from HumanoidNavigation.Utils.obstacles import line_polygon_intersection, plot_polygon, generate_obstacles, segment_intersects_polygon
 
 
 def get_closest_point(points_list, point, lidar_range):
@@ -59,21 +61,61 @@ def compute_lidar_readings(position, obstacles, lidar_range, resolution=360):
 
     return detected_points
 
-def create_convex_hull(points):
+def old_create_convex_hull(points):
     """Create a convex polygon from a cluster of points."""
     if len(points) < 3: return None  # Not enough points for a polygon
-    hull = ConvexHull(points)
+    hull = ConvexHull(np.array(points))
     return points[hull.vertices]
+    # return np.array(points)[hull.vertices]
 
-def retrieve_clusters(points, eps=0.2, min_samples=3):
+def create_convex_hull(points):
+    """Create a convex polygon from a cluster of points."""
+    points = np.unique(points, axis=0)  # Remove duplicate points
+
+    if len(points) < 3:
+        return None  # Not enough points for a polygon
+
+    # Check if points are collinear
+    if np.linalg.matrix_rank(points - points[0]) < 2:
+        return None  # Points are collinear
+
+    try:
+        hull = ConvexHull(points)
+        return points[hull.vertices]
+    except scipy.spatial.qhull.QhullError:
+        return None  # Handle edge cases safely
+
+
+def old_retrieve_clusters(points, eps=0.2, min_samples=3):
     filtered_points = []
     for point in points:
         if point is not None: filtered_points.append(point)
     filtered_points = np.array(filtered_points)
 
+    # print(filtered_points)
+
     clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(filtered_points)
     labels = clustering.labels_
     clusters = [filtered_points[labels == i] for i in set(labels) if i != -1]
+    return clusters
+
+
+def retrieve_clusters(points, eps=0.3, min_samples=3):
+    filtered_points = [p for p in points if p is not None]
+    filtered_points = np.array(filtered_points)
+
+    # Ensure it's a 2D array, even if empty
+    if filtered_points.size == 0:
+        return []  # No clusters to return
+
+    filtered_points = filtered_points.reshape(-1, 2)  # Make sure it has the correct shape
+
+    clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(filtered_points)
+    labels = clustering.labels_
+
+    # Extract clusters
+    clusters = [filtered_points[labels == i] for i in set(labels) if i != -1]
+
     return clusters
 
 
@@ -107,7 +149,7 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
         ax.add_patch(range)
 
     # utils
-    plt.scatter(xs, ys, color="green", label="Detected Points")
+    plt.scatter(xs, ys, color="green", label="Detected Points", s=1)
     plt.legend() # check if needed to remove
     plt.grid(with_grid)
     plt.axis("equal")
@@ -117,11 +159,13 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
 
 # ===== TO RUN SIMULATION FROM THIS FILE =====
 if __name__ == "__main__":
-    LIDAR_RANGE = 2.0
+    LIDAR_RANGE = 7.0
     RESOLUTION = 360 # 90 -> a ray each 4 degree
 
     # LiDAR 2d position
     lidar_position = [0, 0]
+
+    plt.figure(dpi=500)
 
     # LiDAR
     plt.scatter(lidar_position[0], lidar_position[1], color="red", label="LiDAR Position")
@@ -130,10 +174,10 @@ if __name__ == "__main__":
     obstacles = generate_obstacles(
         start=np.array(lidar_position),
         goal=np.array([1, 1]),
-        num_obstacles=3,
-        num_points=5,
-        x_range=(-3, 3),
-        y_range=(-3, 3)
+        num_obstacles=10,
+        num_points=10,
+        x_range=(-5, 5),
+        y_range=(-5, 5)
     )
 
     # ===== LIDAR READINGS =====
@@ -146,12 +190,23 @@ if __name__ == "__main__":
     local_obstacles = build_local_obstacles(clusters)
 
     # ===== PLOTTING STUFFS =====
-    for obstacle in local_obstacles:
-        plot_polygon(obstacle, color='blue', label='Polygon')
+    for i in range(len(obstacles)):
+        obstacle = obstacles[i]
+        if i == 0:
+            plot_polygon(obstacle, color='orange', label='Original obstacle')
+        else:
+            plot_polygon(obstacle, color='orange')
+
+    for i in range(len(local_obstacles)):
+        obstacle = local_obstacles[i]
+        if i == 0:
+            plot_polygon(obstacle, color='blue', label='Percepted Obstacle')
+        else:
+            plot_polygon(obstacle, color='blue')
 
     display_lidar_readings(lidar_position, readings, with_range=True, with_grid=True)
 
     plt.xlabel("X-axis")
     plt.ylabel("Y-axis")
-    plt.title("LiDAR Simulation")
+    plt.title("LiDAR Simulation (DBSCAN eps=0.3)")
     plt.show()
