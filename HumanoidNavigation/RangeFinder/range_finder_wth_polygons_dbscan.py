@@ -61,29 +61,26 @@ def compute_lidar_readings(position, obstacles, lidar_range, resolution=360):
 
     return detected_points
 
-def old_create_convex_hull(points):
-    """Create a convex polygon from a cluster of points."""
-    if len(points) < 3: return None  # Not enough points for a polygon
-    hull = ConvexHull(np.array(points))
-    return points[hull.vertices]
-    # return np.array(points)[hull.vertices]
-
 def create_convex_hull(points):
     """Create a convex polygon from a cluster of points."""
-    points = np.unique(points, axis=0)  # Remove duplicate points
+    # remove duplicate points
+    points = np.unique(points, axis=0)
 
+    # min points for a polygon
     if len(points) < 3:
-        return None  # Not enough points for a polygon
+        return None
 
-    # Check if points are collinear
+    # check if points are collinear
     if np.linalg.matrix_rank(points - points[0]) < 2:
-        return None  # Points are collinear
+        return None
+
 
     try:
         hull = ConvexHull(points)
         return points[hull.vertices]
     except scipy.spatial.qhull.QhullError:
-        return None  # Handle edge cases safely
+        # edge cases safely
+        return None
 
 
 def old_retrieve_clusters(points, eps=0.2, min_samples=3):
@@ -104,9 +101,9 @@ def retrieve_clusters(points, eps=0.3, min_samples=3):
     filtered_points = [p for p in points if p is not None]
     filtered_points = np.array(filtered_points)
 
-    # Ensure it's a 2D array, even if empty
+    # ensure 2D array (even if empty)
     if filtered_points.size == 0:
-        return []  # No clusters to return
+        return [] # no clusters
 
     filtered_points = filtered_points.reshape(-1, 2)  # Make sure it has the correct shape
 
