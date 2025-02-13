@@ -183,6 +183,7 @@ class HumanoidAnimationUtils:
 
         lidar_readings_x_per_frame = []
         lidar_readings_y_per_frame = []
+        lidar_readings_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
             lidar_readings_x = []
             lidar_readings_y = []
@@ -190,11 +191,11 @@ class HumanoidAnimationUtils:
                 if point: # ignore None points (i.e. no obstacles)
                     lidar_readings_x.append(point[0])
                     lidar_readings_y.append(point[1])
+            lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
+            # lidar_readings_x_per_frame.append(lidar_readings_x)
+            # lidar_readings_y_per_frame.append(lidar_readings_y)
 
-            lidar_readings_x_per_frame.append(lidar_readings_x)
-            lidar_readings_y_per_frame.append(lidar_readings_y)
-
-        lidar_readings = ax.scatter([], [], s=1, color='green', label="LiDAR readings", zorder=3)
+        lidar_readings = ax.scatter([], [], s=3, color='green', label="LiDAR readings", zorder=3)
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
@@ -232,9 +233,14 @@ class HumanoidAnimationUtils:
                 # inferred_obstacle_fill.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
 
             # lidar readings for current frame
-            curr_lidar_readings_x = lidar_readings_x_per_frame[frame]
-            curr_lidar_readings_y = lidar_readings_y_per_frame[frame]
-            lidar_readings.set_offsets(list(zip(curr_lidar_readings_x, curr_lidar_readings_y)))
+            # curr_lidar_readings_x = lidar_readings_x_per_frame[frame]
+            # curr_lidar_readings_y = lidar_readings_y_per_frame[frame]
+            # lidar_readings.set_offsets(list(zip(curr_lidar_readings_x, curr_lidar_readings_y)))
+
+            # curr_lidar_reading = rotation_matrix[frame] @ np.array(lidar_readings_per_frame[frame]).T
+            # curr_lidar_reading = np.array(rotation_matrix[frame] @ np.array(lidar_readings_per_frame[frame]).T).T
+            curr_lidar_reading = lidar_readings_per_frame[frame]
+            lidar_readings.set_offsets(curr_lidar_reading)
 
             # Update the position of points c on the obstacles' edges
             points_c.set_offsets(point_c_per_frame[frame, :])
