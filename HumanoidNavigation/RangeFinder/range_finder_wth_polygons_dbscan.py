@@ -1,6 +1,7 @@
 import math
 
 import scipy
+from pip._internal import resolution
 from scipy.spatial import ConvexHull
 import numpy as np
 from matplotlib import pyplot as plt
@@ -152,6 +153,20 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
 
 
 
+# ===== TO RUN SIMULATION FROM OTHER FILES =====
+def range_finder(lidar_position, obstacles, lidar_range=3.0, resolution=360):
+    # ===== LIDAR READINGS =====
+    readings = compute_lidar_readings(lidar_position, obstacles, lidar_range=lidar_range, resolution=resolution)
+
+    # ===== CLUSTER WITH DBSCAN =====
+    clusters = retrieve_clusters(readings)
+
+    # ===== OBSTACLES FROM CLUSTERS =====
+    local_obstacles = build_local_obstacles(clusters)
+
+    return readings, clusters, local_obstacles
+
+
 
 # ===== TO RUN SIMULATION FROM THIS FILE =====
 if __name__ == "__main__":
@@ -159,7 +174,7 @@ if __name__ == "__main__":
     RESOLUTION = 360 # 90 -> a ray each 4 degree
 
     # LiDAR 2d position
-    lidar_position = [0, 0]
+    lidar_position = [0., 0.]
 
     plt.figure(dpi=500)
 
@@ -176,14 +191,19 @@ if __name__ == "__main__":
         y_range=(-5, 5)
     )
 
-    # ===== LIDAR READINGS =====
-    readings = compute_lidar_readings(lidar_position, obstacles, lidar_range=LIDAR_RANGE, resolution=RESOLUTION)
+    print(obstacles)
 
-    # ===== CLUSTER WITH DBSCAN =====
-    clusters = retrieve_clusters(readings)
+    # # ===== LIDAR READINGS =====
+    # readings = compute_lidar_readings(lidar_position, obstacles, lidar_range=LIDAR_RANGE, resolution=RESOLUTION)
+    #
+    # # ===== CLUSTER WITH DBSCAN =====
+    # clusters = retrieve_clusters(readings)
+    #
+    # # ===== OBSTACLES FROM CLUSTERS =====
+    # local_obstacles = build_local_obstacles(clusters)
 
-    # ===== OBSTACLES FROM CLUSTERS =====
-    local_obstacles = build_local_obstacles(clusters)
+    readings, clusters, local_obstacles = range_finder(lidar_position, obstacles, LIDAR_RANGE, RESOLUTION)
+    print("Number of local obstacles=", len(local_obstacles))
 
     # ===== PLOTTING STUFFS =====
     for i in range(len(obstacles)):

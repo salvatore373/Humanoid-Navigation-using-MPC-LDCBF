@@ -19,38 +19,32 @@ class Scenario(Enum):
     FEW_OBSTACLES = 9
 
 
-def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
+def load_scenario(scenario, start, goal):
     start, goal, obstacles = start, goal, None
 
     if scenario == Scenario.CROWDED:
-        start = (0, 0)
-        goal = (5, 5)
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
             num_obstacles=10,  # 100?
-            x_range=(0.1, 5),
-            y_range=(0.1, 5)
+            x_range=(start[0]+0.2, goal[0]-0.2),
+            y_range=(start[1]+0.2, goal[1]-0.2)
         )
     if scenario == Scenario.CROWDED_START:
-        start = (0, 0)
-        goal = (5, 5)
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
             num_obstacles=10,
-            x_range=(0.1, 2),
-            y_range=(0.1, 2)
+            x_range=(start[0]+0.2, 2),
+            y_range=(start[1]+0.2, 2)
         )
     if scenario == Scenario.CROWDED_END:
-        start = (0, 0)
-        goal = (5, 5)
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
             num_obstacles=10,
-            x_range=(3, 4.9),
-            y_range=(3, 4.9)
+            x_range=(3, goal[0]-0.2),
+            y_range=(3, goal[1]-0.2)
         )
     if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
         start = (0, 0)
@@ -65,14 +59,10 @@ def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
             ConvexHull(np.array([[4.9, -3], [4.9, 3], [4, 3], [4, -3]]))
         ]
     if scenario == Scenario.HORIZONTAL_WALL:
-        start = (0, 0)
-        goal = (5, 0)
         obstacles = [
             ConvexHull(np.array([[1, -10], [1, 10], [3, 10], [3, -10]]))
         ]
     if scenario == Scenario.VERTICAL_SLALOM:
-        start = (0, 0)
-        goal = (5, 0)
         obstacles = [
             ConvexHull(np.array([[1, -1], [1, 10], [2, 10], [2, -1]])),
             ConvexHull(np.array([[3, 1], [3, -10], [4, -10], [4, 1]]))
@@ -111,19 +101,13 @@ def load_scenario(scenario, start=(0, 0), goal=(5, 0)):
             ConvexHull(np.array([[1, 5], [3, 5],
                                  [1, 6], [3, 6]])), # upper_medium
         ]
-    
-    if scenario == Scenario.EMPTY:
-        start = (0,0)
-        goal = (5,5)
-        obstacles = []
-        
     if scenario == Scenario.FEW_OBSTACLES:
-        start = (0,0)
-        goal = (5,5)
         obstacles = [
             ConvexHull(np.array([[3, 2], [5, 4], [2, 2], [2, 4]])),
             ConvexHull(np.array([[4, 1], [5, 0.5], [7, 3], [6, 2.5]]))
         ]
+    if scenario == Scenario.EMPTY:
+        obstacles = []
 
     return start, goal, obstacles
 

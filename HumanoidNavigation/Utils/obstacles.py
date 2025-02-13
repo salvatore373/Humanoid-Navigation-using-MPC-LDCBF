@@ -123,8 +123,15 @@ def line_polygon_intersection(line, polygon):
         return None
 
     intersections = []
-    for i in range(len(polygon)):
-        edge = (polygon[i], polygon[(i + 1) % len(polygon)])
+
+    vertices = None
+    if isinstance(polygon, ConvexHull):
+        vertices = polygon.vertices
+    else:
+        vertices = polygon
+
+    for i in range(len(vertices)):
+        edge = (vertices[i], vertices[(i + 1) % len(vertices)])
         intersection = compute_intersection(line[0], line[1], edge[0], edge[1])
         if intersection:
             intersections.append(intersection)

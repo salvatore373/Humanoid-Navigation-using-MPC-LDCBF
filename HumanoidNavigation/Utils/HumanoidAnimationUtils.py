@@ -24,7 +24,7 @@ class HumanoidAnimationUtils:
         """
 
         def __init__(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                     which_footstep: int, list_point_c: list[np.ndarray]):
+                     which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[], lidar_readings = []):
             # The global position of the CoM in the map
             self.com_position = com_position
             # The global orientation of the humanoid in the map
@@ -35,6 +35,10 @@ class HumanoidAnimationUtils:
             self.which_footstep = which_footstep
             # The list of the points c on the edge of the obstacles in the map.
             self.list_point_c = list_point_c
+            # The list of the inferred obstacles.
+            self.inferred_obstacles = inferred_obstacles
+            # The list of the LiDAR readings.
+            self.lidar_readings = lidar_readings
 
     def __init__(self, goal_position: np.ndarray, obstacles: list[ConvexHull] = [], delta: float = 0):
         """
@@ -51,7 +55,7 @@ class HumanoidAnimationUtils:
         self.delta = delta
 
     def add_frame_data(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                       which_footstep: int, list_point_c: list[np.ndarray]) -> None:
+                       which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles = [], lidar_readings = []) -> None:
         """
         Adds to the sequence of frame all the data referred to the current frame of the animation.
 
@@ -62,7 +66,8 @@ class HumanoidAnimationUtils:
         :param list_point_c: The list of the points c on the edge of the obstacles in the map.
         """
         self._frames_data.append(HumanoidAnimationUtils._HumanoidAnimationFrame(
-            com_position, humanoid_orientation, footstep_position, which_footstep, list_point_c
+            com_position, humanoid_orientation, footstep_position, which_footstep,
+            list_point_c, inferred_obstacles, lidar_readings
         ))
 
     @staticmethod
@@ -156,18 +161,48 @@ class HumanoidAnimationUtils:
 
         # Show all the obstacles
         for obs in self.obstacles:
-            self._plot_polygon(ax, obs)
+            self._plot_polygon(ax, obs, color='orange')
+
+        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
+        # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         # Put all the c points and eta vectors in tensors
         point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
         for frame_num, frame_data in enumerate(self._frames_data):
             for obs_num, c in enumerate(frame_data.list_point_c):
                 point_c_per_frame[frame_num, obs_num] = c
+
+        # point_c_per_frame = []
+        # for frame_num, frame_data in enumerate(self._frames_data):
+        #     for obs_num, c in enumerate(frame_data.list_point_c):
+        #         point_c_per_frame.append(c)
+
+        inferred_obstacle_per_frame = []
+        for frame_num, frame_data in enumerate(self._frames_data):
+            inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
+
+        lidar_readings_x_per_frame = []
+        lidar_readings_y_per_frame = []
+        for frame_num, frame_data in enumerate(self._frames_data):
+            lidar_readings_x = []
+            lidar_readings_y = []
+            for point in frame_data.lidar_readings:
+                if point: # ignore None points (i.e. no obstacles)
+                    lidar_readings_x.append(point[0])
+                    lidar_readings_y.append(point[1])
+
+            lidar_readings_x_per_frame.append(lidar_readings_x)
+            lidar_readings_y_per_frame.append(lidar_readings_y)
+
+        lidar_readings = ax.scatter([], [], s=1, color='green', label="LiDAR readings", zorder=3)
+
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
-        points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
-                              color='red', label="Points c", zorder=3)
-        segments_eta = [ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None, zorder=3)[0]
-                        for i in range(len(self.obstacles))]
+        # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
+        #                       color='red', label="Points c", zorder=3)
+        points_c = ax.scatter([], [], color='red', label="Points c", zorder=3)
+        segments_eta = [
+            ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None, zorder=3)[0]
+            for i in range(len(self.obstacles))]
 
         # For each obstacle, initialize the half plane representing the safe area of its CBF
         x_linspace = np.linspace(*ax.get_xlim(), 300)
@@ -189,11 +224,26 @@ class HumanoidAnimationUtils:
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
 
+            # inferred polygons for current frame
+            curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
+            if len(curr_inferred_obstacles) > 0:
+                to_vertices_list = [curr_inferred_obstacles[k].points for k in range(len(curr_inferred_obstacles))][0]
+                inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
+                # inferred_obstacle_fill.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
+
+            # lidar readings for current frame
+            curr_lidar_readings_x = lidar_readings_x_per_frame[frame]
+            curr_lidar_readings_y = lidar_readings_y_per_frame[frame]
+            lidar_readings.set_offsets(list(zip(curr_lidar_readings_x, curr_lidar_readings_y)))
+
             # Update the position of points c on the obstacles' edges
             points_c.set_offsets(point_c_per_frame[frame, :])
+            # points_c.set_offsets(point_c_per_frame[frame])
+
             # Update the position of vectors eta from the obstacles' edges
             for obs_ind, s in enumerate(segments_eta):
                 c_x, c_y = point_c_per_frame[frame, obs_ind]
+                # c_x, c_y = point_c_per_frame[frame]
                 com_x, com_y = barycenter_curr_pos.squeeze()
                 s.set_data([c_x, com_x], [c_y, com_y])
 
@@ -216,7 +266,7 @@ class HumanoidAnimationUtils:
             footsteps_rectangles[frame].set_visible(True)
 
             return (triangle_patch, barycenter_point, trajectory_line, footsteps_rectangles[:frame],
-                    points_c, segments_eta, half_planes)
+                    points_c, segments_eta, half_planes, inferred_obstacle_outline, lidar_readings)
 
         # Create the animation
         ani = FuncAnimation(fig, update, frames=len(triangle_poses), )  # 1 frame per second
