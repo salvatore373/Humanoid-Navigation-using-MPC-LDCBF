@@ -609,7 +609,6 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
         # pos_from_state = [loc_x_k, loc_y_k]
 
         # Add one constraint for each obstacle in the map
-
         local_obstacles = []
         for obstacle in self.obstacles:
             #  Convert the obstacle's points in the local RF (i.e. the one of the state)
@@ -646,7 +645,6 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
         self.list_lidar_readings.append(lidar_readings)
 
         return list_c, list_norm_vec
-        # return super()._get_list_c_and_eta(loc_x_k, loc_y_k, glob_theta_k, glob_x_km1, glob_y_km1)
 
 
 if __name__ == "__main__":

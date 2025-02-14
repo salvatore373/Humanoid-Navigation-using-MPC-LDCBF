@@ -167,22 +167,22 @@ class HumanoidAnimationUtils:
         # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         # Put all the c points and eta vectors in tensors
-        point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
-        for frame_num, frame_data in enumerate(self._frames_data):
-            for obs_num, c in enumerate(frame_data.list_point_c):
-                point_c_per_frame[frame_num, obs_num] = c
-
-        # point_c_per_frame = []
+        # point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
         # for frame_num, frame_data in enumerate(self._frames_data):
         #     for obs_num, c in enumerate(frame_data.list_point_c):
-        #         point_c_per_frame.append(c)
+        #         point_c_per_frame[frame_num, obs_num] = c
+
+        point_c_per_frame = []
+        for frame_num, frame_data in enumerate(self._frames_data):
+            list_point_c_curr_frame = []
+            for obs_num, c in enumerate(frame_data.list_point_c):
+                list_point_c_curr_frame.append(c)
+            point_c_per_frame.append(list_point_c_curr_frame)
 
         inferred_obstacle_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
             inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
 
-        lidar_readings_x_per_frame = []
-        lidar_readings_y_per_frame = []
         lidar_readings_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
             lidar_readings_x = []
@@ -192,10 +192,8 @@ class HumanoidAnimationUtils:
                     lidar_readings_x.append(point[0])
                     lidar_readings_y.append(point[1])
             lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
-            # lidar_readings_x_per_frame.append(lidar_readings_x)
-            # lidar_readings_y_per_frame.append(lidar_readings_y)
 
-        lidar_readings = ax.scatter([], [], s=3, color='green', label="LiDAR readings", zorder=3)
+        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=3)
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
@@ -203,7 +201,8 @@ class HumanoidAnimationUtils:
         points_c = ax.scatter([], [], color='red', label="Points c", zorder=3)
         segments_eta = [
             ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None, zorder=3)[0]
-            for i in range(len(self.obstacles))]
+            for i in range(len(self.obstacles))
+        ]
 
         # For each obstacle, initialize the half plane representing the safe area of its CBF
         x_linspace = np.linspace(*ax.get_xlim(), 300)
@@ -225,45 +224,67 @@ class HumanoidAnimationUtils:
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
 
+            # range = plt.Circle((float(barycenter_curr_pos[0]), float(barycenter_curr_pos[1])),
+            #                    radius=3.0, color='tomato',
+            #                    label='LiDAR range', fill=False, linewidth=2, alpha=1.0)
+            # ax.add_patch(range)
+
+            # inferred_obstacle_per_frame = []
+            # for frame_num, frame_data in enumerate(self._frames_data):
+            #     curr_frame_inferred_obstacle = frame_data.inferred_obstacles
+            #     global_curr_frame_inferred_obstacle = []
+            #     for obs in curr_frame_inferred_obstacle:
+            #         global_curr_frame_inferred_obstacle.append(rot @ vertex + trans)
+            #     inferred_obstacle_per_frame.append(global_curr_frame_inferred_obstacle)
+            #     # inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
+
             # inferred polygons for current frame
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
             if len(curr_inferred_obstacles) > 0:
-                to_vertices_list = [curr_inferred_obstacles[k].points for k in range(len(curr_inferred_obstacles))][0]
+                to_vertices_list = [
+                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T).T
+                    for k in range(len(curr_inferred_obstacles))
+                ][0]
                 inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
                 # inferred_obstacle_fill.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
 
-            # lidar readings for current frame
-            # curr_lidar_readings_x = lidar_readings_x_per_frame[frame]
-            # curr_lidar_readings_y = lidar_readings_y_per_frame[frame]
-            # lidar_readings.set_offsets(list(zip(curr_lidar_readings_x, curr_lidar_readings_y)))
-
-            # curr_lidar_reading = rotation_matrix[frame] @ np.array(lidar_readings_per_frame[frame]).T
-            # curr_lidar_reading = np.array(rotation_matrix[frame] @ np.array(lidar_readings_per_frame[frame]).T).T
-            curr_lidar_reading = lidar_readings_per_frame[frame]
-            lidar_readings.set_offsets(curr_lidar_reading)
+            curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
+            corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading  # OOOOOKKKK
+            corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+            # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
+            # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
+            # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T
+            # corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+            # corrected_lidar_reading = lidar_readings_per_frame[frame]
+            # corrected_lidar_reading = curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+            lidar_readings.set_offsets(corrected_lidar_reading.T)
 
             # Update the position of points c on the obstacles' edges
-            points_c.set_offsets(point_c_per_frame[frame, :])
-            # points_c.set_offsets(point_c_per_frame[frame])
+            # points_c.set_offsets(point_c_per_frame[frame, :])
+            c_per_frame = point_c_per_frame[frame]
+            if len(c_per_frame) != 0:
+                points_c.set_offsets(c_per_frame)
 
             # Update the position of vectors eta from the obstacles' edges
             for obs_ind, s in enumerate(segments_eta):
-                c_x, c_y = point_c_per_frame[frame, obs_ind]
-                # c_x, c_y = point_c_per_frame[frame]
-                com_x, com_y = barycenter_curr_pos.squeeze()
-                s.set_data([c_x, com_x], [c_y, com_y])
+                if obs_ind >= len(c_per_frame):
+                    s.set_data([], [])
+                else:
+                    c_x, c_y = c_per_frame[obs_ind]
+                    com_x, com_y = barycenter_curr_pos.squeeze()
+                    s.set_data([c_x, com_x], [c_y, com_y])
 
-                # Update the position of half-planes representing safe areas
-                hp = half_planes[obs_ind]
-                if hp is not None:
-                    for coll in hp.collections:
-                        coll.remove()
-                eta = np.array([com_x - c_x, com_y - c_y])
-                eta /= np.linalg.norm(eta)
-                eta_x, eta_y = eta
-                condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
-                half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
-                                                   colors='gray', alpha=0.5)
+                    # Update the position of half-planes representing safe areas
+                    hp = half_planes[obs_ind]
+                    if hp is not None:
+                        for coll in hp.collections:
+                            coll.remove()
+                    eta = np.array([com_x - c_x, com_y - c_y])
+                    eta /= np.linalg.norm(eta)
+                    eta_x, eta_y = eta
+                    condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
+                    half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
+                                                       colors='gray', alpha=0.5)
 
             # Update the footsteps opacity
             for i in range(frame):
