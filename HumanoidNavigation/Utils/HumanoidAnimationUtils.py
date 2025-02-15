@@ -152,6 +152,11 @@ class HumanoidAnimationUtils:
         triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='cornflowerblue', zorder=4)
         ax.add_patch(triangle_patch)
 
+        lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
+                           radius=3.0, color='tomato',
+                           label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+        ax.add_patch(lidar_range)
+
         # Initialize the plots of the barycenter and its trajectory
         barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue', zorder=5)
         trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
@@ -164,7 +169,7 @@ class HumanoidAnimationUtils:
             self._plot_polygon(ax, obs, color='orange')
 
         inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
-        # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
+        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         # Put all the c points and eta vectors in tensors
         # point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
@@ -220,6 +225,7 @@ class HumanoidAnimationUtils:
 
             # Update the barycenter position
             barycenter_curr_pos = barycenter_traj[frame]
+            lidar_range.set_center(barycenter_curr_pos.squeeze())
             barycenter_point.set_data(barycenter_curr_pos[0], barycenter_curr_pos[1])
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
@@ -246,11 +252,12 @@ class HumanoidAnimationUtils:
                     for k in range(len(curr_inferred_obstacles))
                 ][0]
                 inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
-                # inferred_obstacle_fill.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
+                inferred_obstacle_fill.set_xy(to_vertices_list)
+
 
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
-                corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading  # OOOOOKKKK
+                corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
                 corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
                 # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
                 # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
@@ -285,7 +292,7 @@ class HumanoidAnimationUtils:
                     eta_x, eta_y = eta
                     condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
                     half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
-                                                       colors='gray', alpha=0.5)
+                                                       colors='lightgray', alpha=0.5)
 
             # Update the footsteps opacity
             for i in range(frame):

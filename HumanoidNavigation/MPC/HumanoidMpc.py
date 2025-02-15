@@ -657,8 +657,8 @@ if __name__ == "__main__":
 
     initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
-    mpc = HumanoidMPC(
-    # mpc = HumanoidMPCUnknownEnvironment(
+    # mpc = HumanoidMPC(
+    mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
