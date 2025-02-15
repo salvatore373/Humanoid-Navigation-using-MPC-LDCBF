@@ -54,6 +54,12 @@ class HumanoidAnimationUtils:
         self.goal_position: np.ndarray = goal_position
         self.delta = delta
 
+    def add_goal(self, new_goal):
+        """
+        Adds new_goal to the list of goals to plot
+        """
+        self.goal_position = np.vstack((self.goal_position, new_goal))
+
     def add_frame_data(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
                        which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles = [], lidar_readings = []) -> None:
         """
@@ -119,9 +125,11 @@ class HumanoidAnimationUtils:
         barycenter_traj = barycenter + np.array([[x_trajectory, y_trajectory]]).T
 
         # Set up the plot
-        fig, ax = plt.subplots(dpi=500)
-        min_x, max_x = min(min(x_trajectory), min(footsteps[0, :])), max(max(x_trajectory), max(footsteps[0, :]))
-        min_y, max_y = min(min(y_trajectory), min(footsteps[1, :])), max(max(y_trajectory), max(footsteps[1, :]))
+        fig, ax = plt.subplots(dpi=100)
+        min_x, max_x = (min(min(x_trajectory), min(footsteps[0, :]), self.goal_position[:, 0].min()),
+                        max(max(x_trajectory), max(footsteps[0, :]), self.goal_position[:, 0].max()))
+        min_y, max_y = (min(min(y_trajectory), min(footsteps[1, :]), self.goal_position[:, 1].min()),
+                        max(max(y_trajectory), max(footsteps[1, :]), self.goal_position[:, 1].max()))
         min_coord, max_coord = min(min_x, min_y), max(max_x, max_y)
         ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
         ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
@@ -162,7 +170,7 @@ class HumanoidAnimationUtils:
         trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
 
         # Plot the goal point
-        ax.plot(self.goal_position[0], self.goal_position[1], 'o', color='darkorange', label='Goal Position')
+        ax.scatter(self.goal_position[:, 0], self.goal_position[:, 1], color='darkorange', label='Goal Position', zorder=3)
 
         # Show all the obstacles
         for obs in self.obstacles:
@@ -359,6 +367,6 @@ class HumanoidAnimationUtils:
             ax.add_patch(rect)
 
         plt.legend()
-        plt.xlim(-5, 7)
-        plt.ylim(-2, 12)
+        plt.xlim(-5, 12)
+        plt.ylim(-5, 12)
         plt.show()
