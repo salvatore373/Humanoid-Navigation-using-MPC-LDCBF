@@ -249,15 +249,16 @@ class HumanoidAnimationUtils:
                 # inferred_obstacle_fill.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
 
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
-            corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading  # OOOOOKKKK
-            corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
-            # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
-            # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
-            # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T
-            # corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
-            # corrected_lidar_reading = lidar_readings_per_frame[frame]
-            # corrected_lidar_reading = curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
-            lidar_readings.set_offsets(corrected_lidar_reading.T)
+            if len(curr_lidar_reading) > 0:
+                corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading  # OOOOOKKKK
+                corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+                # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
+                # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
+                # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T
+                # corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+                # corrected_lidar_reading = lidar_readings_per_frame[frame]
+                # corrected_lidar_reading = curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+                lidar_readings.set_offsets(corrected_lidar_reading.T)
 
             # Update the position of points c on the obstacles' edges
             # points_c.set_offsets(point_c_per_frame[frame, :])

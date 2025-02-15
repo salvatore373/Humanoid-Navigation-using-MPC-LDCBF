@@ -577,7 +577,7 @@ class HumanoidMPC:
                     which_footstep=self.s_v[k],
                     list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[k - 1],
                     inferred_obstacles = self.list_inferred_obstacles[k] if len(self.list_inferred_obstacles) > 0 else [],
-                    lidar_readings = self.list_lidar_readings[k]
+                    lidar_readings = self.list_lidar_readings[k] if len(self.list_lidar_readings) > 0 else []
                 )
             animator.plot_animation(path_to_gif)
 
@@ -657,8 +657,8 @@ if __name__ == "__main__":
 
     initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
-    # mpc = HumanoidMPC(
-    mpc = HumanoidMPCUnknownEnvironment(
+    mpc = HumanoidMPC(
+    # mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
