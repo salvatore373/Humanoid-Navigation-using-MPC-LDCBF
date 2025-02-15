@@ -163,11 +163,6 @@ class HumanoidAnimationUtils:
         triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='cornflowerblue', zorder=4)
         ax.add_patch(triangle_patch)
 
-        lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
-                                     radius=3.0, color='tomato',
-                                     label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
-        ax.add_patch(lidar_range)
-
         # Initialize the plots of the barycenter and its trajectory
         barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue', zorder=5)
         trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
@@ -180,14 +175,14 @@ class HumanoidAnimationUtils:
         for obs in self.obstacles:
             self._plot_polygon(ax, obs, color='orange')
 
-        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
-        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
-
         # Put all the c points and eta vectors in tensors
         # point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
         # for frame_num, frame_data in enumerate(self._frames_data):
         #     for obs_num, c in enumerate(frame_data.list_point_c):
         #         point_c_per_frame[frame_num, obs_num] = c
+
+        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
+        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         point_c_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -210,7 +205,15 @@ class HumanoidAnimationUtils:
                     lidar_readings_y.append(point[1])
             lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
 
-        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=3)
+        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=0)
+
+        # Plot a circle around the robot, representing the LiDAR's range. Plot only if the LiDAR readings were provided
+        lidar_range = None
+        if all(r != [] for r in lidar_readings_per_frame):
+            lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
+                                         radius=3.0, color='tomato',
+                                         label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+            ax.add_patch(lidar_range)
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
@@ -237,10 +240,13 @@ class HumanoidAnimationUtils:
 
             # Update the barycenter position
             barycenter_curr_pos = barycenter_traj[frame]
-            lidar_range.set_center(barycenter_curr_pos.squeeze())
             barycenter_point.set_data(barycenter_curr_pos[0], barycenter_curr_pos[1])
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
+
+            # Update the LiDAR range circle center
+            if lidar_range is not None:
+                lidar_range.set_center(barycenter_curr_pos.squeeze())
 
             # range = plt.Circle((float(barycenter_curr_pos[0]), float(barycenter_curr_pos[1])),
             #                    radius=3.0, color='tomato',
@@ -305,7 +311,7 @@ class HumanoidAnimationUtils:
                     eta_x, eta_y = eta
                     condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
                     half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
-                                                       colors='lightgray', alpha=0.5)
+                                                       colors='gray', alpha=0.5)
 
             # Update the footsteps opacity
             for i in range(frame):
