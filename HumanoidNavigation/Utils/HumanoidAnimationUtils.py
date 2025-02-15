@@ -1,17 +1,19 @@
 import os
+
 import matplotlib
 import numpy as np
-from yaml import safe_load
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
+from yaml import safe_load
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
 with open(config_dir + '/config.yml', 'r') as file:
     conf = safe_load(file)
+
 
 class HumanoidAnimationUtils:
     """
@@ -24,7 +26,7 @@ class HumanoidAnimationUtils:
         """
 
         def __init__(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                     which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[], lidar_readings = []):
+                     which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[], lidar_readings=[]):
             # The global position of the CoM in the map
             self.com_position = com_position
             # The global orientation of the humanoid in the map
@@ -51,7 +53,7 @@ class HumanoidAnimationUtils:
         """
         self._frames_data: list[HumanoidAnimationUtils._HumanoidAnimationFrame] = []
         self.obstacles: list[ConvexHull] = obstacles
-        self.goal_position: np.ndarray = goal_position
+        self.goal_position: np.ndarray = goal_position.reshape((-1, 2))
         self.delta = delta
 
     def add_goal(self, new_goal):
@@ -61,7 +63,8 @@ class HumanoidAnimationUtils:
         self.goal_position = np.vstack((self.goal_position, new_goal))
 
     def add_frame_data(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                       which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles = [], lidar_readings = []) -> None:
+                       which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[],
+                       lidar_readings=[]) -> None:
         """
         Adds to the sequence of frame all the data referred to the current frame of the animation.
 
@@ -161,8 +164,8 @@ class HumanoidAnimationUtils:
         ax.add_patch(triangle_patch)
 
         lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
-                           radius=3.0, color='tomato',
-                           label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+                                     radius=3.0, color='tomato',
+                                     label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
         ax.add_patch(lidar_range)
 
         # Initialize the plots of the barycenter and its trajectory
@@ -170,7 +173,8 @@ class HumanoidAnimationUtils:
         trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
 
         # Plot the goal point
-        ax.scatter(self.goal_position[:, 0], self.goal_position[:, 1], color='darkorange', label='Goal Position', zorder=3)
+        ax.scatter(self.goal_position[:, 0], self.goal_position[:, 1], color='darkorange', label='Goal Position',
+                   zorder=3)
 
         # Show all the obstacles
         for obs in self.obstacles:
@@ -201,7 +205,7 @@ class HumanoidAnimationUtils:
             lidar_readings_x = []
             lidar_readings_y = []
             for point in frame_data.lidar_readings:
-                if point: # ignore None points (i.e. no obstacles)
+                if point:  # ignore None points (i.e. no obstacles)
                     lidar_readings_x.append(point[0])
                     lidar_readings_y.append(point[1])
             lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
@@ -256,17 +260,18 @@ class HumanoidAnimationUtils:
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
             if len(curr_inferred_obstacles) > 0:
                 to_vertices_list = [
-                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T).T
+                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array(
+                        [[x_trajectory[frame], y_trajectory[frame]]]).T).T
                     for k in range(len(curr_inferred_obstacles))
                 ][0]
                 inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
                 inferred_obstacle_fill.set_xy(to_vertices_list)
 
-
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
                 corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
-                corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+                corrected_lidar_reading = corrected_lidar_reading + np.array(
+                    [[x_trajectory[frame], y_trajectory[frame]]]).T
                 # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
                 # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
                 # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T

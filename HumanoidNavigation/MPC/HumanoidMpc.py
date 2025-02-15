@@ -11,7 +11,6 @@ from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUti
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.obstacles import set_seed
 from HumanoidNavigation.report_simulations.Scenario import Scenario, load_scenario
-from HumanoidNavigation.RangeFinder.range_finder_wth_polygons_dbscan import range_finder
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
@@ -66,6 +65,9 @@ class HumanoidMPC:
         self.N_simul = N_simul
         self.sampling_time = sampling_time
 
+        self.start_with_right_foot = start_with_right_foot
+        self.verbosity = verbosity
+
         # If an initial state different from the null vector was provided, transform the goal and the obstacles to move
         # the initial state to the origin
         self.init_state_to_null_transf = None
@@ -73,13 +75,13 @@ class HumanoidMPC:
         self.init_state = init_state
         if init_state is not None:
             if isinstance(init_state, np.ndarray):
-                assert init_state.shape == (5, 1) and init_state.dtype == np.float32, \
+                assert init_state.shape == (5, 1) and np.issubdtype(init_state.dtype, np.floating), \
                     "The initial state must be a vector with 5 components, containing only floats."
             elif isinstance(init_state, tuple):
                 assert len(init_state) == 5 and all(isinstance(el, float) or isinstance(el, int) for el in init_state), \
                     "The initial state must be a vector with 5 components, containing only floats."
 
-            if ((isinstance(init_state, np.ndarray) and init_state != np.zeros((5, 1))) or
+            if ((isinstance(init_state, np.ndarray) and np.any(init_state != np.zeros((5, 1)))) or
                     (isinstance(init_state, tuple) and init_state != (0, 0, 0, 0, 0))):
                 # The transformation matrix to change the coordinates from the RF in the origin
                 # to the one in the provided initial state, and vice versa.
@@ -273,12 +275,11 @@ class HumanoidMPC:
         # initial position constraint
         self.optim_prob.subject_to(self.X_mpc[:, 0] == self.x0)
 
-        # horizon constraint (via dynamics)
         for k in range(self.N_horizon):
             integration_res = self._integrate(self.X_mpc[:, k], self.U_mpc[:, k])
             self.optim_prob.subject_to(self.X_mpc[:, k + 1] == integration_res)
 
-            # leg reachability -> prevent the over-extension of the swing leg
+            # leg reachability
             reachability = self._compute_leg_reachability_matrix(self.X_mpc[:, k], self.X_mpc_theta[k])
             self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(conf["L_MAX"], conf["L_MAX"])))
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-conf["L_MAX"], -conf["L_MAX"])))
@@ -288,7 +289,7 @@ class HumanoidMPC:
             self.optim_prob.subject_to(local_velocities <= conf["V_MAX"])
             self.optim_prob.subject_to(local_velocities >= conf["V_MIN"])
 
-            # maneuverability constraint (right now using the same v_max of the walking constraint)
+            # maneuverability constraint
             velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k], self.X_mpc_theta[k],
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
@@ -410,17 +411,25 @@ class HumanoidMPC:
         """
         return (self.A_l @ x_k) + (self.B_l @ u_k)
 
-    def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True, animation: bool = False):
+    def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True, plot_animation: bool = False,
+                       fill_animator: bool = True, initial_animator: HumanoidAnimationUtils = None) -> \
+            tuple[np.ndarray, np.ndarray, Union[None, HumanoidAnimationUtils]]:
         """
         It executes the MPC. It assumes that the initial state of the humanoid is 0, and it computes the optimal inputs
         to reach the goal. Then, it plots the obtained results.
 
         :param path_to_gif: The path to the GIF file where the animation of this simulation will be saved.
         :param make_fast_plot: Whether to show a static (though fast) plot of the simulation before the animation.
-        :param animation: Whether to show and save the animation ot not
+        :param plot_animation: Whether to show and save the animation or not.
+        :param fill_animator: Whether it should provide frame-by-frame data to the animator.
+        It must be true if plot_animation is true.
+        :param initial_animator: If provided, it will add frame data to this animator, and show the overall frame data.
         :return: A tuple, where the first matrix is the evolution of the state throughout the simulation, while the
-         second one is the evolution of the inputs computed by the MPC.
+        second one is the evolution of the inputs computed by the MPC. The last element is the animator or
+        fill_animator is True, None otherwise.
         """
+        assert not plot_animation or fill_animator, "If plot_animation is True, fill_animator must be True too."
+
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
         X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
         U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
@@ -567,84 +576,25 @@ class HumanoidMPC:
         # Display the obtained results
         if make_fast_plot:
             HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles, self.s_v)
-        if animation:
-            animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles)
+        animator = initial_animator
+        if fill_animator:
+            animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles) if animator is None \
+                else initial_animator
             for k in range(X_pred_glob.shape[1]):
                 animator.add_frame_data(
                     com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
                     humanoid_orientation=X_pred_glob[4, k],
                     footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                     which_footstep=self.s_v[k],
-                    list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[k - 1],
-                    inferred_obstacles = self.list_inferred_obstacles[k] if len(self.list_inferred_obstacles) > 0 else [],
-                    lidar_readings = self.list_lidar_readings[k] if len(self.list_lidar_readings) > 0 else []
+                    list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
+                        k - 1],
+                    inferred_obstacles=self.list_inferred_obstacles[k] if len(self.list_inferred_obstacles) > 0 else [],
+                    lidar_readings=self.list_lidar_readings[k] if len(self.list_lidar_readings) > 0 else []
                 )
+        if plot_animation:
             animator.plot_animation(path_to_gif)
 
-        return X_pred_glob, U_pred_glob
-
-
-
-class HumanoidMPCUnknownEnvironment(HumanoidMPC):
-    """
-    A subclass of HumanoidMPC, where the robot is not aware of the full map, but it can only perceive the environment
-     through a LiDAR system.
-    """
-
-    def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float, glob_y_km1: float):
-        """
-        It computes the list of the points C and the normal vectors Eta, which are defined for each obstacle as the
-        point on the obstacle's edge that is closest to the robot's position, and the vector from the robot's position
-        to C.
-
-        :param loc_x_k: The CoM X-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
-        :param loc_y_k: The CoM Y-coordinate of the humanoid w.r.t the local RF at time step k in the simulation.
-        :param glob_theta_k: The orientation of the humanoid w.r.t the inertial RF at time step k in the simulation.
-        :param glob_x_km1: The CoM X-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
-        :param glob_y_km1: The CoM Y-coordinate of the humanoid w.r.t the inertial RF at time step k-1 in the simulation
-        """
-        list_c, list_norm_vec = [], []
-        # Get the vector of the CoM position from the current state
-        pos_from_state = np.array([loc_x_k, loc_y_k])
-        # pos_from_state = [loc_x_k, loc_y_k]
-
-        # Add one constraint for each obstacle in the map
-        local_obstacles = []
-        for obstacle in self.obstacles:
-            #  Convert the obstacle's points in the local RF (i.e. the one of the state)
-            local_obstacle = ObstaclesUtils.transform_obstacle_coords(
-                obstacle=obstacle, transformation_matrix=self._get_glob_to_loc_rf_trans_mat(
-                    glob_theta_k, glob_x_km1, glob_y_km1
-                )
-            )
-            local_obstacles.append(local_obstacle)
-
-        # perform range finder search
-        lidar_readings, _, inferred_obstacles = range_finder(
-            lidar_position = pos_from_state,
-            obstacles = [ch.points for ch in local_obstacles],
-            # obstacles = [ch.points for ch in self.obstacles],
-            lidar_range = 3.0,
-            resolution = 360
-        )
-
-        current_inferred_obstacles = []
-
-        for obstacle in inferred_obstacles:
-            local_obstacle = ConvexHull(obstacle)
-            current_inferred_obstacles.append(local_obstacle)
-            # Find c, i.e. the point on the obstacle's edge closest to (com_x, com_y) and compute
-            # the normal vector from (com_x, com_y) to c
-            c, normal_vector = ObstaclesUtils.get_closest_point_and_normal_vector_from_obs(
-                x=pos_from_state, polygon=local_obstacle, unitary_normal_vector=True,
-            )
-            list_c.append(c)
-            list_norm_vec.append(normal_vector)
-
-        self.list_inferred_obstacles.append(current_inferred_obstacles)
-        self.list_lidar_readings.append(lidar_readings)
-
-        return list_c, list_norm_vec
+        return X_pred_glob, U_pred_glob, animator
 
 
 if __name__ == "__main__":
@@ -658,7 +608,7 @@ if __name__ == "__main__":
     initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
     # mpc = HumanoidMPC(
-    mpc = HumanoidMPCUnknownEnvironment(
+    mpc = HumanoidMPC(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
@@ -675,4 +625,4 @@ if __name__ == "__main__":
         verbosity=0
     )
 
-    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, animation=True)
+    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=False)
