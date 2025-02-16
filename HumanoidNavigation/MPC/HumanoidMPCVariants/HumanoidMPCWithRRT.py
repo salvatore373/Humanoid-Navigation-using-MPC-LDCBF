@@ -3,9 +3,8 @@ from typing import Callable, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-import numpy.random
-from rrtplanner import RRTStar, r2norm, RRTStarInformed
-from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal
+from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal, RRTStar
+from rrtplanner import r2norm, RRTStarInformed
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial import Delaunay
 
@@ -105,23 +104,22 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # For each cell of the occupancy grid, compute the distance from the closest obstacle
         dst_from_obs = distance_transform_edt(1 - occupancy_grid)
         # Compute the matrix of the cells costs by assigning the minimum cost to the cell with maximum distance
-        # from the obstacles.
-        costs_matrix = (dst_from_obs.min() + dst_from_obs.max()) - dst_from_obs
-        # costs_matrix = dst_from_obs
+        # from the obstacles. The exponential is to guarantee asymptotic optimality (ref:
+        # https://robotics.stackexchange.com/questions/649/does-rrt-guarantee-asymptotic-optimality-for-a-minimum-clearance-cost-metric).
+        costs_matrix = np.exp(-dst_from_obs)
 
         def cost_fn(vcosts: np.ndarray,
                     points: np.ndarray,
                     v: int,
                     x: np.ndarray, ):
-            return vcosts[v] + pow(costs_matrix[x[0], x[1]], 2) + r2norm(points[v] - x)
-            # return vcosts[v] + r2norm(points[v] - x)
+            return vcosts[v] + costs_matrix[x[0], x[1]] * r2norm(points[v] - x)
 
         # Find a path from the initial to the goal position using RRT
         # og: np matrix with 1 if the cell contains an obstacle, 0 otherwise
         # n: the maximum number of points that can be sampled in plan()
         # r_rewire: value of delta in RRT algorithm
         # pbar: whthere to display a progress bar
-        rrts = RRTStarInformed(og=occupancy_grid, n=500, r_rewire=10, pbar=False, costfn=None, r_goal=20)
+        rrts = RRTStarInformed(og=occupancy_grid, n=1500, r_rewire=10, pbar=False, costfn=cost_fn, r_goal=10)
         T, gv = rrts.plan(np.array([0, 0]), goal_og_coords)
         # From the RRT result, get the sequence of occupancy grid cells that must be reached in order to reach the goal
         tree_path_start2goal = rrts.route2gv(T, gv)
