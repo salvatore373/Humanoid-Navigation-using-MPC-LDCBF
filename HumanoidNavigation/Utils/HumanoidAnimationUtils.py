@@ -53,7 +53,7 @@ class HumanoidAnimationUtils:
         """
         self._frames_data: list[HumanoidAnimationUtils._HumanoidAnimationFrame] = []
         self.obstacles: list[ConvexHull] = obstacles
-        self.goal_position: np.ndarray = goal_position.reshape((-1, 2))
+        self.goal_position: np.ndarray = np.array(goal_position).reshape((-1, 2))
         self.delta = delta
 
     def add_goal(self, new_goal):
