@@ -3,7 +3,7 @@ from typing import Callable, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal, RRTStar
+from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal
 from rrtplanner import r2norm, RRTStarInformed
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial import Delaunay
@@ -59,9 +59,9 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         ]).astype(int)
         # Define the function to perform the occupancy grid to global coordinates
         inverse_transformation_fun = lambda x_og, y_og: np.array([
-            np.round(min_x + ((x_og * (max_x - min_x)) / width_grid_size)),
-            np.round(min_y + ((y_og * (max_y - min_y)) / height_grid_size)),
-        ]).astype(int)
+            min_x + ((x_og * (max_x - min_x)) / width_grid_size),
+            min_y + ((y_og * (max_y - min_y)) / height_grid_size),
+        ])
 
         # For each obstacle, fill with 1s the area it occupies in the grid
         for o in self.obstacles:
@@ -98,8 +98,9 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # Convert the environment to an occupancy grid
         occupancy_grid, transformation_fun, inverse_transformation_fun = \
             self._build_occupancy_grid(width_grid_size=250)
-        # Convert the goal to the occupancy grid coordinates
+        # Convert the start and goal positions to the occupancy grid coordinates
         goal_og_coords = transformation_fun(self.goal[0], self.goal[1])
+        start_og_coords = transformation_fun(0, 0)
 
         # For each cell of the occupancy grid, compute the distance from the closest obstacle
         dst_from_obs = distance_transform_edt(1 - occupancy_grid)
@@ -108,6 +109,8 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # https://robotics.stackexchange.com/questions/649/does-rrt-guarantee-asymptotic-optimality-for-a-minimum-clearance-cost-metric).
         costs_matrix = np.exp(-dst_from_obs)
 
+        # Define the cost function that the RRT* algorithm should minimize, including the travelled distance
+        # and the clearance.
         def cost_fn(vcosts: np.ndarray,
                     points: np.ndarray,
                     v: int,
@@ -120,7 +123,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # r_rewire: value of delta in RRT algorithm
         # pbar: whthere to display a progress bar
         rrts = RRTStarInformed(og=occupancy_grid, n=1500, r_rewire=10, pbar=False, costfn=cost_fn, r_goal=10)
-        T, gv = rrts.plan(np.array([0, 0]), goal_og_coords)
+        T, gv = rrts.plan(start_og_coords, goal_og_coords)
         # From the RRT result, get the sequence of occupancy grid cells that must be reached in order to reach the goal
         tree_path_start2goal = rrts.route2gv(T, gv)
         sub_goals_og_seq = rrts.vertices_as_ndarray(T, tree_path_start2goal)
@@ -136,7 +139,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             ax = fig.add_subplot()
             # these functions alter ax in-place.
             plot_og(ax, occupancy_grid)
-            plot_start_goal(ax, np.array([0, 0]), goal_og_coords)
+            plot_start_goal(ax, start_og_coords, goal_og_coords)
             plot_rrt_lines(ax, T)
             plot_path(ax, sub_goals_og_seq)
             ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
