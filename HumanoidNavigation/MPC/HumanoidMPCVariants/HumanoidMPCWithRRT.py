@@ -8,6 +8,7 @@ from rrtplanner import r2norm, RRTStarInformed
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial import Delaunay
 
+from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidMPCCustomLCBF import HumanoidMPCCustomLCBF
 from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 
@@ -154,7 +155,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             if animator is not None:
                 animator.add_goal(sub_goal)
             # Starting from the current position, reach the next sub-goal in the path
-            curr_mpc = HumanoidMPC(
+            curr_mpc = HumanoidMPCCustomLCBF(
                 goal=sub_goal,
                 init_state=start_state,
                 obstacles=self.obstacles,
@@ -163,6 +164,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
                 sampling_time=self.sampling_time,
                 start_with_right_foot=self.start_with_right_foot,
                 verbosity=self.verbosity,
+                distance_from_obstacles=0.3,
             )
             curr_X_pred, curr_U_pred, animator = (
                 curr_mpc.run_simulation(path_to_gif=path_to_gif,
