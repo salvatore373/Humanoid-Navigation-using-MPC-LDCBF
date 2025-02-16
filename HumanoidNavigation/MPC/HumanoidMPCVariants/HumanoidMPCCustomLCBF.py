@@ -2,7 +2,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC
-from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
+from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 
 
 class HumanoidMPCCustomLCBF(HumanoidMPC):
