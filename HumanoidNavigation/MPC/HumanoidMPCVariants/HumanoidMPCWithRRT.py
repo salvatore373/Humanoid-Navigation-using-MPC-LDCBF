@@ -4,7 +4,7 @@ from typing import Callable, Union
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random
-from rrtplanner import RRTStar, r2norm
+from rrtplanner import RRTStar, r2norm, RRTStarInformed
 from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial import Delaunay
@@ -51,17 +51,17 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # Initialize the occupancy grid
         height_grid_size = math.ceil(width_grid_size * ((max_y - min_y) / (max_x - min_x)))
         # Create the grid filled with zeros
-        occupancy_grid = np.zeros((width_grid_size, height_grid_size))
+        occupancy_grid = np.zeros((width_grid_size + 1, height_grid_size + 1))
 
         # Define the function to perform the global to occupancy grid coordinates
         transformation_fun = lambda x_glob, y_glob: np.array([
-            np.round(((x_glob - min_x) / (max_x - min_x)) * (width_grid_size - 1)),
-            np.round(((y_glob - min_y) / (max_y - min_y)) * (height_grid_size - 1)),
+            np.round(((x_glob - min_x) / (max_x - min_x)) * width_grid_size),
+            np.round(((y_glob - min_y) / (max_y - min_y)) * height_grid_size),
         ]).astype(int)
         # Define the function to perform the occupancy grid to global coordinates
         inverse_transformation_fun = lambda x_og, y_og: np.array([
-            np.round(min_x + ((x_og * (max_x - min_x)) / (width_grid_size - 1))),
-            np.round(min_y + ((y_og * (max_y - min_y)) / (height_grid_size - 1))),
+            np.round(min_x + ((x_og * (max_x - min_x)) / width_grid_size)),
+            np.round(min_y + ((y_og * (max_y - min_y)) / height_grid_size)),
         ]).astype(int)
 
         # For each obstacle, fill with 1s the area it occupies in the grid
@@ -106,14 +106,14 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         dst_from_obs = distance_transform_edt(1 - occupancy_grid)
         # Compute the matrix of the cells costs by assigning the minimum cost to the cell with maximum distance
         # from the obstacles.
-        # costs_matrix = (dst_from_obs.min() + dst_from_obs.max()) - dst_from_obs
-        costs_matrix = dst_from_obs
+        costs_matrix = (dst_from_obs.min() + dst_from_obs.max()) - dst_from_obs
+        # costs_matrix = dst_from_obs
 
         def cost_fn(vcosts: np.ndarray,
                     points: np.ndarray,
                     v: int,
                     x: np.ndarray, ):
-            return vcosts[v] + 1/costs_matrix[x[0], x[1]]
+            return vcosts[v] + pow(costs_matrix[x[0], x[1]], 2) + r2norm(points[v] - x)
             # return vcosts[v] + r2norm(points[v] - x)
 
         # Find a path from the initial to the goal position using RRT
@@ -121,8 +121,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # n: the maximum number of points that can be sampled in plan()
         # r_rewire: value of delta in RRT algorithm
         # pbar: whthere to display a progress bar
-        rrts = RRTStar(og=occupancy_grid, n=3000, r_rewire=20, pbar=False, costfn=cost_fn)
-        numpy.random.seed(1)
+        rrts = RRTStarInformed(og=occupancy_grid, n=500, r_rewire=10, pbar=False, costfn=None, r_goal=20)
         T, gv = rrts.plan(np.array([0, 0]), goal_og_coords)
         # From the RRT result, get the sequence of occupancy grid cells that must be reached in order to reach the goal
         tree_path_start2goal = rrts.route2gv(T, gv)
