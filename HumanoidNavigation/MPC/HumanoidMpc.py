@@ -111,14 +111,14 @@ class HumanoidMPC:
         # Create the instance of the optimization problem inside the MPC
         self.optim_prob = cs.Opti()
         p_opts = dict(print_time=False, verbose=True if verbosity > 1 else False, expand=True)
-        s_opts = dict(print_level=verbosity)
+        s_opts = dict(print_level=verbosity, max_iter=5000, constr_viol_tol=1e-5, tol=1e-5)
         self.optim_prob.solver("ipopt", p_opts, s_opts)  # (NLP solver)
 
         # An array of constants such that the i-th element is 1 if the right foot is the stance at time instant i,
         # -1 if the stance is the left foot.
         self.s_v = []
         # Define which step should be right and which left
-        self.s_v_param = self.optim_prob.parameter(1, self.N_horizon)
+        self.s_v_param = self.optim_prob.parameter(1, self.N_horizon + 1)
         for i in range(self.N_simul + self.N_horizon - 1):
             self.s_v.append(conf["RIGHT_FOOT"] if i % 2 == (0 if start_with_right_foot else 1) else conf["LEFT_FOOT"])
 
@@ -196,7 +196,7 @@ class HumanoidMPC:
         goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
 
         # Compute the humanoid's orientation for this prediction horizon
-        self.precomputed_theta = [start_state_theta]  # initial theta
+        self.precomputed_theta = [0]  # initial theta
         self.precomputed_omega = []
         for k in range(self.N_horizon):
             target_heading_angle = (cs.atan2(goal_loc_coords[1] - start_state[2],
@@ -466,7 +466,7 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.x0_theta, X_pred[4, k])
 
             # Set whether the following steps should be with right or left foot
-            self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon])
+            self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon + 1])
 
             # Precompute theta and omega for the current prediction horizon
             self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
