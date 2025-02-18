@@ -1,17 +1,19 @@
 import os
+
 import matplotlib
 import numpy as np
-from yaml import safe_load
 from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
+from yaml import safe_load
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
 with open(config_dir + '/config.yml', 'r') as file:
     conf = safe_load(file)
+
 
 class HumanoidAnimationUtils:
     """
@@ -24,7 +26,7 @@ class HumanoidAnimationUtils:
         """
 
         def __init__(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                     which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[], lidar_readings = []):
+                     which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[], lidar_readings=[]):
             # The global position of the CoM in the map
             self.com_position = com_position
             # The global orientation of the humanoid in the map
@@ -51,11 +53,18 @@ class HumanoidAnimationUtils:
         """
         self._frames_data: list[HumanoidAnimationUtils._HumanoidAnimationFrame] = []
         self.obstacles: list[ConvexHull] = obstacles
-        self.goal_position: np.ndarray = goal_position
+        self.goal_position: np.ndarray = np.array(goal_position).reshape((-1, 2))
         self.delta = delta
 
+    def add_goal(self, new_goal):
+        """
+        Adds new_goal to the list of goals to plot
+        """
+        self.goal_position = np.vstack((self.goal_position, new_goal))
+
     def add_frame_data(self, com_position: np.ndarray, humanoid_orientation: float, footstep_position: np.ndarray,
-                       which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles = [], lidar_readings = []) -> None:
+                       which_footstep: int, list_point_c: list[np.ndarray], inferred_obstacles=[],
+                       lidar_readings=[]) -> None:
         """
         Adds to the sequence of frame all the data referred to the current frame of the animation.
 
@@ -119,9 +128,11 @@ class HumanoidAnimationUtils:
         barycenter_traj = barycenter + np.array([[x_trajectory, y_trajectory]]).T
 
         # Set up the plot
-        fig, ax = plt.subplots(dpi=500)
-        min_x, max_x = min(min(x_trajectory), min(footsteps[0, :])), max(max(x_trajectory), max(footsteps[0, :]))
-        min_y, max_y = min(min(y_trajectory), min(footsteps[1, :])), max(max(y_trajectory), max(footsteps[1, :]))
+        fig, ax = plt.subplots(dpi=100)
+        min_x, max_x = (min(min(x_trajectory), min(footsteps[0, :]), self.goal_position[:, 0].min()),
+                        max(max(x_trajectory), max(footsteps[0, :]), self.goal_position[:, 0].max()))
+        min_y, max_y = (min(min(y_trajectory), min(footsteps[1, :]), self.goal_position[:, 1].min()),
+                        max(max(y_trajectory), max(footsteps[1, :]), self.goal_position[:, 1].max()))
         min_coord, max_coord = min(min_x, min_y), max(max_x, max_y)
         ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
         ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
@@ -162,20 +173,21 @@ class HumanoidAnimationUtils:
         trajectory_line, = ax.plot([], [], '--k', lw=1, label="CoM Trajectory", zorder=4)
 
         # Plot the goal point
-        ax.plot(self.goal_position[0], self.goal_position[1], 'o', color='darkorange', label='Goal Position')
+        ax.scatter(self.goal_position[:, 0], self.goal_position[:, 1], color='darkorange', label='Goal Position',
+                   zorder=3)
 
         # Show all the obstacles
         for obs in self.obstacles:
             self._plot_polygon(ax, obs, color='orange')
-
-        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
-        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         # Put all the c points and eta vectors in tensors
         # point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
         # for frame_num, frame_data in enumerate(self._frames_data):
         #     for obs_num, c in enumerate(frame_data.list_point_c):
         #         point_c_per_frame[frame_num, obs_num] = c
+
+        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
+        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         point_c_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -193,12 +205,20 @@ class HumanoidAnimationUtils:
             lidar_readings_x = []
             lidar_readings_y = []
             for point in frame_data.lidar_readings:
-                if point: # ignore None points (i.e. no obstacles)
+                if point:  # ignore None points (i.e. no obstacles)
                     lidar_readings_x.append(point[0])
                     lidar_readings_y.append(point[1])
             lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
 
-        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=3)
+        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=0)
+
+        # Plot a circle around the robot, representing the LiDAR's range. Plot only if the LiDAR readings were provided
+        lidar_range = None
+        if all(r != [] for r in lidar_readings_per_frame):
+            lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
+                                         radius=3.0, color='tomato',
+                                         label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+            ax.add_patch(lidar_range)
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
@@ -225,10 +245,13 @@ class HumanoidAnimationUtils:
 
             # Update the barycenter position
             barycenter_curr_pos = barycenter_traj[frame]
-            lidar_range.set_center(barycenter_curr_pos.squeeze())
             barycenter_point.set_data(barycenter_curr_pos[0], barycenter_curr_pos[1])
             # Update the barycenter trajectory
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
+
+            # Update the LiDAR range circle center
+            if lidar_range is not None:
+                lidar_range.set_center(barycenter_curr_pos.squeeze())
 
             # range = plt.Circle((float(barycenter_curr_pos[0]), float(barycenter_curr_pos[1])),
             #                    radius=3.0, color='tomato',
@@ -248,17 +271,18 @@ class HumanoidAnimationUtils:
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
             if len(curr_inferred_obstacles) > 0:
                 to_vertices_list = [
-                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T).T
+                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array(
+                        [[x_trajectory[frame], y_trajectory[frame]]]).T).T
                     for k in range(len(curr_inferred_obstacles))
                 ][0]
                 inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
                 inferred_obstacle_fill.set_xy(to_vertices_list)
 
-
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
                 corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
-                corrected_lidar_reading = corrected_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
+                corrected_lidar_reading = corrected_lidar_reading + np.array(
+                    [[x_trajectory[frame], y_trajectory[frame]]]).T
                 # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
                 # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
                 # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T
@@ -292,7 +316,7 @@ class HumanoidAnimationUtils:
                     eta_x, eta_y = eta
                     condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
                     half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
-                                                       colors='lightgray', alpha=0.5)
+                                                       colors='gray', alpha=0.5)
 
             # Update the footsteps opacity
             for i in range(frame):
@@ -359,6 +383,6 @@ class HumanoidAnimationUtils:
             ax.add_patch(rect)
 
         plt.legend()
-        plt.xlim(-5, 7)
-        plt.ylim(-2, 12)
+        plt.xlim(-5, 12)
+        plt.ylim(-5, 12)
         plt.show()

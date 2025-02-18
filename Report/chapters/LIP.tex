@@ -1,83 +1,4 @@
-\documentclass[main.tex]{subfiles}
-
-\begin{document}
-
-\section{LIP}\label{sec:lip_eugenio}
-Eugenio:\\
-This reduced model assumes that during the motion the Center of Mass (CoM) will have a constant height H.
-\begin{equation}
-    \dot{v}_{x} = \frac{g}{H}(p_{x} - f_{x})
-    \qquad
-    \dot{v}_{y} = \frac{g}{H}(p_{y} - f_{y})
-\end{equation}
-With $(p_{x}, p_{y})$ we denote the position of the CoM and with $(v_{x}, v_{y})$ its velocity with respect to the $x$-axis and $y$-axis. The stance foot position, which is the position in which both feets are in contact with the ground, is denoted with $(f_{x}, f_{y})$.
-
-Given the position $(p_{x_{k}}, p_{y_{k}})$ and velocities $(v_{x_{k}}, v_{y_{k}})$ of the CoM at the $k$-th step, the closed-form solutions of the step-to-step discrete dynamics can be written as follows :
-\begin{equation}
-    \begin{bmatrix}
-        p_{x_{k+1}} \\
-        v_{x_{k+1}}
-    \end{bmatrix}
-    = A_{d}
-    \begin{bmatrix}
-        p_{x_{k}} \\
-        v_{x_{k}}
-    \end{bmatrix}
-    + B_{d} f_{x_{k}}
-    \qquad
-    \begin{bmatrix}
-        p_{y_{k+1}} \\
-        v_{y_{k+1}}
-    \end{bmatrix}
-    = A_{d}
-    \begin{bmatrix}
-        p_{y_{k}} \\
-        v_{y_{k}}
-    \end{bmatrix}
-    + B_{d} f_{y_{k}}
-\end{equation}
-
-Where $\beta = \sqrt{\frac{g}{H}}$ and the two matrices are:
-\begin{equation}
-    A_{d} = 
-    \begin{bmatrix}
-        cosh(\beta T) & \frac{sinh(\beta T)}{\beta} \\
-        \beta sinh(\beta T) & cosh(\beta T)
-    \end{bmatrix}
-    \qquad
-    B_{d} = 
-    \begin{bmatrix}
-        1 - cosh(\beta T) & - \beta sinh(\beta T)
-    \end{bmatrix}
-\end{equation}
-By defining the state of our system as $x = [p_{x}, v_{x}, p_{y}, v_{y}, \theta]^T \in \mathbb{R}^5$ and the control input as $u = [f_{x}, f_{y}, \omega]^T \in \mathbb{R}^3$, where $\theta$ is the heading angle and $\omega$ is its turning rate, the step-to-step dynamics of the 3D-LIP model is written as follows:
-\begin{equation}
-    x_{k+1} = A_{L}x_{k} + B_{L}u_{k}
-\end{equation}
-
-Where the two matrices are defined as follows:
-\begin{equation}
-    A_{L} = 
-    \begin{bmatrix}
-        A_{d} & 0 & 0 \\
-        0 & A_{d} & 0 \\
-        0 & 0 & 1
-    \end{bmatrix}
-    \qquad
-    B_{d} = 
-    \begin{bmatrix}
-        B_{d} & 0 & 0 \\
-        0 & B_{d} & 0 \\
-        0 & 0 & T
-    \end{bmatrix}
-\end{equation}
-
-
-
-
 \section{3D-LIP Model with Heading Angles}\label{sec:lip}
-Salvatore:\\
-If the full dynamic model of the humanoid is used to simulate its motion, it becomes computationally impossible to perform joint path and gait planning, due to its high dimensionality and non-linearity. Therefore, a simplifying model must be used. For this scope Peng et al. introduced the "3D-LIP Model with Heading Angle", which describes the discrete dynamics of the Center of Mass (CoM) similarly to the one of an inverted pendulum in three dimensions.
 
 \subsection{Local Robot Reference Frame}
 The state $\mathbf{x}$ and the input $\mathbf{u}$ of the dynamic model are defined as:
@@ -179,4 +100,116 @@ $$
 \\
 In the following chapter, these dynamics will be used as the internal process representation of an MPC. Along with the constraints, they will grant that the found solution is meaningful to the humanoid motion.
 
-\end{document}
+
+\section{3D-LIP Model with Heading Angles}
+Due to the high dimensionality and non-linearity of the full dynamic model of a humanoid, we have used a simplified model base on the standard Linear Inverted Pendulum formulation.
+This reduced model assumes that during the motion, the Center of Mass (CoM) will have a constant height during the motion.
+According to (citation), we can express the acceleration of the CoM position as follows:
+\begin{align}
+    \begin{cases}
+        \dot{v}_{x} = \frac{g}{H}(p_{x} - f_{x})
+        \\[1ex]
+        \dot{v}_{y} = \frac{g}{H}(p_{y} - f_{y})
+    \end{cases}
+\end{align}
+
+with $(p_{x}, p_{y})$ we denote the position of the CoM and with $(v_{x}, v_{y})$ its velocity with respect to the $x$-axis and $y$-axis. The stance foot position, which is the position in which both feets are in contact with the ground, is denoted with $(f_{x}, f_{y})$.
+
+By defining the state of our system as $x = [p_{x}, v_{x}, p_{y}, v_{y}, \theta]^T \in \mathbb{R}^5$ and the control input as $u = [f_{x}, f_{y}, \omega]^T \in \mathbb{R}^3$, where $\theta$ is the heading angle and $\omega$ is its turning rate, the dynamics of the model can be written as follows:
+\begin{equation}
+    \dot{x}(t) = A x(t) + B u(t)
+\end{equation}
+This equation can be expanded as:
+\begin{align}
+    \dot{x} = 
+    \begin{bmatrix}
+        \dot{p}_{x}\\
+        \dot{v}_{x}\\
+        \dot{p}_{y}\\
+        \dot{v}_{y}\\
+        \dot{\theta}
+    \end{bmatrix}
+    &=
+    \begin{bmatrix}
+        0 & 1 & 0 & 0 & 0 \\[1ex]
+        \frac{g}{H} & 0 & 0 & 0 & 0 \\[1ex]
+        0 & 0 & 0 & 1 & 0 \\[1ex]
+        0 & 0 & \frac{g}{H} & 0 & 0 \\[1ex]
+        0 & 0 & 0 & 0 & 0
+    \end{bmatrix}
+    \begin{bmatrix}
+        p_{x}\\
+        v_{x}\\
+        p_{y}\\
+        v_{y}\\
+        \theta
+    \end{bmatrix}
+    +
+    \begin{bmatrix}
+        0 & 0 & 0 \\[1ex]
+        -\frac{g}{H} & 0 & 0 \\[1ex]
+        0 & 0 & 0 \\[1ex]
+        0 & -\frac{g}{H} & 0 \\[1ex]
+        0 & 0 & 1 \\[1ex]
+    \end{bmatrix}
+    \begin{bmatrix}
+        f_{x} \\
+        f_{y} \\
+        \omega
+    \end{bmatrix}
+    =
+    \\
+    &= 
+    \begin{bmatrix}
+        A_c & 0 & 0 \\
+        0 & A_c & 0 \\
+        0 & 0 & 0
+    \end{bmatrix}
+    x(t) +
+    \begin{bmatrix}
+        B_c & 0 & 0 \\
+        0 & B_c & 0 \\
+        0 & 0 & 0
+    \end{bmatrix}
+    u(t)
+\end{align}
+where $A_{c} \in \mathbb{R}^{2 \times 2}$, $B_{c} \in \mathbb{R}^{2 \times 1}$ and $\beta = \sqrt{\frac{g}{H}}$.
+\\
+From this continuous model, we can obtain the following discretized system: 
+\begin{equation}
+    x_{k+1} = A_{L}x_{k} + B_{L}u_{k}
+\end{equation}
+where the two matrices are defined as:
+
+\begin{align}
+    A_{L} = 
+    \begin{bmatrix}
+        A_{d} & 0 & 0 \\
+        0 & A_{d} & 0 \\
+        0 & 0 & 1
+    \end{bmatrix}
+    \qquad
+    B_{d} = 
+    \begin{bmatrix}
+        B_{d} & 0 & 0 \\
+        0 & B_{d} & 0 \\
+        0 & 0 & T
+    \end{bmatrix}
+\end{align}
+
+with:
+\begin{equation}
+    A_{d} = 
+    \begin{bmatrix}
+        cosh(\beta T) & \frac{sinh(\beta T)}{\beta} \\
+        \beta sinh(\beta T) & cosh(\beta T)
+    \end{bmatrix}
+    \qquad
+    B_{d} = 
+    \begin{bmatrix}
+        1 - cosh(\beta T) \\
+        - \beta sinh(\beta T)
+    \end{bmatrix}
+\end{equation}
+
+\todo[inline]{improve the discretization part}

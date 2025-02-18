@@ -4,15 +4,15 @@ import numpy as np
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidMPCWithRRT import HumanoidMPCWithRRT
-from HumanoidNavigation.MPC.HumanoidMpc import conf, HumanoidMPC
+from HumanoidNavigation.MPC.HumanoidMpc import conf
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.PlotsUtils import PlotUtils
 from HumanoidNavigation.Utils.obstacles import generate_obstacles, set_seed
 
-PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/Simulation1/"
+PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/SimulationRRT/"
 
 
-def run_simulation_1(start, goal, include_obstacles=False):
+def run_simulation_rrt(start, goal, include_obstacles=False):
     """
     It runs the simulation described in paragraph 1 of the Simulation chapter, and generates all the associated plots.
     """
@@ -39,7 +39,8 @@ def run_simulation_1(start, goal, include_obstacles=False):
     else:
         obstacles = []
 
-    mpc = HumanoidMPC(
+    # mpc = HumanoidMPC(
+    mpc = HumanoidMPCWithRRT(
         N_horizon=3,
         N_simul=300,
         sampling_time=conf["DELTA_T"],
@@ -56,7 +57,7 @@ def run_simulation_1(start, goal, include_obstacles=False):
     )
 
     X_pred_glob, U_pred_glob, _ = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=False,
-                                                     plot_animation=True)
+                                                     plot_animation=True, visualize_rrt_path=True)
 
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal[0]], [goal[1]]]), "Position error", ['X error', 'Y error']),
@@ -67,13 +68,4 @@ def run_simulation_1(start, goal, include_obstacles=False):
 
 
 if __name__ == "__main__":
-    print("******* run_simulation_1(start=(0, 0, 0, 0, 0), goal=(5, 5), include_obstacles=True) ****")
-    run_simulation_1(start=(0, 0, 0, 0, 0), goal=(5, 5), include_obstacles=True)
-    print("******* run_simulation_1(start=(0, 0, 0, 0, 0), goal=(0, 3), include_obstacles=False) ****")
-    run_simulation_1(start=(0, 0, 0, 0, 0), goal=(0, 3), include_obstacles=False)
-    print("******* run_simulation_1(start=(0, 0, 0, 0, 0), goal=(0, -3), include_obstacles=False) ****")
-    run_simulation_1(start=(0, 0, 0, 0, 0), goal=(0, -3), include_obstacles=False)
-    print("******* run_simulation_1(start=(0, 0, 0, 0, 0), goal=(3, -3), include_obstacles=False) ****")
-    run_simulation_1(start=(0, 0, 0, 0, 0), goal=(3, -3), include_obstacles=False)
-    print("******* run_simulation_1(start=(0, 0, 0, 0, 0), goal=(3, 3), include_obstacles=False) ****")
-    run_simulation_1(start=(0, 0, 0, 0, 0), goal=(3, 3), include_obstacles=False)
+    run_simulation_rrt(start=(0, 0, 0, 0, 0), goal=(5, 0), include_obstacles=True)

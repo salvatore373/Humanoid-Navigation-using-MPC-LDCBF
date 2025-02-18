@@ -1,8 +1,9 @@
+from typing import Union
+
 import numpy as np
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC
-from HumanoidNavigation.MPC.ObstaclesUtils import ObstaclesUtils
 
 
 class HumanoidMPCCustomLCBF(HumanoidMPC):
@@ -12,6 +13,7 @@ class HumanoidMPCCustomLCBF(HumanoidMPC):
     """
 
     def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
+                 init_state: Union[np.ndarray, tuple[float, float, float, float, float]] = None,
                  start_with_right_foot: bool = True, verbosity: int = 1,
                  distance_from_obstacles: float = 0.0):
         """
@@ -21,7 +23,8 @@ class HumanoidMPCCustomLCBF(HumanoidMPC):
         """
         assert distance_from_obstacles >= 0.0, "distance_from_obstacles must be non-negative"
 
-        super().__init__(goal, obstacles, N_horizon, N_simul, sampling_time, start_with_right_foot, verbosity)
+        super().__init__(goal, obstacles, N_horizon, N_simul, sampling_time,
+                         init_state, start_with_right_foot, verbosity)
         self.distance_from_obstacles = distance_from_obstacles
 
     def _compute_single_lcbf(self, x, eta, c):

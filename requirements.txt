@@ -4,3 +4,5 @@ casadi
 scipy
 sympy
 pyyaml
+rrtplanner==0.1.2
+scikit-learn==1.6.1
