@@ -154,9 +154,22 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
 
 
 # ===== TO RUN SIMULATION FROM OTHER FILES =====
-def range_finder(lidar_position, obstacles, lidar_range=3.0, resolution=360):
+def range_finder(lidar_position, obstacles, lidar_range=3.0, resolution=360, noisy=True):
     # ===== LIDAR READINGS =====
     readings = compute_lidar_readings(lidar_position, obstacles, lidar_range=lidar_range, resolution=resolution)
+
+    # Gaussian noise to valid readings
+    if noisy:
+        noise_std = 0.01
+        noisy_readings = []
+        for point in readings:
+            if point is not None:
+                noise = np.random.normal(0.0, noise_std, 2)
+                noisy_point = (point[0] + noise[0], point[1] + noise[1])
+                noisy_readings.append(noisy_point)
+            else:
+                noisy_readings.append(None)
+        readings = noisy_readings
 
     # ===== CLUSTER WITH DBSCAN =====
     clusters = retrieve_clusters(readings)

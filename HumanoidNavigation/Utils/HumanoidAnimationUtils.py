@@ -154,7 +154,7 @@ class HumanoidAnimationUtils:
 
         lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
                            radius=3.0, color='tomato',
-                           label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+                           label='LiDAR range', fill=False, linewidth=1, alpha=1.0, zorder=6)
         ax.add_patch(lidar_range)
 
         # Initialize the plots of the barycenter and its trajectory

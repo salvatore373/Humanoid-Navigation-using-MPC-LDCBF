@@ -625,7 +625,8 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
             obstacles = [ch.points for ch in local_obstacles],
             # obstacles = [ch.points for ch in self.obstacles],
             lidar_range = 3.0,
-            resolution = 360
+            resolution = 360,
+            noisy=True
         )
 
         current_inferred_obstacles = []
