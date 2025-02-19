@@ -193,6 +193,7 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
 # ===== PLOTTING OBSTACLES FROM OTHER FILES =====
 def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10)):
     # generate the polygons
-    polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
+    # polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
+    polygons = [ConvexHull(p) for p in generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)]
 
     return polygons

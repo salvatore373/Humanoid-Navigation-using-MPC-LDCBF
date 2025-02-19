@@ -19,11 +19,11 @@ class Scenario(Enum):
     FEW_OBSTACLES = 9
 
 
-def load_scenario(scenario, start, goal):
+def load_scenario(scenario, start, goal, num_max_obstacles=5, distance_factor=2.0):
     obstacles = None
 
     if scenario == Scenario.CROWDED:
-        dist_factor = 1.0
+        dist_factor = distance_factor
 
         min_x = min(start[0]+dist_factor, goal[0]-dist_factor)
         max_x = max(start[0]+dist_factor, goal[0]-dist_factor)
@@ -33,12 +33,12 @@ def load_scenario(scenario, start, goal):
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
-            num_obstacles=10,
+            num_obstacles=num_max_obstacles,
             x_range=(min_x, max_x),
             y_range=(min_y, max_y)
         )
     if scenario == Scenario.CROWDED_START:
-        dist_factor = 1.0
+        dist_factor = distance_factor
 
         min_x = min(start[0]-dist_factor, start[0]+dist_factor)
         max_x = max(start[0]-dist_factor, start[0]+dist_factor)
@@ -48,12 +48,12 @@ def load_scenario(scenario, start, goal):
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
-            num_obstacles=10,
+            num_obstacles=num_max_obstacles,
             x_range=(min_x, max_x),
             y_range=(min_y, max_y)
         )
     if scenario == Scenario.CROWDED_END:
-        dist_factor = 1.0
+        dist_factor = distance_factor
 
         min_x = min(goal[0]-dist_factor, goal[0]+dist_factor)
         max_x = max(goal[0]-dist_factor, goal[0]+dist_factor)
@@ -63,7 +63,7 @@ def load_scenario(scenario, start, goal):
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
-            num_obstacles=10,
+            num_obstacles=num_max_obstacles,
             x_range=(min_x, max_x),
             y_range=(min_y, max_y)
         )
