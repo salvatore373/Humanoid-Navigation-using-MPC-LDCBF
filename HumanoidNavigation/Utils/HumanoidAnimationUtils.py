@@ -81,7 +81,10 @@ class HumanoidAnimationUtils:
 
     @staticmethod
     def _plot_polygon(ax: plt.Axes, polygon: ConvexHull, color='blue', label=None):
-        polygon = polygon.points[polygon.vertices]
+        if isinstance(polygon, ConvexHull):
+            polygon = polygon.points[polygon.vertices]
+        else:
+            polygon = np.array(polygon)
         # 'close' the polygon by appending the first vertex to the end of the vertex list
         polygon = np.append(polygon, [polygon[0]], axis=0)
         ax.plot(polygon[:, 0], polygon[:, 1], '-', color=color, label=label)
@@ -163,10 +166,10 @@ class HumanoidAnimationUtils:
         triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='cornflowerblue', zorder=4)
         ax.add_patch(triangle_patch)
 
-        lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
-                           radius=3.0, color='tomato',
-                           label='LiDAR range', fill=False, linewidth=1, alpha=1.0, zorder=6)
-        ax.add_patch(lidar_range)
+        # lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
+        #                    radius=3.0, color='tomato',
+        #                    label='LiDAR range', fill=False, linewidth=1, alpha=1.0, zorder=6)
+        # ax.add_patch(lidar_range)
 
         # Initialize the plots of the barycenter and its trajectory
         barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue', zorder=5)
@@ -180,14 +183,7 @@ class HumanoidAnimationUtils:
         for obs in self.obstacles:
             self._plot_polygon(ax, obs, color='orange')
 
-        # Put all the c points and eta vectors in tensors
-        # point_c_per_frame = np.zeros((len(self._frames_data), len(self.obstacles), 2))
-        # for frame_num, frame_data in enumerate(self._frames_data):
-        #     for obs_num, c in enumerate(frame_data.list_point_c):
-        #         point_c_per_frame[frame_num, obs_num] = c
 
-        inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
-        inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         point_c_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -196,9 +192,34 @@ class HumanoidAnimationUtils:
                 list_point_c_curr_frame.append(c)
             point_c_per_frame.append(list_point_c_curr_frame)
 
-        inferred_obstacle_per_frame = []
-        for frame_num, frame_data in enumerate(self._frames_data):
-            inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
+
+        inferred_obstacle_per_frame = [frame_data.inferred_obstacles for frame_data in self._frames_data]
+
+
+
+        # inferred_obstacles_outline = []
+        # inferred_obstacles_fill = []
+        # inferred_obstacle_per_frame = []
+        # for frame_num, frame_data in enumerate(self._frames_data):
+        #     inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
+        #
+        #     inferred_obstacle_outline = [ # , label='Inferred Obstacle' if frame_num == 0 else None
+        #         ax.plot([], [], '-', color='blue')[0]
+        #         for i in range(len(frame_data.inferred_obstacles))
+        #     ]
+        #     inferred_obstacles_outline.append(inferred_obstacle_outline)
+        #
+        #     inferred_obstacle_fill = [
+        #         ax.fill([], [], alpha=0.2, color='blue')[0]
+        #         for i in range(len(frame_data.inferred_obstacles))
+        #     ]
+        #     inferred_obstacles_fill.append(inferred_obstacle_fill)
+
+
+        # inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
+        # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
+
+
 
         lidar_readings_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -210,15 +231,18 @@ class HumanoidAnimationUtils:
                     lidar_readings_y.append(point[1])
             lidar_readings_per_frame.append(list(zip(lidar_readings_x, lidar_readings_y)))
 
-        lidar_readings = ax.scatter([], [], s=2, color='green', label="LiDAR readings", zorder=0)
+        lidar_readings = ax.scatter([], [], s=1.5, color='green', label="LiDAR readings", zorder=4)
 
         # Plot a circle around the robot, representing the LiDAR's range. Plot only if the LiDAR readings were provided
-        lidar_range = None
-        if all(r != [] for r in lidar_readings_per_frame):
+        # lidar_range = None
+        display_lidar_range = False
+        if any(r != [] for r in lidar_readings_per_frame):
             lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
-                                         radius=3.0, color='tomato',
-                                         label='LiDAR range', fill=False, linewidth=1, alpha=1.0)
+                                         radius=1.5, color='tomato',
+                                         label='LiDAR range', fill=False, linewidth=1,
+                                         alpha=1.0, zorder=6)
             ax.add_patch(lidar_range)
+            display_lidar_range = True
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
         # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
@@ -250,33 +274,49 @@ class HumanoidAnimationUtils:
             trajectory_line.set_data(barycenter_traj[:frame + 1, 0], barycenter_traj[:frame + 1, 1])
 
             # Update the LiDAR range circle center
-            if lidar_range is not None:
+            if display_lidar_range:
                 lidar_range.set_center(barycenter_curr_pos.squeeze())
 
-            # range = plt.Circle((float(barycenter_curr_pos[0]), float(barycenter_curr_pos[1])),
-            #                    radius=3.0, color='tomato',
-            #                    label='LiDAR range', fill=False, linewidth=2, alpha=1.0)
-            # ax.add_patch(range)
+            # # inferred polygons for current frame
+            # curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
+            # if len(curr_inferred_obstacles) > 0:
+            #     glob_curr_inferred_obstacles = [
+            #         np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array(
+            #             [[x_trajectory[frame], y_trajectory[frame]]]).T).T
+            #         for k in range(len(curr_inferred_obstacles))
+            #     ]
+            #
+            #     obs_curr_frame = inferred_obstacles_outline[frame]
+            #     for obs_ind, o in enumerate(obs_curr_frame):
+            #         o.set_data(glob_curr_inferred_obstacles[obs_ind][:, 0], glob_curr_inferred_obstacles[obs_ind][:, 1])
+            #         inferred_obstacles_fill[frame][obs_ind].set_xy(glob_curr_inferred_obstacles[obs_ind])
 
-            # inferred_obstacle_per_frame = []
-            # for frame_num, frame_data in enumerate(self._frames_data):
-            #     curr_frame_inferred_obstacle = frame_data.inferred_obstacles
-            #     global_curr_frame_inferred_obstacle = []
-            #     for obs in curr_frame_inferred_obstacle:
-            #         global_curr_frame_inferred_obstacle.append(rot @ vertex + trans)
-            #     inferred_obstacle_per_frame.append(global_curr_frame_inferred_obstacle)
-            #     # inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
 
-            # inferred polygons for current frame
+            # Remove previously drawn inferred-obstacle artists (if any)
+            if hasattr(update, "current_inferred_outlines"):
+                for artist in update.current_inferred_outlines:
+                    artist.remove()
+            if hasattr(update, "current_inferred_fills"):
+                for artist in update.current_inferred_fills:
+                    artist.remove()
+            # Initialize lists to store the current frame’s inferred obstacle artists
+            update.current_inferred_outlines = []
+            update.current_inferred_fills = []
+
+            # Get inferred obstacles for the current frame
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
-            if len(curr_inferred_obstacles) > 0:
-                to_vertices_list = [
-                    np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array(
-                        [[x_trajectory[frame], y_trajectory[frame]]]).T).T
-                    for k in range(len(curr_inferred_obstacles))
-                ][0]
-                inferred_obstacle_outline.set_data(to_vertices_list[:, 0], to_vertices_list[:, 1])
-                inferred_obstacle_fill.set_xy(to_vertices_list)
+            for obs in curr_inferred_obstacles:
+                # Transform the obstacle’s points from its local frame to global coordinates.
+                local_points = np.array(obs.points)  # shape: (N,2)
+                global_points = (rotation_matrix[frame] @ local_points.T).T + np.array(
+                    [x_trajectory[frame], y_trajectory[frame]])
+                # Plot the outline
+                outline, = ax.plot(global_points[:, 0], global_points[:, 1], '-', color='blue')
+                # Plot the filled polygon (ax.fill returns a list; take its first element)
+                fill = ax.fill(global_points[:, 0], global_points[:, 1], alpha=0.2, color='blue')[0]
+                update.current_inferred_outlines.append(outline)
+                update.current_inferred_fills.append(fill)
+
 
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
@@ -325,7 +365,8 @@ class HumanoidAnimationUtils:
             footsteps_rectangles[frame].set_visible(True)
 
             return (triangle_patch, barycenter_point, trajectory_line, footsteps_rectangles[:frame],
-                    points_c, segments_eta, half_planes, inferred_obstacle_outline, lidar_readings)
+                    points_c, segments_eta, half_planes, *update.current_inferred_outlines,
+                    *update.current_inferred_fills, lidar_readings)
 
         # Create the animation
         ani = FuncAnimation(fig, update, frames=len(triangle_poses), )  # 1 frame per second
@@ -358,7 +399,7 @@ class HumanoidAnimationUtils:
 
         # Plot the obstacles
         for obstacle in obstacles:
-            HumanoidAnimationUtils._plot_polygon(ax, obstacle)
+            HumanoidAnimationUtils._plot_polygon(ax, obstacle, color='orange')
 
         # Plot the trajectory of the CoM computed by the MPC
         plt.plot(state_glob[0, :], state_glob[2, :], color="mediumpurple", label="Predicted Trajectory")

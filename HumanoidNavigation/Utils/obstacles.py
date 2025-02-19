@@ -164,7 +164,7 @@ def plot_polygon(polygon, color='blue', label=None):
 
 
 # Generate small obstacles randomly placed around the map
-def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
+def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, delta):
     polygons = []
     attempts = 0
     max_attempts = 500
@@ -174,7 +174,8 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
 
         x_center = random.uniform(*x_range)
         y_center = random.uniform(*y_range)
-        poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+        # poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+        poly = generate_random_convex_polygon(num_points, (x_center - 0.5, x_center + 0.5), (y_center - 0.5, y_center + 0.5))
 
         if is_point_inside_polygon(start, poly):
             continue
@@ -185,15 +186,18 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range):
         if any(polygons_intersect(poly, p) for p in polygons):
             continue
 
+        if any(point_to_polygon_distance((x_center, y_center), p) < delta for p in polygons):
+            continue
+
         polygons.append(np.array(poly))
 
     return polygons
 
 
 # ===== PLOTTING OBSTACLES FROM OTHER FILES =====
-def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10)):
+def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10), delta=1):
     # generate the polygons
     # polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
-    polygons = [ConvexHull(p) for p in generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)]
+    polygons = [ConvexHull(p) for p in generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, delta)]
 
     return polygons

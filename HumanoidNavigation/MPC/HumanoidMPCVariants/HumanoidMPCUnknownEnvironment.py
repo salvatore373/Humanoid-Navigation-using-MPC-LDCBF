@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 from scipy.spatial import ConvexHull
 
@@ -13,6 +15,17 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
     A subclass of HumanoidMPC, where the robot is not aware of the full map, but it can only perceive the environment
      through a LiDAR system.
     """
+
+    def __init__(self, goal, obstacles, N_horizon=3, N_mpc_timesteps=100, sampling_time=1e-3,
+                 init_state: Union[np.ndarray, tuple[float, float, float, float, float]] = None,
+                 start_with_right_foot: bool = True, verbosity: int = 1,
+                 lidar_range: float = 3.0, lidar_resolution: int = 360):
+
+        self.lidar_range=lidar_range
+        self.lidar_resolution = lidar_resolution
+
+        super().__init__(goal, obstacles, N_horizon=N_horizon, N_mpc_timesteps=N_mpc_timesteps, sampling_time=sampling_time,
+                 init_state=init_state, start_with_right_foot=start_with_right_foot, verbosity=verbosity)
 
     def _get_list_c_and_eta(self, loc_x_k: float, loc_y_k: float, glob_theta_k: float, glob_x_km1: float,
                             glob_y_km1: float):
@@ -48,8 +61,8 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
             lidar_position=pos_from_state,
             obstacles=[ch.points for ch in local_obstacles],
             # obstacles = [ch.points for ch in self.obstacles],
-            lidar_range=3.0,
-            resolution=360
+            lidar_range=self.lidar_range,
+            resolution=self.lidar_resolution
         )
 
         current_inferred_obstacles = []
@@ -72,13 +85,22 @@ class HumanoidMPCUnknownEnvironment(HumanoidMPC):
 
 
 if __name__ == "__main__":
-    ObstaclesUtils.set_random_seed(1)
-    set_seed(1)
+    seed = 10
+    ObstaclesUtils.set_random_seed(seed)
+    set_seed(seed)
 
-    start, goal = (0, 0), (5, 0)
+    start, goal = (0, 0), (4, 3.5)
 
-    start, goal, obstacles = load_scenario(Scenario.CROWDED, start, goal)
+    start, goal, obstacles = load_scenario(
+        Scenario.CROWDED,
+        start,
+        goal,
+        20,
+        range_x=(-1, 6),
+        range_y=(-1, 6)
+    )
 
+    # initial_state = (start[0], 0, start[1], 0, 0)
     initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
     # mpc = HumanoidMPC(
@@ -87,16 +109,10 @@ if __name__ == "__main__":
         N_mpc_timesteps=300,
         sampling_time=conf["DELTA_T"],
         goal=goal,
-        # goal=(5, 5),
         init_state=initial_state,
-        # init_state=(0, 0, 0, 0, 0),
         obstacles=obstacles,
-        # obstacles=[
-        #     obstacle1,
-        #     # obstacle2,
-        #     # obstacle3,
-        # ],
-        verbosity=0
+        verbosity=0,
+        lidar_range=1.5
     )
 
-    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=False)
+    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=True)

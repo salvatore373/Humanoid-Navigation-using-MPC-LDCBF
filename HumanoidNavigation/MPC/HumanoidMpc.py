@@ -207,6 +207,7 @@ class HumanoidMPC:
         goal_loc_coords = self.optim_prob.value(self.goal_loc_coords)
 
         # Compute the humanoid's orientation for this prediction horizon
+        # self.precomputed_theta = [start_state_theta]  # initial theta
         self.precomputed_theta = [0]  # initial theta
         self.precomputed_omega = []
         for k in range(self.N_horizon):
@@ -637,14 +638,22 @@ class HumanoidMPC:
 
 
 if __name__ == "__main__":
-    ObstaclesUtils.set_random_seed(1)
-    set_seed(1)
+    ObstaclesUtils.set_random_seed(4)
+    set_seed(4)
 
-    start, goal = (0, 0), (5, 0)
+    start, goal = (0, 0), (4, 4)
 
-    start, goal, obstacles = load_scenario(Scenario.CROWDED, start, goal)
+    start, goal, obstacles = load_scenario(
+        Scenario.CROWDED,
+        start,
+        goal,
+        20,
+        range_x=(-1, 6),
+        range_y=(-1, 6)
+    )
 
-    initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
+    initial_state = (start[0], 0, start[1], 0, 0)
+    # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
     # mpc = HumanoidMPC(
     mpc = HumanoidMPC(
@@ -654,7 +663,7 @@ if __name__ == "__main__":
         # sampling_time=1e-2,
         goal=goal,
         init_state=initial_state,
-        obstacles=[],
+        obstacles=obstacles,
         # obstacles=[
         #     obstacle1,
         #     # obstacle2,

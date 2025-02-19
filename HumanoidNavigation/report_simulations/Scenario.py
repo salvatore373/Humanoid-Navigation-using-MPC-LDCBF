@@ -19,11 +19,29 @@ class Scenario(Enum):
     FEW_OBSTACLES = 9
 
 
-def load_scenario(scenario, start, goal, num_max_obstacles=5, distance_factor=2.0):
+def load_scenario(scenario, start, goal,
+                  num_max_obstacles=5, min_distance=2.0,
+                  delta=1.0, range_x=None, range_y=None):
+    """
+    Returns the list of random obstacles and if MAZE scenario is selected, also the initial and final position.
+
+    :param scenario: selected scenario
+    :param start: initial (x, y) coordinates
+    :param goal: final (x, y) coordinates
+    :param num_max_obstacles: maximum number of obstacles to generate
+    :param delta: minimum distance between each obstacle
+
+    # === for auto range generation ===
+    :param min_distance: minimum distance from objectives
+
+    # === for imposed range ===
+    :param range_x: custom range of x coordinates
+    :param range_y: custom range of y coordinates
+    """
     obstacles = None
 
     if scenario == Scenario.CROWDED:
-        dist_factor = distance_factor
+        dist_factor = min_distance
 
         min_x = min(start[0]+dist_factor, goal[0]-dist_factor)
         max_x = max(start[0]+dist_factor, goal[0]-dist_factor)
@@ -34,11 +52,12 @@ def load_scenario(scenario, start, goal, num_max_obstacles=5, distance_factor=2.
             start=start,
             goal=goal,
             num_obstacles=num_max_obstacles,
-            x_range=(min_x, max_x),
-            y_range=(min_y, max_y)
+            x_range=(min_x, max_x) if range_x is None else range_x,
+            y_range=(min_y, max_y) if range_y is None else range_y,
+            delta=delta
         )
     if scenario == Scenario.CROWDED_START:
-        dist_factor = distance_factor
+        dist_factor = min_distance
 
         min_x = min(start[0]-dist_factor, start[0]+dist_factor)
         max_x = max(start[0]-dist_factor, start[0]+dist_factor)
@@ -49,11 +68,12 @@ def load_scenario(scenario, start, goal, num_max_obstacles=5, distance_factor=2.
             start=start,
             goal=goal,
             num_obstacles=num_max_obstacles,
-            x_range=(min_x, max_x),
-            y_range=(min_y, max_y)
+            x_range=(min_x, max_x) if range_x is None else range_x,
+            y_range=(min_y, max_y) if range_y is None else range_y,
+            delta=delta
         )
     if scenario == Scenario.CROWDED_END:
-        dist_factor = distance_factor
+        dist_factor = min_distance
 
         min_x = min(goal[0]-dist_factor, goal[0]+dist_factor)
         max_x = max(goal[0]-dist_factor, goal[0]+dist_factor)
@@ -64,8 +84,9 @@ def load_scenario(scenario, start, goal, num_max_obstacles=5, distance_factor=2.
             start=start,
             goal=goal,
             num_obstacles=num_max_obstacles,
-            x_range=(min_x, max_x),
-            y_range=(min_y, max_y)
+            x_range=(min_x, max_x) if range_x is None else range_x,
+            y_range=(min_y, max_y) if range_y is None else range_y,
+            delta=delta
         )
     if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
         obstacles = [
