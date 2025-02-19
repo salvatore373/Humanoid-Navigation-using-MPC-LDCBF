@@ -160,7 +160,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
                 init_state=start_state,
                 obstacles=self.obstacles,
                 N_horizon=self.N_horizon,
-                N_simul=self.N_simul,
+                N_mpc_timesteps=self.N_simul,
                 sampling_time=self.sampling_time,
                 start_with_right_foot=self.start_with_right_foot,
                 verbosity=self.verbosity,

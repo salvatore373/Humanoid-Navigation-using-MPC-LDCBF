@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # mpc = HumanoidMPC(
     mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,
-        N_simul=300,
+        N_mpc_timesteps=300,
         sampling_time=conf["DELTA_T"],
         goal=goal,
         # goal=(5, 5),

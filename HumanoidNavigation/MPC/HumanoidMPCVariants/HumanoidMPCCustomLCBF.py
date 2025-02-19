@@ -12,7 +12,7 @@ class HumanoidMPCCustomLCBF(HumanoidMPC):
     to keep the robot at a user's defined distance from the obstacles.
     """
 
-    def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
+    def __init__(self, goal, obstacles, N_horizon=3, N_mpc_timesteps=100, sampling_time=1e-3,
                  init_state: Union[np.ndarray, tuple[float, float, float, float, float]] = None,
                  start_with_right_foot: bool = True, verbosity: int = 1,
                  distance_from_obstacles: float = 0.0):
@@ -23,7 +23,7 @@ class HumanoidMPCCustomLCBF(HumanoidMPC):
         """
         assert distance_from_obstacles >= 0.0, "distance_from_obstacles must be non-negative"
 
-        super().__init__(goal, obstacles, N_horizon, N_simul, sampling_time,
+        super().__init__(goal, obstacles, N_horizon, N_mpc_timesteps, sampling_time,
                          init_state, start_with_right_foot, verbosity)
         self.distance_from_obstacles = distance_from_obstacles
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     mpc = HumanoidMPCCustomLCBF(
         N_horizon=3,
-        N_simul=300,
+        N_mpc_timesteps=300,
         sampling_time=HumanoidMPC.DELTA_T,
         goal=(-1, 3),
         obstacles=[

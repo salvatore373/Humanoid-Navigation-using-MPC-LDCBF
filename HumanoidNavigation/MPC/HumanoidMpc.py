@@ -1,3 +1,4 @@
+import math
 import os
 import time
 from typing import Union
@@ -46,7 +47,7 @@ class HumanoidMPC:
         cs.horzcat(0, -conf["BETA"] * SINH),
     )
 
-    def __init__(self, goal, obstacles, N_horizon=3, N_simul=100, sampling_time=1e-3,
+    def __init__(self, goal, obstacles, N_horizon=3, N_mpc_timesteps=100, sampling_time=1e-3,
                  init_state: Union[np.ndarray, tuple[float, float, float, float, float]] = None,
                  start_with_right_foot: bool = True, verbosity: int = 1):
         """
@@ -56,14 +57,24 @@ class HumanoidMPC:
         :param obstacles: The obstacles in the environment.
         :param init_state: The initial position, velocity and orientation of the humanoid, as a 5D vector.
         :param N_horizon: The length of the prediction horizon.
-        :param N_simul: The number of time steps in the simulation.
+        :param N_mpc_timesteps: The maximum number of times the MPC will be triggered in the simulation.
         :param sampling_time: The duration of a single time step in seconds.
         :param start_with_right_foot: Whether the first stance foot should be the right or left one.
         :param verbosity: The level of verbosity of the logs. It ranges between 1 and 3.
         """
+        assert conf['DELTA_T'] % sampling_time <= 1e-8, \
+            "The sampling time must be lower than and divisible by the duration of the step."
+
         self.N_horizon = N_horizon
-        self.N_simul = N_simul
+        self.N_simul = N_mpc_timesteps
         self.sampling_time = sampling_time
+
+        # Compute the number of inputs that will be provided to the robot during one simulation timestep
+        self.mpc_step = int((conf['DELTA_T'] / self.sampling_time))
+        self.mpc_step = 1 if self.mpc_step == 0 else self.mpc_step
+        # Compute the number of inputs that will be provided throughout the simulation,
+        # based on the robot's sampling time.
+        self.num_inputs = self.mpc_step * self.N_simul
 
         self.start_with_right_foot = start_with_right_foot
         self.verbosity = verbosity
@@ -119,7 +130,7 @@ class HumanoidMPC:
         self.s_v = []
         # Define which step should be right and which left
         self.s_v_param = self.optim_prob.parameter(1, self.N_horizon + 1)
-        for i in range(self.N_simul + self.N_horizon - 1):
+        for i in range(self.num_inputs + self.N_horizon + 1):
             self.s_v.append(conf["RIGHT_FOOT"] if i % 2 == (0 if start_with_right_foot else 1) else conf["LEFT_FOOT"])
 
         # Define the state and the control variables (without theta and omega)
@@ -142,8 +153,8 @@ class HumanoidMPC:
 
         # Define a vector of parameters that can be either 0 or 1, used to activate or deactivate the LCBFs of a
         # specific simulation timestep.
-        self.lcbf_activation_params = self.optim_prob.parameter(1, self.N_simul)
-        self.optim_prob.set_value(self.lcbf_activation_params, np.ones(self.N_simul))
+        self.lcbf_activation_params = self.optim_prob.parameter(1, self.num_inputs)
+        self.optim_prob.set_value(self.lcbf_activation_params, np.ones(self.num_inputs))
 
         # Add the constraints to the objective function
         self._add_constraints()
@@ -432,14 +443,14 @@ class HumanoidMPC:
         assert not plot_animation or fill_animator, "If plot_animation is True, fill_animator must be True too."
 
         # Initialize the matrices that will hold the evolution of the state and the input throughout the simulation
-        X_pred = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
-        U_pred = np.zeros(shape=(self.control_dim + 1, self.N_simul))
-        computation_time = np.zeros(self.N_simul)
+        X_pred = np.zeros(shape=(self.state_dim + 1, self.num_inputs + 1))
+        U_pred = np.zeros(shape=(self.control_dim + 1, self.num_inputs))
+        computation_time = np.zeros(self.num_inputs)  # DEBUG
 
         # The position of the CoM in the global frame at each step of the simulation
-        X_pred_glob = np.zeros(shape=(self.state_dim + 1, self.N_simul + 1))
+        X_pred_glob = np.zeros(shape=(self.state_dim + 1, self.num_inputs + 1))
         # The position of the footsteps in the global frame at each step of the simulation
-        U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.N_simul))
+        U_pred_glob = np.zeros(shape=(self.control_dim + 1, self.num_inputs))
 
         # The list of the lists of vectors c and eta computed for each obstacle at each simulation step
         c_and_eta_lists: list[list[tuple[np.ndarray, np.ndarray]]] = []
@@ -447,9 +458,17 @@ class HumanoidMPC:
         self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, 0])
         self.optim_prob.set_initial(self.U_mpc[:, 0], U_pred[:2, 0])
 
+        # The last timestep where an MPC solution was computed
+        last_mpc_timestep = 0
+
         last_obj_fun_val = float('inf')
-        for k in range(self.N_simul):
+        for k in range(self.num_inputs):
             starting_iter_time = time.time()  # CLOCK  #DEBUG
+
+            # Check whether in this timestep an MPC solution will be computed
+            is_mpc_timestep = k % self.mpc_step == 0
+            if is_mpc_timestep:
+                last_mpc_timestep = k
 
             # Add the LCBF constraints based on the current humanoid's position
             list_of_c_and_eta = (
@@ -468,8 +487,11 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.x0, X_pred[:4, k])
             self.optim_prob.set_value(self.x0_theta, X_pred[4, k])
 
-            # Set whether the following steps should be with right or left foot
-            self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon + 1])
+            if is_mpc_timestep:
+                # Compute how many steps are before the current one
+                step_number = math.floor(k / self.mpc_step)
+                # Set whether the following steps should be with right or left foot
+                self.optim_prob.set_value(self.s_v_param, self.s_v[step_number:step_number + self.N_horizon + 1])
 
             # Precompute theta and omega for the current prediction horizon
             self.optim_prob.set_value(self.X_mpc_theta[0], X_pred[4, k])
@@ -479,21 +501,23 @@ class HumanoidMPC:
             for i in range(self.N_horizon):
                 self.optim_prob.set_value(self.U_mpc_omega[i], self.precomputed_omega[i])
 
-            # solve
-            try:
-                kth_solution = self.optim_prob.solve()
-                last_obj_fun_val = self.optim_prob.debug.value(self.optim_prob.f)
-            except Exception as e:
-                print(f"===== ERROR ({k}) =====")
-                print("===== STATES =====")
-                print(self.optim_prob.debug.value(X_pred))
-                print("===== CONTROLS =====")
-                print(self.optim_prob.debug.value(U_pred))
-                print("===== EXCEPTION =====")
-                print(e)
-                print("===== INFEASIBILITIES =====")
-                print(self.optim_prob.debug.show_infeasibilities())
-                break
+            # Compute a new foot position by the optimization process only if in this step a new MPC solution
+            # should be generated.
+            if is_mpc_timestep:
+                try:
+                    kth_solution = self.optim_prob.solve()
+                    last_obj_fun_val = self.optim_prob.debug.value(self.optim_prob.f)
+                except Exception as e:
+                    print(f"===== ERROR ({k}) =====")
+                    print("===== STATES =====")
+                    print(self.optim_prob.debug.value(X_pred))
+                    print("===== CONTROLS =====")
+                    print(self.optim_prob.debug.value(U_pred))
+                    print("===== EXCEPTION =====")
+                    print(e)
+                    print("===== INFEASIBILITIES =====")
+                    print(self.optim_prob.debug.show_infeasibilities())
+                    break
 
             # get u_k
             U_pred[:2, k] = kth_solution.value(self.U_mpc[:, 0])
@@ -513,32 +537,40 @@ class HumanoidMPC:
             # print(kth_solution.value(self.X_mpc))
             # print(kth_solution.value(self.U_mpc))
 
-            # compute x_k_next using x_k and u_k
-            state_res = self._integrate(X_pred[:4, k], U_pred[:2, k])
-            X_pred[:4, k + 1] = state_res.full().squeeze(-1)
+            if is_mpc_timestep:
+                # A new MPC solution has just been computed, then compute x_k_next using x_k and u_k
+                state_res = self._integrate(X_pred[:4, k], U_pred[:2, k])
+                X_pred[:4, k + 1] = state_res.full().squeeze(-1)
+            else:
+                # At this timestep only a new omega has been provided to the robot, then the CoM position and velocity
+                # did not change.
+                X_pred[:4, k + 1] = X_pred[:4, k]
             X_pred[4, k + 1] = self.precomputed_theta[1]
 
-            # Compute x_k_next in the global frame
+            # Compute x_k_next in the global frame (take as origin of the local RF the origin of the RF corresponding
+            # to the last MPC input, as it didn't change since then).
             X_pred_glob[4, k + 1] = self.precomputed_theta[1] + X_pred_glob[4, k]
             trans_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k + 1],
-                                                                         X_pred_glob[0, k],
-                                                                         X_pred_glob[2, k])
+                                                                         X_pred_glob[0, last_mpc_timestep],
+                                                                         X_pred_glob[2, last_mpc_timestep])
             rot_mat_loc_to_glob = self._get_local_to_glob_rf_trans_mat(X_pred_glob[4, k + 1],
                                                                        0, 0)[:2, :2]
             glob_pos = (trans_mat_loc_to_glob @ [X_pred[0, k + 1], X_pred[2, k + 1], 1])[:2]
             glob_vel = (rot_mat_loc_to_glob @ [X_pred[1, k + 1], X_pred[3, k + 1]])
             X_pred_glob[:4, k + 1] = [glob_pos[0], glob_vel[0], glob_pos[1], glob_vel[1]]
 
-            # Set X_mpc to the state derived from the computed inputs
-            self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
-            for i in range(self.N_horizon - 1):
-                state_res = self._integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]))
-                self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
+            # Set the initial guesses only if a new MPC solution will be generated at the next timestep
+            if k % self.mpc_step == self.mpc_step - 1:
+                # Set X_mpc to the state derived from the computed inputs
+                self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, k + 1])
+                for i in range(self.N_horizon - 1):
+                    state_res = self._integrate(state_res, kth_solution.value(self.U_mpc[:, i + 1]))
+                    self.optim_prob.set_initial(self.X_mpc[:, i + 1], state_res)
 
             # Move the goal wrt the RF with origin in p_k_next and orientation theta_next
             glob_to_loc_trans_mat = self._get_glob_to_loc_rf_trans_mat(X_pred_glob[4, k + 1],
-                                                                       X_pred_glob[0, k],
-                                                                       X_pred_glob[2, k])
+                                                                       X_pred_glob[0, last_mpc_timestep],
+                                                                       X_pred_glob[2, last_mpc_timestep])
             goal_loc_coords = (glob_to_loc_trans_mat @ [self.goal[0], self.goal[1], 1])[:2]
             self.optim_prob.set_value(self.goal_loc_coords, goal_loc_coords)
 
@@ -546,6 +578,7 @@ class HumanoidMPC:
         X_pred_glob = X_pred_glob[:, :k + 1]
         U_pred_glob = U_pred_glob[:, :k]
 
+        computation_time = computation_time[:k + 1]
         computation_time[k] = time.time() - starting_iter_time  # CLOCK
         print(f"Average Computation time: {np.mean(computation_time) * 1000} ms")  # DEBUG
 
@@ -580,7 +613,8 @@ class HumanoidMPC:
 
         # Display the obtained results
         if make_fast_plot:
-            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles, self.s_v)
+            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles,
+                                                    np.repeat(self.s_v, self.mpc_step))
         animator = initial_animator
         if fill_animator:
             animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles) if animator is None \
@@ -590,7 +624,7 @@ class HumanoidMPC:
                     com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
                     humanoid_orientation=X_pred_glob[4, k],
                     footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
-                    which_footstep=self.s_v[k],
+                    which_footstep=self.s_v[math.floor(k / self.mpc_step)],
                     list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
                         k - 1],
                     inferred_obstacles=self.list_inferred_obstacles[k] if len(self.list_inferred_obstacles) > 0 else [],
@@ -615,12 +649,11 @@ if __name__ == "__main__":
     # mpc = HumanoidMPC(
     mpc = HumanoidMPC(
         N_horizon=3,
-        N_simul=300,
+        N_mpc_timesteps=300,
         sampling_time=conf["DELTA_T"],
+        # sampling_time=1e-2,
         goal=goal,
-        # goal=(5, 5),
         init_state=initial_state,
-        # init_state=(0, 0, 0, 0, 0),
         obstacles=[],
         # obstacles=[
         #     obstacle1,
