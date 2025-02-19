@@ -20,43 +20,70 @@ class Scenario(Enum):
 
 
 def load_scenario(scenario, start, goal):
-    start, goal, obstacles = start, goal, None
+    obstacles = None
 
     if scenario == Scenario.CROWDED:
+        dist_factor = 1.0
+
+        min_x = min(start[0]+dist_factor, goal[0]-dist_factor)
+        max_x = max(start[0]+dist_factor, goal[0]-dist_factor)
+        min_y = min(start[1]+dist_factor, goal[1]-dist_factor)
+        max_y = max(start[1]+dist_factor, goal[1]-dist_factor)
+
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
-            num_obstacles=10,  # 100?
-            x_range=(start[0]+0.2, goal[0]-0.2),
-            y_range=(start[1]+0.2, goal[1]-0.2)
+            num_obstacles=10,
+            x_range=(min_x, max_x),
+            y_range=(min_y, max_y)
         )
     if scenario == Scenario.CROWDED_START:
+        dist_factor = 1.0
+
+        min_x = min(start[0]-dist_factor, start[0]+dist_factor)
+        max_x = max(start[0]-dist_factor, start[0]+dist_factor)
+        min_y = min(start[1]+dist_factor, start[1]-dist_factor)
+        max_y = max(start[1]+dist_factor, start[1]-dist_factor)
+
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
             num_obstacles=10,
-            x_range=(start[0]+0.2, 2),
-            y_range=(start[1]+0.2, 2)
+            x_range=(min_x, max_x),
+            y_range=(min_y, max_y)
         )
     if scenario == Scenario.CROWDED_END:
+        dist_factor = 1.0
+
+        min_x = min(goal[0]-dist_factor, goal[0]+dist_factor)
+        max_x = max(goal[0]-dist_factor, goal[0]+dist_factor)
+        min_y = min(goal[1]+dist_factor, goal[1]-dist_factor)
+        max_y = max(goal[1]+dist_factor, goal[1]-dist_factor)
+
         obstacles = generate_obstacles(
             start=start,
             goal=goal,
             num_obstacles=10,
-            x_range=(3, goal[0]-0.2),
-            y_range=(3, goal[1]-0.2)
+            x_range=(min_x, max_x),
+            y_range=(min_y, max_y)
         )
     if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
-        start = (0, 0)
-        goal = (5, 0)
         obstacles = [
-            ConvexHull(np.array([[0.1, -3], [0.1, 3], [1, 3], [1, -3]]))
+            ConvexHull(np.array([
+                [start[0] + 0.1, -3],
+                [start[0] + 0.1, 3],
+                [start[0] + 0.3, 3],
+                [start[0] + 0.3, -3]
+            ]))
         ]
     if scenario == Scenario.END_CLOSE_TO_OBSTACLE:
-        start = (0, 0)
-        goal = (5, 0)
         obstacles = [
-            ConvexHull(np.array([[4.9, -3], [4.9, 3], [4, 3], [4, -3]]))
+            ConvexHull(np.array([
+                [goal[0] + 0.1, -3],
+                [goal[0] + 0.1, 3],
+                [goal[0] + 0.3, 3],
+                [goal[0] + 0.3, -3]
+            ]))
         ]
     if scenario == Scenario.HORIZONTAL_WALL:
         obstacles = [
