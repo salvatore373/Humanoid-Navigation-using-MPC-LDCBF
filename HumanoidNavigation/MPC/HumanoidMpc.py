@@ -444,6 +444,9 @@ class HumanoidMPC:
         # The list of the lists of vectors c and eta computed for each obstacle at each simulation step
         c_and_eta_lists: list[list[tuple[np.ndarray, np.ndarray]]] = []
 
+        self.optim_prob.set_initial(self.X_mpc[:, 0], X_pred[:4, 0])
+        self.optim_prob.set_initial(self.U_mpc[:, 0], U_pred[:2, 0])
+
         last_obj_fun_val = float('inf')
         for k in range(self.N_simul):
             starting_iter_time = time.time()  # CLOCK  #DEBUG
@@ -469,8 +472,9 @@ class HumanoidMPC:
             self.optim_prob.set_value(self.s_v_param, self.s_v[k:k + self.N_horizon + 1])
 
             # Precompute theta and omega for the current prediction horizon
+            self.optim_prob.set_value(self.X_mpc_theta[0], X_pred[4, k])
             self._precompute_theta_omega_naive(X_pred[:4, k], X_pred[4, k])
-            for i in range(self.N_horizon + 1):
+            for i in range(1, self.N_horizon + 1):
                 self.optim_prob.set_value(self.X_mpc_theta[i], self.precomputed_theta[i])
             for i in range(self.N_horizon):
                 self.optim_prob.set_value(self.U_mpc_omega[i], self.precomputed_omega[i])
@@ -617,7 +621,7 @@ if __name__ == "__main__":
         # goal=(5, 5),
         init_state=initial_state,
         # init_state=(0, 0, 0, 0, 0),
-        obstacles=obstacles,
+        obstacles=[],
         # obstacles=[
         #     obstacle1,
         #     # obstacle2,
