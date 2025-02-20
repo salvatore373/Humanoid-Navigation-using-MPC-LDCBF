@@ -18,6 +18,24 @@ class ObstaclesUtils:
         random.seed(seed)
 
     @staticmethod
+    def generate_circle_like_polygon(num_points: int, radius: float, center: tuple[float, float]) -> ConvexHull:
+        """
+        Generates a polygon with num_points vertices that approximates a circle.
+
+        :param num_points: The number of vertices that the returned polygon should have. The more the points,
+         the smoother is the circle.
+        :param radius: The radius of the circle.
+        :param center: The coordinates of the center of the circle
+        """
+        # Generate the coordinates of the circle-like polygon's vertices
+        theta = np.linspace(0, 2 * np.pi, num_points)
+        x = center[0] + radius * np.cos(theta)
+        y = center[1] + radius * np.sin(theta)
+        points = np.column_stack((x, y))
+
+        return ConvexHull(points)
+
+    @staticmethod
     def generate_random_convex_polygon(num_points: int, x_range: tuple[float, float],
                                        y_range: tuple[float, float]) -> ConvexHull:
         """

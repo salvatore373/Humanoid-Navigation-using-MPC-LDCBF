@@ -11,7 +11,7 @@ from yaml import safe_load
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.obstacles import set_seed
-from HumanoidNavigation.report_simulations.Scenario import Scenario, load_scenario
+from HumanoidNavigation.report_simulations.Scenario import Scenario
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
@@ -643,7 +643,7 @@ if __name__ == "__main__":
 
     start, goal = (0, 0), (4, 4)
 
-    start, goal, obstacles = load_scenario(
+    start, goal, obstacles = Scenario.load_scenario(
         Scenario.CROWDED,
         start,
         goal,

@@ -7,7 +7,7 @@ from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC, conf, ASSETS_PATH
 from HumanoidNavigation.RangeFinder.range_finder_wth_polygons_dbscan import range_finder
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.obstacles import set_seed
-from HumanoidNavigation.report_simulations.Scenario import load_scenario, Scenario
+from HumanoidNavigation.report_simulations.Scenario import Scenario
 
 
 class HumanoidMPCUnknownEnvironment(HumanoidMPC):
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     start, goal = (0, 0), (4, 3.5)
 
-    start, goal, obstacles = load_scenario(
+    start, goal, obstacles = Scenario.load_scenario(
         Scenario.CROWDED,
         start,
         goal,
