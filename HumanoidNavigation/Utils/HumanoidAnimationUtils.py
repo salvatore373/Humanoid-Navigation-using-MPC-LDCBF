@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import matplotlib
 import numpy as np
@@ -90,11 +91,14 @@ class HumanoidAnimationUtils:
         ax.plot(polygon[:, 0], polygon[:, 1], '-', color=color, label=label)
         ax.fill(polygon[:, 0], polygon[:, 1], alpha=0.2, color=color)
 
-    def plot_animation(self, path_to_gif: str = None):
+    def plot_animation(self, path_to_gif: str = None, path_to_frames_folder: str = None, num_sampled_frames: int = 10):
         """
         Shows the animation of the humanoid's motion.
 
         :param path_to_gif: The path to the GIF image where the animation will be saved.
+        :param path_to_frames_folder: The path to the folder where some frames sampled from the animation will be saved
+        as PDF images. If this is provided, the legend will not be shown.
+        :param num_sampled_frames: The number of frames to sample from the animation and put in path_to_frames_folder.
         """
         # Extract the x, y and theta trajectories of the triangle representing the CoM
         x_trajectory = np.zeros(len(self._frames_data))
@@ -183,8 +187,6 @@ class HumanoidAnimationUtils:
         for obs in self.obstacles:
             self._plot_polygon(ax, obs, color='orange')
 
-
-
         point_c_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
             list_point_c_curr_frame = []
@@ -192,10 +194,7 @@ class HumanoidAnimationUtils:
                 list_point_c_curr_frame.append(c)
             point_c_per_frame.append(list_point_c_curr_frame)
 
-
         inferred_obstacle_per_frame = [frame_data.inferred_obstacles for frame_data in self._frames_data]
-
-
 
         # inferred_obstacles_outline = []
         # inferred_obstacles_fill = []
@@ -215,11 +214,8 @@ class HumanoidAnimationUtils:
         #     ]
         #     inferred_obstacles_fill.append(inferred_obstacle_fill)
 
-
         # inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
         # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
-
-
 
         lidar_readings_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -260,10 +256,15 @@ class HumanoidAnimationUtils:
         half_planes = [None for _ in range(len(self.obstacles))]
 
         # Show the legend (at the most appropriate location)
-        plt.legend()
+        if path_to_frames_folder is None:  # In the grid frames there will be no legend
+            plt.legend()
+
+        # Create the file names that will store the SVGs to put in the frames grid
+        pdf_frames = [f'{path_to_frames_folder}/frame_{i}.pdf' for i in range(num_sampled_frames)]
+        # Compute which frames should be sampled
+        sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
 
         def update(frame):
-            """Update the triangle's vertices, barycenter and trajectory at each frame."""
             # Update the CoM triangle position
             triangle_patch.set_xy(triangle_poses[frame].T)
 
@@ -291,7 +292,6 @@ class HumanoidAnimationUtils:
             #         o.set_data(glob_curr_inferred_obstacles[obs_ind][:, 0], glob_curr_inferred_obstacles[obs_ind][:, 1])
             #         inferred_obstacles_fill[frame][obs_ind].set_xy(glob_curr_inferred_obstacles[obs_ind])
 
-
             # Remove previously drawn inferred-obstacle artists (if any)
             if hasattr(update, "current_inferred_outlines"):
                 for artist in update.current_inferred_outlines:
@@ -316,7 +316,6 @@ class HumanoidAnimationUtils:
                 fill = ax.fill(global_points[:, 0], global_points[:, 1], alpha=0.2, color='blue')[0]
                 update.current_inferred_outlines.append(outline)
                 update.current_inferred_fills.append(fill)
-
 
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
@@ -364,15 +363,28 @@ class HumanoidAnimationUtils:
             # Display the rectangles
             footsteps_rectangles[frame].set_visible(True)
 
+            sampling_ind = np.where(frame == sampled_frames_ind)[0]
+            if path_to_frames_folder is not None and len(sampling_ind) > 0:
+                # This frame has to be put in the frames grid, then save it
+                fig.savefig(pdf_frames[sampling_ind[0]], format="pdf")
+
             return (triangle_patch, barycenter_point, trajectory_line, footsteps_rectangles[:frame],
                     points_c, segments_eta, half_planes, *update.current_inferred_outlines,
                     *update.current_inferred_fills, lidar_readings)
 
         # Create the animation
-        ani = FuncAnimation(fig, update, frames=len(triangle_poses), )  # 1 frame per second
+        ani = FuncAnimation(fig, update, frames=len(triangle_poses))  # 1 frame per second
         if path_to_gif is not None:
             ani.save(path_to_gif, writer='ffmpeg')
-        # Display the animation
+        else:
+            # Call save() with a temporary file in order to generate all the frames
+            with tempfile.NamedTemporaryFile(suffix='.gif', mode='w') as tmp_gif:
+                ani.save(tmp_gif.name, writer='ffmpeg')
+
+        # Don't save the grid frames again with plt.show()
+        sampled_frames_ind = []
+
+        # Display the animation or the frames grid
         plt.show()
 
     @staticmethod

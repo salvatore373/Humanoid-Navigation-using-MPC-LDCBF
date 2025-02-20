@@ -60,7 +60,8 @@ def run_simulation_1(start, goal, include_obstacles=False):
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
     ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf")
 
-    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif')
+    # anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif')
+    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif', path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
 
 
 if __name__ == "__main__":
