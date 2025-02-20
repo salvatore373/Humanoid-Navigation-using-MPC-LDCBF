@@ -92,7 +92,7 @@ if __name__ == "__main__":
     start, goal = (0, 0), (4, 3.5)
 
     start, goal, obstacles = Scenario.load_scenario(
-        Scenario.CROWDED,
+        Scenario.MAIN_PAPER,
         start,
         goal,
         20,
@@ -101,7 +101,8 @@ if __name__ == "__main__":
     )
 
     # initial_state = (start[0], 0, start[1], 0, 0)
-    initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
+    # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
+    initial_state = (start[0], 0, start[1], 0, np.pi/4)
 
     # mpc = HumanoidMPC(
     mpc = HumanoidMPCUnknownEnvironment(
@@ -115,4 +116,4 @@ if __name__ == "__main__":
         lidar_range=1.5
     )
 
-    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=True)
+    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=False)

@@ -20,6 +20,7 @@ class Scenario(Enum):
     EMPTY = 8
     FEW_OBSTACLES = 9
     CIRCLE_OBSTACLES = 10
+    MAIN_PAPER = 11
 
     @staticmethod
     def load_scenario(scenario, start, goal,
@@ -167,6 +168,19 @@ class Scenario(Enum):
                 ObstaclesUtils.generate_circle_like_polygon(10, 0.5, (5, -1)),
                 ObstaclesUtils.generate_circle_like_polygon(20, 1, (4, 2)),
                 ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (1, 0)),
+            ]
+
+        if scenario == Scenario.MAIN_PAPER:
+            start = (0, 0)
+            goal = (10, 10)
+
+            obstacles = [
+                ConvexHull(np.array([[2.0,7.5], [1.5,7.0], [1.8,6.5]])),
+                ConvexHull(np.array([[4.0,6.5], [4.3,6.8], [4.7,6.5], [4.5,6.2], [4.1,6.2]])),
+                ConvexHull(np.array([[7.0,7.0], [7.5,7.5], [8.0,7.0], [7.5,6.5]])),
+                ConvexHull(np.array([[6.0,2.5], [6.5,2.0], [7.0,2.5]])),
+                ConvexHull(np.array([[1.5,3.0], [1.8,3.3], [2.2,3.0], [2.0,2.6], [1.6,2.6]])),
+                ConvexHull(np.array([[2.5,3.5], [2.8,3.8], [3.2,3.5], [3.0,3.1], [2.6,3.1]]))
             ]
 
         return start, goal, obstacles
