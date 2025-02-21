@@ -6,7 +6,10 @@ from HumanoidNavigation.MPC.HumanoidMpc import conf, HumanoidMPC
 from HumanoidNavigation.Utils.PlotsUtils import PlotUtils
 from HumanoidNavigation.report_simulations.Scenario import Scenario
 
-PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/Simulation1/"
+PLOTS_PATH_BASE = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/ReportResults/Simulation1"
+PLOTS_PATH_CIRCLES = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/ReportResults/Simulation1Circles"
 
 
 def run_simulation_1():
@@ -30,7 +33,8 @@ def run_simulation_1():
         verbosity=0
     )
 
-    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
+    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH_BASE}/animation.gif',
+                                                        make_fast_plot=True,
                                                         plot_animation=False, fill_animator=True)
 
     PlotUtils.plot_signals([
@@ -38,10 +42,12 @@ def run_simulation_1():
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
-    ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf")
+    ], path_to_pdf=f"{PLOTS_PATH_BASE}/evolutions.pdf")
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif')
-    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif', path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
+    anim.plot_animation(path_to_gif=f'{PLOTS_PATH_BASE}/animation.gif',
+                        path_to_frames_folder=f'{PLOTS_PATH_BASE}/grid_frames')
+
 
 def run_simulation_circles():
     """
@@ -65,7 +71,8 @@ def run_simulation_circles():
         verbosity=0
     )
 
-    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
+    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif',
+                                                        make_fast_plot=True,
                                                         plot_animation=False, fill_animator=True)
 
     PlotUtils.plot_signals([
@@ -73,10 +80,11 @@ def run_simulation_circles():
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
-    ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf")
+    ], path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions.pdf")
 
-    # anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif')
-    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif', path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
+    # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif')
+    anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif',
+                        path_to_frames_folder=f'{PLOTS_PATH_CIRCLES}/grid_frames')
 
 
 if __name__ == "__main__":

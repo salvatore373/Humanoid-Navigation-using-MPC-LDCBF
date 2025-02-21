@@ -9,7 +9,7 @@ from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.Utils.PlotsUtils import PlotUtils
 from HumanoidNavigation.Utils.obstacles import generate_obstacles, set_seed
 
-PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/SimulationRRT/"
+PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/ReportResults/SimulationRRT/"
 
 
 def run_simulation_rrt(start, goal, include_obstacles=False):
