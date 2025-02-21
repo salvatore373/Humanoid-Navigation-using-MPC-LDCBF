@@ -43,13 +43,17 @@ The values of $\theta$ and $\omega$ are not determined by the optimization of th
 \theta_0 = \theta, \qquad \theta_k = \theta_{k-1} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
 \end{gather}
 
+\todo[inline]{change theta precomputation and explain the new one}
+
 where $p_x, p_y$ and $\theta$ are the position and orientation of the humanoid at the start of the simulation time step, $T$ is the sampling time, and the goal position is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate: they must be added due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
 
 \subsection{Kinematic Constraints}
 The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, Peng et al. decided to enforce the walking velocities, leg reachability, and maneuverability constraints defined as follows.
+\todo[inline]{Better explain all the constraints}
 
-%% TODO: not sure about any of the constraints explainations
 \subsubsection{Walking Velocities Constraint}
+
+\todo[inline]{Change this constraint to adhere to Michele\&Andrew's suggestions.}
 
 \[
 \begin{pmatrix}
@@ -77,7 +81,7 @@ v_{y_{\max}}
 The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to the orientation of $RF_{k}$. In the vector resulting from the transformation, the first component is the forward velocity, while the second is the lateral velocity, both in $RF_k$. At this point, the constraint imposes that the velocity is within the lateral and longitudinal limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
 $s_v$ is $1$ if stance foot is the right one, $-1$ otherwise. It is meant to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side but the humanoid does not lose balance.
 %% TODO: decide whether the text below should be removed
-For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
+For instance, \todo{decide whether this text should be removed} if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
 
 \subsubsection{Leg Reachability Constraint}
 \[
@@ -148,7 +152,7 @@ Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take
 \end{gather*}
 
 %%% TODO: not sure about it
-It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant.
+It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant. \todo{Not sure about it}
 
 \subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}
 Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of $\vec{x}$, the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
