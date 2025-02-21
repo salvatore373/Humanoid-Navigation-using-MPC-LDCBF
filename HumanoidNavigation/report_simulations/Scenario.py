@@ -5,7 +5,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
-from HumanoidNavigation.Utils.obstacles import generate_obstacles
+from HumanoidNavigation.Utils.obstacles import generate_obstacles, set_seed
 
 
 class Scenario(Enum):
@@ -21,11 +21,12 @@ class Scenario(Enum):
     FEW_OBSTACLES = 9
     CIRCLE_OBSTACLES = 10
     MAIN_PAPER = 11
+    BASE = 12
 
     @staticmethod
     def load_scenario(scenario, start, goal,
                       num_max_obstacles=5, min_distance=2.0,
-                      delta=1.0, range_x=None, range_y=None):
+                      delta=1.0, range_x=None, range_y=None, seed: int = None):
         """
         Returns the list of random obstacles and if MAZE scenario is selected, also the initial and final position.
 
@@ -34,6 +35,7 @@ class Scenario(Enum):
         :param goal: final (x, y) coordinates
         :param num_max_obstacles: maximum number of obstacles to generate
         :param delta: minimum distance between each obstacle
+        :param seed: The seed to control random generations.
 
         # === for auto range generation ===
         :param min_distance: minimum distance from objectives
@@ -43,6 +45,10 @@ class Scenario(Enum):
         :param range_y: custom range of y coordinates
         """
         obstacles = None
+
+        if seed is not None:
+            ObstaclesUtils.set_random_seed(seed)
+            set_seed(seed)
 
         if scenario == Scenario.CROWDED:
             dist_factor = min_distance
@@ -60,7 +66,7 @@ class Scenario(Enum):
                 y_range=(min_y, max_y) if range_y is None else range_y,
                 delta=delta
             )
-        if scenario == Scenario.CROWDED_START:
+        elif scenario == Scenario.CROWDED_START:
             dist_factor = min_distance
 
             min_x = min(start[0] - dist_factor, start[0] + dist_factor)
@@ -76,7 +82,7 @@ class Scenario(Enum):
                 y_range=(min_y, max_y) if range_y is None else range_y,
                 delta=delta
             )
-        if scenario == Scenario.CROWDED_END:
+        elif scenario == Scenario.CROWDED_END:
             dist_factor = min_distance
 
             min_x = min(goal[0] - dist_factor, goal[0] + dist_factor)
@@ -92,7 +98,7 @@ class Scenario(Enum):
                 y_range=(min_y, max_y) if range_y is None else range_y,
                 delta=delta
             )
-        if scenario == Scenario.START_CLOSE_TO_OBSTACLE:
+        elif scenario == Scenario.START_CLOSE_TO_OBSTACLE:
             obstacles = [
                 ConvexHull(np.array([
                     [start[0] + 0.1, -3],
@@ -101,7 +107,7 @@ class Scenario(Enum):
                     [start[0] + 0.3, -3]
                 ]))
             ]
-        if scenario == Scenario.END_CLOSE_TO_OBSTACLE:
+        elif scenario == Scenario.END_CLOSE_TO_OBSTACLE:
             obstacles = [
                 ConvexHull(np.array([
                     [goal[0] + 0.1, -3],
@@ -110,18 +116,18 @@ class Scenario(Enum):
                     [goal[0] + 0.3, -3]
                 ]))
             ]
-        if scenario == Scenario.HORIZONTAL_WALL:
+        elif scenario == Scenario.HORIZONTAL_WALL:
             obstacles = [
                 ConvexHull(np.array([[1, -10], [1, 10], [3, 10], [3, -10]]))
             ]
-        if scenario == Scenario.VERTICAL_SLALOM:
+        elif scenario == Scenario.VERTICAL_SLALOM:
             obstacles = [
                 ConvexHull(np.array([[1, -1], [1, 10], [2, 10], [2, -1]])),
                 ConvexHull(np.array([[3, 1], [3, -10], [4, -10], [4, 1]]))
             ]
-        if scenario == Scenario.MAZE:
-            start = (0.5, 0.5)
-            goal = (5.5, 5.5)
+        elif scenario == Scenario.MAZE:
+            start = (0.5, 0.5) if start is None else start
+            goal = (5.5, 5.5) if goal is None else goal
             obstacles = [
                 ConvexHull(np.array([[-1, 0], [6, 0],
                                      [-1, -1], [6, -1]])),  # low wall
@@ -153,24 +159,30 @@ class Scenario(Enum):
                 ConvexHull(np.array([[1, 5], [3, 5],
                                      [1, 6], [3, 6]])),  # upper_medium
             ]
-        if scenario == Scenario.FEW_OBSTACLES:
+        elif scenario == Scenario.FEW_OBSTACLES:
             obstacles = [
                 ConvexHull(np.array([[3, 2], [5, 4], [2, 2], [2, 4]])),
                 ConvexHull(np.array([[4, 1], [5, 0.5], [7, 3], [6, 2.5]]))
             ]
-        if scenario == Scenario.EMPTY:
+        elif scenario == Scenario.EMPTY:
             obstacles = []
 
-        if scenario == Scenario.CIRCLE_OBSTACLES:
-            start = (0, 3)
-            goal = (6, -3)
+        elif scenario == Scenario.CIRCLE_OBSTACLES:
             obstacles = [
                 ObstaclesUtils.generate_circle_like_polygon(10, 0.5, (5, -1)),
                 ObstaclesUtils.generate_circle_like_polygon(20, 1, (4, 2)),
-                ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (1, 0)),
+                ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (1.5, -1)),
             ]
-
-        if scenario == Scenario.MAIN_PAPER:
+        elif scenario == Scenario.BASE:
+            obstacles = generate_obstacles(
+                start=start,
+                goal=goal,
+                num_obstacles=5,
+                x_range=(0, 5),
+                y_range=(0, 5),
+                delta=delta
+            )
+        elif scenario == Scenario.MAIN_PAPER:
             start = (0, 0)
             goal = (10, 10)
 
