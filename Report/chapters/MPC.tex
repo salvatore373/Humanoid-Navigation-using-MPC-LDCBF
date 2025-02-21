@@ -154,13 +154,13 @@ Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take
 %%% TODO: not sure about it
 It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant. \todo{Not sure about it}
 
-\subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}
+\subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}\label{subsec:ldcbf}
 Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of $\vec{x}$, the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
 However, if $F(\cdot)$ is a non-linear function, we obtain a non-linear DCBF constraint, which should be avoided for the reasons exposed before.\\
 Peng et al. in \cite{peng_main_paper} linearized the DCBF by approximating the safe region. The plane is partitioned in two halves: one containing the obstacle and the other containing the robot (as shown in Fig. \ref{fig:example_LDCBF}).
 The safe region is the latter, and it is defined as:
 
-\begin{equation} \notag
+\begin{equation} \label{eq:std_ldcbf_def}
 h\left(\vec{x}\right) = \eta^T \left(\vec{x} - c\right) \geq 0,
 \end{equation}
 

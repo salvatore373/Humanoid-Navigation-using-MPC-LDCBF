@@ -9,19 +9,22 @@ The objective of this set of tests is to prove that, using the inputs provided b
 The hyper-parameters used in the following simulations are summarized in Table \ref{table:sim_params}.
 
 \begin{table}[h]
-        \begin{tabular}{ |p{3cm}||p{3cm}|p{3cm}|p{3cm}|  }
-             \hline
-             \multicolumn{2}{|c|}{Simulation Parameters} \\
-             \hline
-             Parameter& Value\\
-             \hline
-             $\alpha$   & 1.44 \\
-             %% TODO: add other parameters
-             \hline
-        \end{tabular}
-    \centering
-    \caption{The MPC and LIP parameters used for all the simulations in this chapter. \todo[inline]{add other parameters}}
-    \label{table:sim_params}
+    \begin{tabular}{ |p{3cm}||p{4cm}| }
+         \hline
+         \multicolumn{2}{|c|}{Simulation Parameters} \\
+         \hline
+         Parameter& Value\\
+         \hline
+         $\alpha$   & 1.44 \\
+         CoM height & 1 \si{\meter} \\
+         $l_{\max}$ & $0.1 \sqrt{3} \;\si{\meter}$ \\
+         $\left( v_{x_{max}},\, v_{y_{max}} \right)$ & $\left( -0.1,\, 0.1 \right)$ \si{\meter\per\second}\\
+         $\left( v_{y_{min}},\, v_{y_{min}} \right)$ & $\left( 0.8,\, 0.4 \right)$ \\
+         \hline
+    \end{tabular}
+\centering
+\caption{The MPC and LIP parameters used for all the simulations in this chapter. \todo[inline]{add other parameters}}
+\label{table:sim_params}
 \end{table}
 
 \subsection{Simple Environment}

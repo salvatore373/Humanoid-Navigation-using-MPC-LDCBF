@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -15,20 +17,16 @@ class PlotUtils:
         :params data_tuples: A list of tuples: the first element is a 2D matrix containing the data to plot;
          the second one is the label to put on the y-axis; the third one is optional, and is the label to assign to the
           data in each row of the matrix. The content of each tuple is plotted separately.
-        :params path_to_pdf: The path where the plot will be stored as a PDF.
+        :params path_to_pdf: The path to the folder where the plots will be stored as PDF files.
         :params samples_per_second: The number of elements belonging to the same second in the array to show on
          the Y-axis.
         """
-        n_plots = len(data_tuples)
-        # Create one subplot per tuple, stacked vertically.
-        fig, axes = plt.subplots(n_plots, 1, figsize=(8, 4 * n_plots), sharex=True)
-        # If only one plot is created, ensure axes is a list
-        if n_plots == 1:
-            axes = [axes]
+        os.makedirs(path_to_pdf, exist_ok=True)
 
         for i, tpl in enumerate(data_tuples):
+            # Create one plot per tuple
+            fig, ax = plt.subplots(figsize=(8, 4))
             matrix, ylabel_str = tpl[0], tpl[1]
-            ax = axes[i]
             steps = np.arange(matrix.shape[1]) if samples_per_second is None else \
                 np.arange(matrix.shape[1]) / samples_per_second
             # Plot each row as a separate signal.
@@ -38,7 +36,6 @@ class PlotUtils:
             ax.set_xlabel("Simulation Step k" if samples_per_second is None else "Time (s)")
             ax.legend()
             ax.grid(True)
-
-        plt.tight_layout()
-        plt.savefig(path_to_pdf)
-        plt.show()
+            plt.tight_layout()
+            plt.savefig(f'{path_to_pdf}/evolution_{i}.pdf')
+            plt.show()
