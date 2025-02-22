@@ -3,12 +3,11 @@ from typing import Callable, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal
-from rrtplanner import r2norm, RRTStarInformed
+from rrtplanner import plot_rrt_lines, plot_path, plot_og, plot_start_goal, RRTStar
+from rrtplanner import r2norm
 from scipy.ndimage import distance_transform_edt
 from scipy.spatial import Delaunay
 
-from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidMPCCustomLCBF import HumanoidMPCCustomLCBF
 from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 
@@ -42,11 +41,12 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             max_obs_y = max(obs_vertices_y.max(), max_obs_y)
         # Find the minimum and maximum coordinates to include in the occupancy grid, considering the initial position,
         # the goal position and the obstacles. (initial position is always (0,0), regardless of
-        # the provided initial state).
-        min_x = min(0, self.goal[0], min_obs_x)
-        min_y = min(0, self.goal[1], min_obs_y)
-        max_x = max(0, self.goal[0], max_obs_x)
-        max_y = max(0, self.goal[1], max_obs_y)
+        # the provided initial state). Add some space between the min/max coordinate and the edge to allow the robot
+        # to fit in that space.
+        min_x = min(0, self.goal[0], min_obs_x) - 3
+        min_y = min(0, self.goal[1], min_obs_y) - 3
+        max_x = max(0, self.goal[0], max_obs_x) + 3
+        max_y = max(0, self.goal[1], max_obs_y) + 3
 
         # Initialize the occupancy grid
         height_grid_size = math.ceil(width_grid_size * ((max_y - min_y) / (max_x - min_x)))
@@ -91,10 +91,11 @@ class HumanoidMPCWithRRT(HumanoidMPC):
 
     def run_simulation(self, path_to_gif: str, make_fast_plot: bool = True, plot_animation: bool = False,
                        fill_animator: bool = True, initial_animator: HumanoidAnimationUtils = None,
-                       visualize_rrt_path: bool = False) -> \
+                       visualize_rrt_path: bool = False, path_to_rrt_pdf: str = None) -> \
             tuple[np.ndarray, np.ndarray, Union[None, HumanoidAnimationUtils]]:
         """
         :param visualize_rrt_path: Whether to visualize or not the plot of the RRT computation and path
+        :param path_to_rrt_pdf: The path where the PDF plot showing the RRT result should be saved.
         """
         # Convert the environment to an occupancy grid
         occupancy_grid, transformation_fun, inverse_transformation_fun = \
@@ -122,8 +123,8 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # og: np matrix with 1 if the cell contains an obstacle, 0 otherwise
         # n: the maximum number of points that can be sampled in plan()
         # r_rewire: value of delta in RRT algorithm
-        # pbar: whthere to display a progress bar
-        rrts = RRTStarInformed(og=occupancy_grid, n=1500, r_rewire=10, pbar=False, costfn=cost_fn, r_goal=10)
+        # pbar: whether to display a progress bar
+        rrts = RRTStar(og=occupancy_grid, n=1500, r_rewire=80, pbar=False, costfn=cost_fn, seed=1)
         T, gv = rrts.plan(start_og_coords, goal_og_coords)
         # From the RRT result, get the sequence of occupancy grid cells that must be reached in order to reach the goal
         tree_path_start2goal = rrts.route2gv(T, gv)
@@ -134,7 +135,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             sub_goals[sub_goal_ind, :] = inverse_transformation_fun(start2goal_mat[1, 0], start2goal_mat[1, 1])
 
         # Visualize the results
-        if visualize_rrt_path:
+        if visualize_rrt_path or path_to_rrt_pdf is not None:
             # create figure and ax.
             fig = plt.figure()
             ax = fig.add_subplot()
@@ -144,7 +145,10 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             plot_rrt_lines(ax, T)
             plot_path(ax, sub_goals_og_seq)
             ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
-            plt.show()
+            if path_to_rrt_pdf is not None:
+                plt.savefig(path_to_rrt_pdf)
+            if visualize_rrt_path:
+                plt.show()
 
         # Reach all the sub-goals sequentially
         X_pred_glob, U_pred_glob = None, None
@@ -155,7 +159,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
             if animator is not None:
                 animator.add_goal(sub_goal)
             # Starting from the current position, reach the next sub-goal in the path
-            curr_mpc = HumanoidMPCCustomLCBF(
+            curr_mpc = HumanoidMPC(
                 goal=sub_goal,
                 init_state=start_state,
                 obstacles=self.obstacles,
@@ -164,7 +168,6 @@ class HumanoidMPCWithRRT(HumanoidMPC):
                 sampling_time=self.sampling_time,
                 start_with_right_foot=self.start_with_right_foot,
                 verbosity=self.verbosity,
-                distance_from_obstacles=0.3,
             )
             curr_X_pred, curr_U_pred, animator = (
                 curr_mpc.run_simulation(path_to_gif=path_to_gif,
