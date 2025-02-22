@@ -136,11 +136,16 @@ class HumanoidAnimationUtils:
 
         # Set up the plot
         fig, ax = plt.subplots(dpi=100)
-        min_x, max_x = (min(min(x_trajectory), min(footsteps[0, :]), self.goal_position[:, 0].min()),
-                        max(max(x_trajectory), max(footsteps[0, :]), self.goal_position[:, 0].max()))
-        min_y, max_y = (min(min(y_trajectory), min(footsteps[1, :]), self.goal_position[:, 1].min()),
-                        max(max(y_trajectory), max(footsteps[1, :]), self.goal_position[:, 1].max()))
-        min_coord, max_coord = min(min_x, min_y), max(max_x, max_y)
+        # Compute the min and max coordinates of the obstacles
+        min_obs, max_obs = float('inf'), float('-inf')
+        for o in self.obstacles:
+            vertices = o.points[o.vertices]
+            min_obs, max_obs = min(min_obs, vertices.min()), max(max_obs, vertices.max())
+        # Compute the min and max coordinates of the trajectory and goal
+        min_rob_goal = min(min(x_trajectory), min(y_trajectory), footsteps.min(), self.goal_position.min())
+        max_rob_goal = max(max(x_trajectory), max(y_trajectory), footsteps.max(), self.goal_position.max())
+        # Compute the overall min and max coordinates
+        min_coord, max_coord = min(min_rob_goal, min_obs), max(max_rob_goal, max_obs)
         ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
         ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
         ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
@@ -259,6 +264,7 @@ class HumanoidAnimationUtils:
         if path_to_frames_folder is None:  # In the grid frames there will be no legend
             plt.legend()
 
+        sampled_frames_ind = []
         if path_to_frames_folder is not None:
             # Create the file names that will store the SVGs to put in the frames grid
             os.makedirs(path_to_frames_folder, exist_ok=True)
