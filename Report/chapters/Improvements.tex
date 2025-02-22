@@ -16,6 +16,23 @@ In this Figure, in order to reach the goal, the robot must first overcome the ob
 
 
 \subsection{Unknown Environments}
+In unknown environments the robot does not rely on a pre‐loaded map but rather builds its understanding on the fly.
+To achieve this, a 2D LiDAR range finder is employed to capture real-time measurements of the surroundings.
+These LiDAR readings are getting perturbed with zero-mean Gaussian noise to better simulate the uncertainty found in real-world sensor data.
+The noisy measurements are then processed using the DBSCAN clustering algorithm (with an epsilon of 0.3) to group nearby points into clusters that represent inferred obstacles.
+
+This leads to a further tuning of the system, in order to achieve desired performances in real world scenarios; in
+fact provided that every real obstacle is convex, and assuming the
+obstacles are sufficiently distant, the LiDAR resolution is not too high (here 360°), and the DBSCAN epsilon
+remains small enough (here 0.3); these inferred obstacles will also be convex.
+By considering only these clustered obstacles—rather than every single detected point—the navigation system mirrors the behavior of the base simulation while accounting for realistic environmental complexity.
+In this way, the humanoid robot is able to navigate safely despite not knowing the environment a priori, relying solely on the dynamically inferred obstacles from its sensor data.
+
+
+
+
+
+
 \begin{figure}[h]
     \centering
     % First row
