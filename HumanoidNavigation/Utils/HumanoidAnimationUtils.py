@@ -10,6 +10,8 @@ from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 from yaml import safe_load
 
+from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
+
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
 with open(config_dir + '/config.yml', 'r') as file:
@@ -360,6 +362,8 @@ class HumanoidAnimationUtils:
                             coll.remove()
                     eta = np.array([com_x - c_x, com_y - c_y])
                     eta /= np.linalg.norm(eta)
+                    eta *= -1 if any(ObstaclesUtils.is_point_inside_polygon(np.array([com_x, com_y]), obs)
+                                     for obs in self.obstacles) else 1
                     eta_x, eta_y = eta
                     condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
                     half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],

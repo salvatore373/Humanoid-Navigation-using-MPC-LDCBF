@@ -47,7 +47,7 @@ class ObstaclesUtils:
         return ConvexHull(points)
 
     @staticmethod
-    def _is_point_inside_polygon(point: np.ndarray, polygon: ConvexHull) -> bool:
+    def is_point_inside_polygon(point: np.ndarray, polygon: ConvexHull) -> bool:
         """
         Checks if a 2D point is inside the given convex hull.
         """
@@ -103,7 +103,7 @@ class ObstaclesUtils:
         if unitary_normal_vector:
             normal_vector = normal_vector / np.linalg.norm(normal_vector)
 
-        if ObstaclesUtils._is_point_inside_polygon(x, polygon):
+        if ObstaclesUtils.is_point_inside_polygon(x, polygon):
             normal_vector *= -1
 
         return closest_point, normal_vector
