@@ -259,10 +259,12 @@ class HumanoidAnimationUtils:
         if path_to_frames_folder is None:  # In the grid frames there will be no legend
             plt.legend()
 
-        # Create the file names that will store the SVGs to put in the frames grid
-        pdf_frames = [f'{path_to_frames_folder}/frame_{i}.pdf' for i in range(num_sampled_frames)]
-        # Compute which frames should be sampled
-        sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
+        if path_to_frames_folder is not None:
+            # Create the file names that will store the SVGs to put in the frames grid
+            os.makedirs(path_to_frames_folder, exist_ok=True)
+            pdf_frames = [f'{path_to_frames_folder}/frame_{i}.pdf' for i in range(num_sampled_frames)]
+            # Compute which frames should be sampled
+            sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
 
         def update(frame):
             # Update the CoM triangle position
@@ -375,6 +377,7 @@ class HumanoidAnimationUtils:
         # Create the animation
         ani = FuncAnimation(fig, update, frames=len(triangle_poses))  # 1 frame per second
         if path_to_gif is not None:
+            os.makedirs(os.path.dirname(path_to_gif), exist_ok=True)
             ani.save(path_to_gif, writer='ffmpeg')
         else:
             # Call save() with a temporary file in order to generate all the frames
