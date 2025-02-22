@@ -92,7 +92,7 @@ if __name__ == "__main__":
     start, goal = (0, 0), (4, 3.5)
 
     start, goal, obstacles = Scenario.load_scenario(
-        Scenario.MAIN_PAPER,
+        Scenario.CROWDED,
         start,
         goal,
         20,

@@ -74,6 +74,8 @@ class HumanoidAnimationUtils:
         :param footstep_position: The global position of the stance foot in the map.
         :param which_footstep: 1 if the stance foot is the right one, -1 otherwise.
         :param list_point_c: The list of the points c on the edge of the obstacles in the map.
+        :param inferred_obstacles: inferred obstacles for current frame
+        :param lidar_readings: lidar readings for current frame
         """
         self._frames_data.append(HumanoidAnimationUtils._HumanoidAnimationFrame(
             com_position, humanoid_orientation, footstep_position, which_footstep,
@@ -156,7 +158,8 @@ class HumanoidAnimationUtils:
             # Create rectangle centered at the position with the humanoid's orientation
             rect = Rectangle((-conf["FOOT_RECTANGLE_WIDTH"] / 2, -conf["FOOT_RECTANGLE_HEIGHT"] / 2),
                              conf["FOOT_RECTANGLE_WIDTH"], conf["FOOT_RECTANGLE_HEIGHT"],
-                             color='blue' if footstep[2] == conf["RIGHT_FOOT"] else 'green', alpha=0.7, zorder=3)
+                             color='blue' if footstep[2] == conf["RIGHT_FOOT"] else 'green',
+                             alpha=0.7, zorder=3)
             t = (matplotlib.transforms.Affine2D().rotate(theta_trajectory[ind]) +
                  matplotlib.transforms.Affine2D().translate(x, y) + ax.transData)
             rect.set_transform(t)
@@ -169,11 +172,6 @@ class HumanoidAnimationUtils:
         # Initialize the triangle
         triangle_patch = patches.Polygon(triangle_poses[0].T, closed=True, facecolor='cornflowerblue', zorder=4)
         ax.add_patch(triangle_patch)
-
-        # lidar_range = patches.Circle((float(barycenter_traj[0][0]), float(barycenter_traj[0][1])),
-        #                    radius=3.0, color='tomato',
-        #                    label='LiDAR range', fill=False, linewidth=1, alpha=1.0, zorder=6)
-        # ax.add_patch(lidar_range)
 
         # Initialize the plots of the barycenter and its trajectory
         barycenter_point, = ax.plot([], [], 'o', label="CoM", color='cornflowerblue', zorder=5)
@@ -195,27 +193,6 @@ class HumanoidAnimationUtils:
             point_c_per_frame.append(list_point_c_curr_frame)
 
         inferred_obstacle_per_frame = [frame_data.inferred_obstacles for frame_data in self._frames_data]
-
-        # inferred_obstacles_outline = []
-        # inferred_obstacles_fill = []
-        # inferred_obstacle_per_frame = []
-        # for frame_num, frame_data in enumerate(self._frames_data):
-        #     inferred_obstacle_per_frame.append(frame_data.inferred_obstacles)
-        #
-        #     inferred_obstacle_outline = [ # , label='Inferred Obstacle' if frame_num == 0 else None
-        #         ax.plot([], [], '-', color='blue')[0]
-        #         for i in range(len(frame_data.inferred_obstacles))
-        #     ]
-        #     inferred_obstacles_outline.append(inferred_obstacle_outline)
-        #
-        #     inferred_obstacle_fill = [
-        #         ax.fill([], [], alpha=0.2, color='blue')[0]
-        #         for i in range(len(frame_data.inferred_obstacles))
-        #     ]
-        #     inferred_obstacles_fill.append(inferred_obstacle_fill)
-
-        # inferred_obstacle_outline, = ax.plot([], [], '-', color='blue', label='Inferred Obstacle')
-        # inferred_obstacle_fill, = ax.fill([], [], alpha=0.2, color='blue')
 
         lidar_readings_per_frame = []
         for frame_num, frame_data in enumerate(self._frames_data):
@@ -241,8 +218,6 @@ class HumanoidAnimationUtils:
             display_lidar_range = True
 
         # For each obstacle, initialize a vector and a point to display at each frame at the appropriate position
-        # points_c = ax.scatter(np.zeros(len(self.obstacles)), np.zeros(len(self.obstacles)),
-        #                       color='red', label="Points c", zorder=3)
         points_c = ax.scatter([], [], color='red', label="Points c", zorder=3)
         segments_eta = [
             ax.plot([], [], 'r--', label="Vectors $\eta$" if i == 0 else None, zorder=3)[0]
@@ -278,20 +253,6 @@ class HumanoidAnimationUtils:
             if display_lidar_range:
                 lidar_range.set_center(barycenter_curr_pos.squeeze())
 
-            # # inferred polygons for current frame
-            # curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
-            # if len(curr_inferred_obstacles) > 0:
-            #     glob_curr_inferred_obstacles = [
-            #         np.array(rotation_matrix[frame] @ np.array(curr_inferred_obstacles[k].points).T + np.array(
-            #             [[x_trajectory[frame], y_trajectory[frame]]]).T).T
-            #         for k in range(len(curr_inferred_obstacles))
-            #     ]
-            #
-            #     obs_curr_frame = inferred_obstacles_outline[frame]
-            #     for obs_ind, o in enumerate(obs_curr_frame):
-            #         o.set_data(glob_curr_inferred_obstacles[obs_ind][:, 0], glob_curr_inferred_obstacles[obs_ind][:, 1])
-            #         inferred_obstacles_fill[frame][obs_ind].set_xy(glob_curr_inferred_obstacles[obs_ind])
-
             # Remove previously drawn inferred-obstacle artists (if any)
             if hasattr(update, "current_inferred_outlines"):
                 for artist in update.current_inferred_outlines:
@@ -306,6 +267,7 @@ class HumanoidAnimationUtils:
             # Get inferred obstacles for the current frame
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
             for obs in curr_inferred_obstacles:
+                ax = fig.gca()
                 # Transform the obstacle’s points from its local frame to global coordinates.
                 local_points = np.array(obs.points)  # shape: (N,2)
                 global_points = (rotation_matrix[frame] @ local_points.T).T + np.array(
@@ -322,12 +284,6 @@ class HumanoidAnimationUtils:
                 corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
                 corrected_lidar_reading = corrected_lidar_reading + np.array(
                     [[x_trajectory[frame], y_trajectory[frame]]]).T
-                # corrected_lidar_reading = rotation_matrix[frame].T @ curr_lidar_reading
-                # corrected_lidar_reading = np.array(rotation_matrix[frame] @ curr_lidar_reading).T
-                # corrected_lidar_reading = np.array(rotation_matrix[frame].T @ curr_lidar_reading).T
-                # corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
-                # corrected_lidar_reading = lidar_readings_per_frame[frame]
-                # corrected_lidar_reading = curr_lidar_reading + np.array([[x_trajectory[frame], y_trajectory[frame]]]).T
                 lidar_readings.set_offsets(corrected_lidar_reading.T)
 
             # Update the position of points c on the obstacles' edges
@@ -363,8 +319,10 @@ class HumanoidAnimationUtils:
             # Display the rectangles
             footsteps_rectangles[frame].set_visible(True)
 
-            sampling_ind = np.where(frame == sampled_frames_ind)[0]
+            sampling_ind = np.where(frame == sampled_frames_ind)[0] if len(sampled_frames_ind)>0 else []
             if path_to_frames_folder is not None and len(sampling_ind) > 0:
+                plt.xticks(fontsize=20)
+                plt.yticks(fontsize=20)
                 # This frame has to be put in the frames grid, then save it
                 fig.savefig(pdf_frames[sampling_ind[0]], format="pdf")
 

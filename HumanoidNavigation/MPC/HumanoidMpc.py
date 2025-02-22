@@ -614,20 +614,17 @@ class HumanoidMPC:
 
         # Display the obtained results
         if make_fast_plot:
-            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles,
-                                                    np.repeat(self.s_v, self.mpc_step))
+            HumanoidAnimationUtils.plot_fast_static(X_pred_glob, U_pred_glob, goal, obstacles, np.repeat(self.s_v, self.mpc_step))
         animator = initial_animator
         if fill_animator:
-            animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles) if animator is None \
-                else initial_animator
+            animator = HumanoidAnimationUtils(goal_position=goal, obstacles=obstacles) if animator is None else initial_animator
             for k in range(X_pred_glob.shape[1]):
                 animator.add_frame_data(
                     com_position=[X_pred_glob[0, k], X_pred_glob[2, k]],
                     humanoid_orientation=X_pred_glob[4, k],
                     footstep_position=U_pred_glob[:2, k] if k < X_pred_glob.shape[1] - 1 else [None, None],
                     which_footstep=self.s_v[math.floor(k / self.mpc_step)],
-                    list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[
-                        k - 1],
+                    list_point_c=c_and_eta_lists_global[k] if k < X_pred_glob.shape[1] - 1 else c_and_eta_lists_global[k - 1],
                     inferred_obstacles=self.list_inferred_obstacles[k] if len(self.list_inferred_obstacles) > 0 else [],
                     lidar_readings=self.list_lidar_readings[k] if len(self.list_lidar_readings) > 0 else []
                 )

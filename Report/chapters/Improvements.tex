@@ -12,3 +12,63 @@ It is the sum of the cost of the path from $j$'s parent to the initial node, the
 
 FIGURE CAPTION:
 In this Figure, in order to reach the goal, the robot must first overcome the obstacle by reaching the red star. Indeed, the RRT* solution contains 3 nodes: the start, the star, and the goal positions. The first goal provided to the robot is the star, which represents a subgoal. Once it has been reached with the standard framework, the original goal is provided to the MPC. With this approach it is possible for the humanoid to travel along a path that would be unfeasible by just using the MPC.
+
+
+
+\subsection{Unknown Environments}
+\begin{figure}[h]
+    \centering
+    % First row
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_0.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_1.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_2.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_3.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_4.pdf}
+    \end{subfigure}
+
+    % Second row
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_5.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_6.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_7.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_8.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_9.pdf}
+    \end{subfigure}
+
+    \caption[short]{This is a description.}
+\end{figure}
