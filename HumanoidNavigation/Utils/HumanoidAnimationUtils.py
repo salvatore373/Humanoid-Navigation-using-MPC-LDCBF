@@ -10,6 +10,8 @@ from matplotlib.patches import Rectangle
 from scipy.spatial import ConvexHull
 from yaml import safe_load
 
+from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
+
 this_dir = os.path.dirname(os.path.realpath(__file__))
 config_dir = os.path.dirname(this_dir)
 with open(config_dir + '/config.yml', 'r') as file:
@@ -138,11 +140,16 @@ class HumanoidAnimationUtils:
 
         # Set up the plot
         fig, ax = plt.subplots(dpi=100)
-        min_x, max_x = (min(min(x_trajectory), min(footsteps[0, :]), self.goal_position[:, 0].min()),
-                        max(max(x_trajectory), max(footsteps[0, :]), self.goal_position[:, 0].max()))
-        min_y, max_y = (min(min(y_trajectory), min(footsteps[1, :]), self.goal_position[:, 1].min()),
-                        max(max(y_trajectory), max(footsteps[1, :]), self.goal_position[:, 1].max()))
-        min_coord, max_coord = min(min_x, min_y), max(max_x, max_y)
+        # Compute the min and max coordinates of the obstacles
+        min_obs, max_obs = float('inf'), float('-inf')
+        for o in self.obstacles:
+            vertices = o.points[o.vertices]
+            min_obs, max_obs = min(min_obs, vertices.min()), max(max_obs, vertices.max())
+        # Compute the min and max coordinates of the trajectory and goal
+        min_rob_goal = min(min(x_trajectory), min(y_trajectory), footsteps.min(), self.goal_position.min())
+        max_rob_goal = max(max(x_trajectory), max(y_trajectory), footsteps.max(), self.goal_position.max())
+        # Compute the overall min and max coordinates
+        min_coord, max_coord = min(min_rob_goal, min_obs), max(max_rob_goal, max_obs)
         ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
         ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
         ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
@@ -234,10 +241,13 @@ class HumanoidAnimationUtils:
         if path_to_frames_folder is None:  # In the grid frames there will be no legend
             plt.legend()
 
-        # Create the file names that will store the SVGs to put in the frames grid
-        pdf_frames = [f'{path_to_frames_folder}/frame_{i}.pdf' for i in range(num_sampled_frames)]
-        # Compute which frames should be sampled
-        sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
+        sampled_frames_ind = []
+        if path_to_frames_folder is not None:
+            # Create the file names that will store the SVGs to put in the frames grid
+            os.makedirs(path_to_frames_folder, exist_ok=True)
+            pdf_frames = [f'{path_to_frames_folder}/frame_{i}.pdf' for i in range(num_sampled_frames)]
+            # Compute which frames should be sampled
+            sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
 
         def update(frame):
             # Update the CoM triangle position
@@ -308,6 +318,8 @@ class HumanoidAnimationUtils:
                             coll.remove()
                     eta = np.array([com_x - c_x, com_y - c_y])
                     eta /= np.linalg.norm(eta)
+                    eta *= -1 if any(ObstaclesUtils.is_point_inside_polygon(np.array([com_x, com_y]), obs)
+                                     for obs in self.obstacles) else 1
                     eta_x, eta_y = eta
                     condition = eta_x * (X_meshgrid - c_x) + eta_y * (Y_meshgrid - c_y) - self.delta >= 0
                     half_planes[obs_ind] = ax.contourf(X_meshgrid, Y_meshgrid, condition, levels=[0.5, 1],
@@ -333,6 +345,7 @@ class HumanoidAnimationUtils:
         # Create the animation
         ani = FuncAnimation(fig, update, frames=len(triangle_poses))  # 1 frame per second
         if path_to_gif is not None:
+            os.makedirs(os.path.dirname(path_to_gif), exist_ok=True)
             ani.save(path_to_gif, writer='ffmpeg')
         else:
             # Call save() with a temporary file in order to generate all the frames
