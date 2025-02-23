@@ -6,17 +6,18 @@ from HumanoidNavigation.Utils.PlotsUtils import PlotUtils
 from HumanoidNavigation.MPC.HumanoidMpc import HumanoidMPC
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
 from HumanoidNavigation.report_simulations.Scenario import Scenario
+from HumanoidNavigation.MPC.HumanoidMPCVariants.HumanoidMPCWithRRT import HumanoidMPCWithRRT
 
-PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/ReportResults/SimulationMaze/"
+PLOTS_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + "/Assets/ReportResults/SimulationMaze2/"
 
 
-def run_simulation_maze(start, goal):
+def run_simulation_maze(start, goal, rrt=False):
     """
     It runs the simulation described in paragraph of the Simulation chapter, and generates all the associated plots.
     """
 
     start, goal, obstacles = Scenario.load_scenario(
-        Scenario.MAZE_1,
+        Scenario.MAZE_2,
         (start[0], start[2]),
         goal,
         20,
@@ -27,18 +28,34 @@ def run_simulation_maze(start, goal):
     initial_state = (start[0], 0, start[1], 0, 0)
     num_steps_per_second = 1 / conf["DELTA_T"]
 
-    mpc = HumanoidMPC(
-        N_horizon=3,
-        N_mpc_timesteps=300,
-        sampling_time=conf["DELTA_T"],
-        goal=goal,
-        init_state=initial_state,
-        obstacles=obstacles,
-        verbosity=0
-    )
+    if not rrt:
+        mpc = HumanoidMPC(
+            N_horizon=10,
+            N_mpc_timesteps=300,
+            sampling_time=conf["DELTA_T"],
+            goal=goal,
+            init_state=initial_state,
+            obstacles=obstacles,
+            verbosity=0
+        )
 
-    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
+        X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
                                                      plot_animation=False, fill_animator=True)
+        
+    else:
+        mpc = HumanoidMPCWithRRT(
+            N_horizon=3,
+            N_mpc_timesteps=300,
+            sampling_time=conf["DELTA_T"],
+            goal=goal,
+            init_state=initial_state,
+            obstacles=obstacles,
+            verbosity=0
+        )
+
+        X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
+                                                     visualize_rrt_path=True, plot_animation=False, fill_animator=True,
+                                                     path_to_rrt_pdf=f'{PLOTS_PATH}/rrt_res.pdf')
 
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal[0]], [goal[1]]]), "Position error", ['X error', 'Y error']),
@@ -47,9 +64,9 @@ def run_simulation_maze(start, goal):
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
     ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf", samples_per_second=num_steps_per_second)
 
-    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif',
-                        path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
+    # anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif',
+    #                     path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
 
 
 if __name__ == "__main__":
-    run_simulation_maze(start=(0.5, 0, 0.5, 0, 0), goal=(7.5, 7.5))
+    run_simulation_maze(start=(0.5, 0, 0.5, 0, 0), goal=(0.5, 7.5), rrt=False)

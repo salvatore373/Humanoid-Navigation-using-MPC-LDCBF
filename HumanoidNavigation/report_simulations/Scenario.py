@@ -16,13 +16,13 @@ class Scenario(Enum):
     END_CLOSE_TO_OBSTACLE = 4
     HORIZONTAL_WALL = 5
     VERTICAL_SLALOM = 6
-    MAZE = 7
-    EMPTY = 8
-    FEW_OBSTACLES = 9
-    CIRCLE_OBSTACLES = 10
-    MAIN_PAPER = 11
-    BASE = 12
-    MAZE_1 = 13
+    EMPTY = 7
+    FEW_OBSTACLES = 8
+    CIRCLE_OBSTACLES = 9
+    MAIN_PAPER = 10
+    BASE = 11
+    MAZE_1 = 12
+    MAZE_2 = 13
 
     @staticmethod
     def load_scenario(scenario, start, goal,
@@ -157,6 +157,40 @@ class Scenario(Enum):
                                      [7, 2.5], [9, 2.5]])),  # lower_right_block
 
             ]
+        elif scenario == Scenario.MAZE_2:
+            start = (0.5, 0.5) if start is None else start
+            goal = (0.5, 7.5) if goal is None else goal
+            obstacles = [
+                ConvexHull(np.array([[-1, -0.5], [3.5, -0.5],
+                                     [-1, -1], [3.5, -1]])),  # low wall
+
+                ConvexHull(np.array([[-0.5, -0.5], [-0.5, 8.5],
+                                     [-1, -0.5], [-1, 8.5]])),  # left wall
+
+                ConvexHull(np.array([[8.5, 2.5], [9, 2.5],
+                                     [8.5, 6], [9, 6]])),  # right wall
+                                    
+                ConvexHull(np.array([[-1, 8.5], [5, 8.5],
+                                     [-1, 9], [5, 9]])),  # high wall
+
+                ConvexHull(np.array([[-0.5, 2.5], [1, 2.5], 
+                                     [-0.5, 4.5], [1, 4.5]])),  # mid_left_block_1
+                                     
+                ConvexHull(np.array([[1, 2.5], [3.5, 3.5], 
+                                     [3, 5], [1, 4],
+                                     [7, 4], [7, 4.5]])),  # mid_left_block_2
+
+                ConvexHull(np.array([[-0.5, 6.5], [3.5, 6.5],
+                                     [-0.5, 5.5], [3.5, 6]])),  # upper_left_block
+                
+                ConvexHull(np.array([[5, 6], [9, 6],
+                                     [5, 9], [9, 9]])),  # upper_right_block
+                                    
+                ConvexHull(np.array([[3.5, -1], [3.5, 0],
+                                     [9, -1],  
+                                     [7, 2.5], [9, 2.5]])),  # lower_right_block
+
+            ]
         elif scenario == Scenario.FEW_OBSTACLES:
             obstacles = [
                 ConvexHull(np.array([[3, 2], [5, 4], [2, 2], [2, 4]])),
@@ -197,8 +231,7 @@ class Scenario(Enum):
 
 
 if __name__ == "__main__":
-    scenario = Scenario.load_scenario(Scenario.MAZE_FINAL, start=(0.5,0.5), goal=(7.5,7.5))
-    #scenario = Scenario.load_scenario(Scenario.MAZE, start=(0.5,0.5), goal=(5.5,5.5))
+    scenario = Scenario.load_scenario(Scenario.MAZE_2, start=(0.5,0.5), goal=(0.5,7.5))
     fig, ax = plt.subplots()
 
     start = scenario[0]
