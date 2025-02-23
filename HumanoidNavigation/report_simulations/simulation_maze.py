@@ -25,6 +25,7 @@ def run_simulation_maze(start, goal):
     )
 
     initial_state = (start[0], 0, start[1], 0, 0)
+    num_steps_per_second = 1 / conf["DELTA_T"]
 
     mpc = HumanoidMPC(
         N_horizon=3,
@@ -36,15 +37,18 @@ def run_simulation_maze(start, goal):
         verbosity=0
     )
 
-    X_pred_glob, U_pred_glob, _ = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=False,
-                                                     plot_animation=True)
+    X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
+                                                     plot_animation=False, fill_animator=True)
 
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal[0]], [goal[1]]]), "Position error", ['X error', 'Y error']),
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
-    ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf")
+    ], path_to_pdf=f"{PLOTS_PATH}/evolutions.pdf", samples_per_second=num_steps_per_second)
+
+    anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif',
+                        path_to_frames_folder=f'{PLOTS_PATH}/grid_frames')
 
 
 if __name__ == "__main__":
