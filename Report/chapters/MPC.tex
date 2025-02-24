@@ -1,38 +1,18 @@
-\section{MPC}
-Eugenio: \\
-The dynamic model is used to define a MPC problem to compute the optimal stepping positions for save nagivation and locomotion. The LIP-MPC is defined as:
-\begin{align*}
-    &J^* = \min_{u_{0:N-1}} \sum_{k=1}^{N}[(p_{x_{k}} - g_{x})^2+(p_{y_{k}} - g_{y})^2]
-    \\ \text{s. t} \quad
-    &x_{k+1} = A_{L}x_{k} + B_{L}u_{k} \qquad
-    c_{l} \le c(x_{k}, u_{k}) \le c_{u}
-\end{align*}
-Minimizing the cost function means that the robot is moving towards the goal position. This problem is subject to the satisfaction of the robot's dynamics and the kinematics and path constraints. The kinematics and path constraints are captured in $c(x_{k}, u_{k})$ and they are often nonlinear. This nonlinearity is related to presence of the heading angle $\theta_{k}$. These constraints are linearized by pre-computing the turning rates $\bar{\omega}_{k}$ for all the horizon length, in order to have them fixed in the MPC calculation.
-\\
-\\
-
 \section{LIP-MPC: Gait planning with Model Predictive Control}\label{sec:mpc}
-Salvatore:\\
 The LIP dynamics defined in (\ref{eq:lip_dyanmics}) is used as a model of the process inside a Model Predictive Control (MPC) scheme. The MPC controller uses that model to predict the future output along a \textit{prediction horizon} $N$, namely the predefined number of time steps to look out in the future. Based on those forecasts and the provided constraints, the MPC computes the sequence of control actions that optimize a given cost function during the prediction horizon. Then, only the first input of that sequence is taken and provided to the process. The real output will be used at the next time step to compute the new predictions and control actions.\\
- In our case, the LIP-MPC is used to respond instantaneously to the changes in the humanoid's state, while providing optimal stepping positions for stable locomotion and safe navigation. It is formulated as follows:
-
-\begin{align}
-    J^* &= \min_{\mathbf{u}_{0:N-1}} \sum_{k=1}^{N} q(\mathbf{x}_k) \\
-    \text{s.t.} \quad
-    &\mathbf{x}_k \in X, \quad k \in [1, N] \notag \\
-    &\mathbf{u}_k \in U, \quad k \in [0, N-1] \notag \\
-    &\mathbf{x}_{k+1} = \mathbf{A_L} \mathbf{x}_k + \mathbf{B_L} \mathbf{u}_k, \quad k \in [0, N-1] \notag \\
-    &\mathbf{c}_l \leq \mathbf{c}(\mathbf{x}_k, \mathbf{u}_k) \leq \mathbf{c}_u, \quad k \in [0, N-1], \notag
-    \label{eq:lip-mpc}
-\end{align}
-
-where $q(\mathbf{x}_k)$ is the cost function to minimize along the prediction horizon. It drives the humanoid toward the goal by minimizing the distance between its current position and the target position. It is defined as:
-
-$$
-q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^2 \qquad \forall k \in \left[1, N\right],
-$$
-
-where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
+In our case, the LIP-MPC is used to respond instantaneously to the changes in the humanoid's state, while providing optimal stepping positions for stable locomotion and safe navigation. It is formulated as follows:
+\begin{equation}
+    \begin{aligned}
+    J^* =& \min_{u_{0:N-1}} \ \sum_{k=1}^{N} \Big[(p_{x_{k}} - g_{x})^2+(p_{y_{k}} - g_{y})^2\Big] \\
+    \text{s.t.} \quad 
+    & x_{k} \in \ \mathcal{X}, \quad k \in [1,\ N] \\
+    & u_{k} \in \ \mathcal{U}, \quad k \in [0,\ N-1] \\
+    & \mathbf{x_{k+1}} = \mathbf{A_{L}x_{k}} + \mathbf{B_{L}u_{k}}, \quad k \in [0,\ N-1] \\
+    & \mathbf{c_{l}} \le \mathbf{c(x_{k}, u_{k})} \le \mathbf{c_{u}}, \quad k \in [0,\ N-1].
+    \end{aligned}
+\end{equation}
+The cost function is defined as the distance between the sequence of predicted states over the horizon and the goal position. As a consequence, minimizing the cost function means that the robot is moving towards the goal. This problem is subject to the satisfaction of the robot's dynamics and the kinematics and path constraints, captured in $c(x_{k}, u_{k})$ and defined in the \textit{local coordinate frame}. This constraints are nonlinear due to the presence of the heading angle $\theta_{k}$. These constraints are linearized by pre-computing the turning rates $\bar{\omega}_{k}$ for all the horizon length, in order to have them fixed inside the MPC calculation.
+The constraints include the walking velocities, leg reachability, maneuverability and the linear control barrier function, will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, and it is often sufficient to linearize some constraints.\\
