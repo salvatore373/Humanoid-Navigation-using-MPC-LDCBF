@@ -250,6 +250,8 @@ class HumanoidAnimationUtils:
             sampled_frames_ind = np.linspace(0, len(triangle_poses) - 1, num=num_sampled_frames, dtype=int)
 
         def update(frame):
+            nonlocal ax
+
             # Update the CoM triangle position
             triangle_patch.set_xy(triangle_poses[frame].T)
 
@@ -277,7 +279,7 @@ class HumanoidAnimationUtils:
             # Get inferred obstacles for the current frame
             curr_inferred_obstacles = inferred_obstacle_per_frame[frame]
             for obs in curr_inferred_obstacles:
-                ax = fig.gca()
+                # ax = fig.gca()
                 # Transform the obstacle’s points from its local frame to global coordinates.
                 local_points = np.array(obs.points)  # shape: (N,2)
                 global_points = (rotation_matrix[frame] @ local_points.T).T + np.array(
@@ -333,8 +335,6 @@ class HumanoidAnimationUtils:
 
             sampling_ind = np.where(frame == sampled_frames_ind)[0] if len(sampled_frames_ind)>0 else []
             if path_to_frames_folder is not None and len(sampling_ind) > 0:
-                plt.xticks(fontsize=20)
-                plt.yticks(fontsize=20)
                 # This frame has to be put in the frames grid, then save it
                 fig.savefig(pdf_frames[sampling_ind[0]], format="pdf")
 
