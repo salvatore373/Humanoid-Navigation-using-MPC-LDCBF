@@ -15,19 +15,25 @@ In this Figure, in order to reach the goal, the robot must first overcome the ob
 
 
 
-\subsection{Unknown Environments}
-In unknown environments the robot does not rely on a pre‐loaded map but rather builds its understanding on the fly.
+\subsection{Unknown Environment}
+In unknown environments, the robot does not rely on a pre‐loaded map but rather builds its understanding on the fly.
+\todo[inline]{proposta cambiare con "the robot navigation is not based on a pre-loaded map, but on real-time perceptions."}
 To achieve this, a 2D LiDAR range finder is employed to capture real-time measurements of the surroundings.
-These LiDAR readings are getting perturbed with zero-mean Gaussian noise to better simulate the uncertainty found in real-world sensor data.
-The noisy measurements are then processed using the DBSCAN clustering algorithm (with an epsilon of 0.3) to group nearby points into clusters that represent inferred obstacles.
+\todo{proposta cambiare con: "These LiDAR readings are affected by a zero-mean Gaussian noise"???} These LiDAR readings are getting perturbed with zero-mean Gaussian noise to better simulate the uncertainty found in real-world sensor data.
+The noisy measurements are then processed using the DBSCAN clustering algorithm (with \todo{$\epsilon = 0.3$?} an epsilon of 0.3) to group nearby points into clusters that represent inferred obstacles.
 
-This leads to a further tuning of the system, in order to achieve desired performances in real world scenarios; in
-fact provided that every real obstacle is convex, and assuming the
+This leads to a further tuning of the system, in order to achieve desired performance in real world scenarios; \todo[inline]{proposta cambiare con: "With the integration of a LiDAR system, our framework is capable of replicating the previously described performance in real-word scenarios as well."}
+in fact provided that every real obstacle is convex, and assuming the
 obstacles are sufficiently distant, the LiDAR resolution is not too high (here 360°), and the DBSCAN epsilon
 remains small enough (here 0.3); these inferred obstacles will also be convex.
+\todo[inline]{In fact, provided that every obstacle in the workspace is convex, and assuming that the obstacles
+are sufficiently distant, the LiDAR resolution is about 360°, and the
+DBSCAN $\epsilon$ is small enough, the obstacles inferred by our system will
+be convex too.}
 By considering only these clustered obstacles—rather than every single detected point—the navigation system mirrors the behavior of the base simulation while accounting for realistic environmental complexity.
-In this way, the humanoid robot is able to navigate safely despite not knowing the environment a priori, relying solely on the dynamically inferred obstacles from its sensor data.
-
+\todo[inline]{proposta cambiare con: (continuando nello stesso paragrafo) "Then, the MPC computes one LDCBF for each of those obstacles. In this way, the navigation system can mirror ..."}
+\todo{", and the humanoid" continuando da precedente paragrafo} In this way, the humanoid robot is able to navigate safely despite not knowing the environment a priori, relying solely on the \todo{obstacles inferred dynamically} dynamically inferred obstacles from its sensor data.
+\todo[inline]{aggiungerei una breve descrizione di quello che accade nella simulazione in basso.}
 
 
 
@@ -87,5 +93,7 @@ In this way, the humanoid robot is able to navigate safely despite not knowing t
         \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_9.pdf}
     \end{subfigure}
 
-    \caption[short]{This is a description.}
+    \caption[short]{This is a description.\todo[inline]{aggiungerei descrizione degli elementi nelle figure (es. punti verdi, cerchio)}}
 \end{figure}
+
+\todo[inline]{IMPORTANTE: credo che bisogna aggiungere i plot sullo stato e l'input, e dire se hanno qualcosa di particolare o sono analoghi alle simulaizoni precedenti}
