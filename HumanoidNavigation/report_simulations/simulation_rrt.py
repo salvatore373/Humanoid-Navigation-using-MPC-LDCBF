@@ -77,7 +77,7 @@ def run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obs
     X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH_RRT}/animation.gif',
                                                         make_fast_plot=True, visualize_rrt_path=True,
                                                         plot_animation=False, fill_animator=True,
-                                                        path_to_rrt_pdf=f'{PLOTS_PATH_NO_RRT}/rrt_res.pdf')
+                                                        path_to_rrt_pdf=f'{PLOTS_PATH_RRT}/rrt_res.pdf')
 
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
