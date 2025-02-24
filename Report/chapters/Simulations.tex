@@ -24,7 +24,7 @@ The hyper-parameters used in the following simulations are summarized in Table \
     \label{table:sim_params}
 \end{table}
 
-\subsection{Simple Environment}
+\subsection{Simple Environment}\label{subsec:sim_simple_env}
 The first simulation takes place in a basic environment: the humanoid is positioned at $(0,\,0)$ with orientation $\theta = 0$, and the goal position is $(5,\,5)$. In between, we placed 3 obstacles with a quasi-circular shape. The choice of approximating circles with polygons was made to comply with the CBF computation described in \ref{subsec:ldcbf}. The results are shown in Figures \ref{fig:sim1_evol} and \ref{fig:sim1_frames}.
 
 By inspecting the plots, we see that, at the beginning of the simulation, a high turning velocity $\omega$ is commanded in order to make the robot point toward the goal. In the meantime, the MPC provides new footstep positions but, due to the maneuverability constraint, the high turning rate limits the velocity along the sagittal axis. Therefore, the robot is encouraged to move laterally, and the first inputs generate a large $v_y$ that induces a \textit{side-walking} motion.\\
@@ -52,7 +52,7 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim1circles/evolution_3.pdf}
     \end{subfigure}
-    \caption{The figure depicts the evolution of the humanoid's state and the input throughout the simulation. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the translational velocities along the x- and y-axis. The bottom left and right plots show the theta and omega evolution, respectively. All the quantities are expressed in the global RF.}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the translational velocities along the x- and y-axis. The bottom left and right plots show the theta and omega evolution, respectively. All the quantities are expressed in the global RF.}
     \label{fig:sim1_evol}
 \end{figure}
 
