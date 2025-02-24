@@ -80,30 +80,32 @@ Since there might be the possibility of having an over-extension of the swing le
 This type of constraint prevents the inputs computed at time $k$ from moving the CoM too far away from $(p_{x_{k-1}},\,p_{y_{k-1}})$. Indeed, the distance between the previous and the new position cannot be farther than $l_{\max}$, which is the maximum reachable distance of the swing foot in both directions on the ground. As in the previous case, the constraint is defined locally, so we need to rotate everything accordingly.
 
 \subsubsection{Maneuverability Constraint}
-\[
-\begin{pmatrix}
-\cos \theta_k & \sin \theta_k
-\end{pmatrix}
-\begin{pmatrix}
-v_{x_k} \\
-v_{y_k}
-\end{pmatrix}
-\leq v_{x_{\max}} - \frac{\alpha}{\pi} |\omega_k|
-\qquad \forall k \in \left[0,\, N-1 \right].
-\]
+This constraint is used to prevent fast turns during motion by decelerating the walking speed while turning.
+\begin{align}
+    \begin{bmatrix}
+        \cos\theta_{k} & \sin\theta_{k}
+    \end{bmatrix}
+    \begin{bmatrix}
+        v_{x_{k}} \\[1ex]
+        v_{y_{k}}
+    \end{bmatrix}
+    \le
+    v_{x_{max}} - \dfrac{\alpha}{\pi}|\omega_{k}|
+    , \qquad \forall k \in \left[ 0,\, N-1\right].
+\end{align}
+This ensures that the component of the CoM velocity in the robot's heading direction (given by the vectors projection on the left side) is lower than a quantity that depends on the turning rate and some constant values. The parameter $\alpha$ is empirically set to $1.44$ by the authors of the original paper.
 
-This constraint is meant to reduce the humanoid's walking speed while it is turning. For this reason, it combines the longitudinal and angular velocities. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vectors projection on the left side) is lower than a quantity that depends on the turning rate and some constant values. $\alpha$ is a simulation parameter.
-
-\subsection{Control Barrier Functions}
+\subsection{Obstacle Avoidance with Control Barrier Functions}
 
 \subsubsection{Definitions}
-Considering a continuous and differentiable function $h: \mathbb{R}^n \rightarrow \mathbb{R}$, we can define the \textit{safety set} $S$ and its boundary $\partial S$ as:
-\begin{align*}
-S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) \geq 0\right\}, \notag \\
-\partial S \coloneqq \left\{ \mathbf{x} \in X \mid  h(\mathbf{x}) = 0\right\}. \notag  \\
-\end{align*}
-
-They are the region and its perimeter where the robot can freely move without colliding with obstacles.
+Given a continuous and differentiable function $h: \mathbb{R}^n \rightarrow \mathbb{R}$, we can define the \textit{safety set} $\mathcal{C}$ and its boundary $\partial \mathcal{C}$ as:
+\begin{equation}
+    \begin{aligned}
+        \mathcal{C} \coloneqq \left\{ \mathbf{x} \in \mathcal{X} \mid  h(\mathbf{x}_k) \geq 0\right\}, \\
+        \partial \mathcal{C} \coloneqq \left\{ \mathbf{x} \in \mathcal{X} \mid  h(\mathbf{x}_k) = 0\right\}.
+    \end{aligned}
+\end{equation}
+These are the region and its perimeter where the robot can freely move without colliding with obstacles.
 According to \cite{zeng2021safetycriticalmodelpredictivecontrol}, % formula 5 + remark 1
 assume that there exists a class $\mathcal{K}$ function $\gamma$ such that
 $$
@@ -112,17 +114,17 @@ $$
 and the following holds:
 \begin{gather}
 \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \coloneqq h(\mathbf{x}_{k+1}) - h(\mathbf{x}_{k}), \notag \\
-\forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma(h(\mathbf{x}_k)). \label{eq:dcbf_def_constr}
+\forall \mathbf{x}_k \in \mathcal{C} \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma(h(\mathbf{x}_k)). \label{eq:dcbf_def_constr}
 \end{gather}
 
 Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take $\gamma$ as a scalar such that $0 < \gamma \leq 1$, and (\ref{eq:dcbf_def_constr}) becomes:
 
 \begin{gather*}
-    \forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma * h(\mathbf{x}_k). 
+    \forall \mathbf{x}_k \in \mathcal{C} \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma * h(\mathbf{x}_k). 
 \end{gather*}
 
 %%% TODO: not sure about it
-It means that, if the state starts from the safety set $S$, there exists an input that, when applied, produces a state which will sill be in $S$: namely, $S$ is invariant. \todo{Not sure about it}
+It means that, if the state starts from the safety set $\mathcal{C}$, there exists an input that, when applied, produces a state which will sill be in $\mathcal{C}$: namely, $\mathcal{C}$ is invariant. \todo[inline]{Not sure about it}
 
 \subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}\label{subsec:ldcbf}
 Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of $\vec{x}$, the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
