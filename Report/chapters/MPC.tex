@@ -15,21 +15,17 @@ The cost function is defined as the distance between the sequence of predicted s
 The constraints include the walking velocities, leg reachability, maneuverability and the linear control barrier function, will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
-Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, and it is often sufficient to linearize some constraints.\\
-The values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC. Instead, their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
+Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, which will become fixed inside the MPC calculation.
+This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
 
 \begin{gather}
 \omega_k = \max \left\{ \min \left\{ \operatorname{atan2}(g_y - p_y,\, g_x - p_x) - \theta,\, \quad \omega_{max} \right\} ,\quad \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\
-\theta_0 = \theta, \qquad \theta_k = \theta_{k-1} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
+\theta_0 = 0, \qquad \theta_k = \theta_{k-1} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
 \end{gather}
+where $p_x, p_y$ and $\theta$ are the pose of the humanoid at the start of the simulation time step, $T$ is the sampling time, and the goal position $(g_x, \ g_y)$ is expressed in local coordinates. With $\omega_{min}$ and $\omega_{max}$ we define the bounds on the robot turning rate, due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal. The initial value of the heading angle $\theta$ is set to zero since we are in a local frame, while for each step over the horizon is computed as the sum between the previous angle and the product between the current turning rate and the timestep.
 
-\todo[inline]{change theta precomputation and explain the new one}
-
-where $p_x, p_y$ and $\theta$ are the position and orientation of the humanoid at the start of the simulation time step, $T$ is the sampling time, and the goal position is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate: they must be added due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
-
-\subsection{Kinematic Constraints}
-The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, Peng et al. decided to enforce the walking velocities, leg reachability, and maneuverability constraints defined as follows.
-\todo[inline]{Better explain all the constraints}
+\subsection{Safety Constraints}
+The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, the authors of the paper decided to enforce the walking velocities, leg reachability, and maneuverability constraints as follows.
 
 \subsubsection{Walking Velocities Constraint}
 
