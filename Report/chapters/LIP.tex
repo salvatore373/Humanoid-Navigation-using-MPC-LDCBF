@@ -3,7 +3,6 @@
 \todo[inline]{Small Intro ?}
 \subsection{Local Robot Reference Frame}
 The state $\mathbf{x}$ and the input $\mathbf{u}$ of the dynamic model are defined as:
-
 $$ \mathbf{x} := \begin{bmatrix} p_x & v_x & p_y & v_y & \theta \end{bmatrix}^T \in \ \mathcal{X} \subset \mathbb{R}^5 , $$
 $$ \mathbf{u} := \begin{bmatrix} f_x & f_y & \omega \end{bmatrix}^T \in \ \mathcal{U} \subset \mathbb{R}^3 , $$
 where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position, $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $\mathcal{X}$ is the set of the allowed states, while $\mathcal{U}$ is the set of the admissible inputs.\\
@@ -24,7 +23,6 @@ These Transformations are defined by the following matrix:
     \end{bmatrix},
 \end{align}
 Starting from this, we can express all the quantities in the \textit{global reference frame} as follows:
-
 \begin{align}
     \begin{bmatrix}
         f_{x,\,k,\,\text{glob} } \\
@@ -72,7 +70,6 @@ Starting from this, we can express all the quantities in the \textit{global refe
 \end{align}
 The positional vectors are roto-translated using an homogeneous matrix $ \mathbf{T_k} \in \mathbb{R}^{3\times3}$, while the velocity vectors are only rotated around the z-axis (indeed, a translation would change their magnitude) using a rotation matrix $R \in \mathbb{R}^{2\times2}$.\\
 The global robot's orientation is obtained by summing the latest local variation to the previous global angle and the angular velocity does not need to be transformed because it is along the $z$-axis, which is fixed.
-
 \begin{equation}
     \theta_{k+1, \text{glob}} = \theta_{k, \text{glob}} + \theta_{k+1, \text{loc}},
     \qquad
@@ -132,7 +129,6 @@ From this continuous model, we can obtain the following discretized system:
     x_{k+1} = A_{L}x_{k} + B_{L}u_{k}
 \end{equation}
 where the two matrices $A_L$ and $B_L$ are defined as:
-
 \begin{align}
     A_{L} = 
     \begin{bmatrix}
