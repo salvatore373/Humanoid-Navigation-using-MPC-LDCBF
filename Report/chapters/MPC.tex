@@ -17,9 +17,8 @@ The constraints include the walking velocities, leg reachability, maneuverabilit
 \subsection{Heading Angle Preprocessing}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, which will become fixed inside the MPC calculation.
 This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
-
 \begin{gather}
-\omega_k = \max \left\{ \min \left\{ \operatorname{atan2}(g_y - p_y,\, g_x - p_x) - \theta,\, \quad \omega_{max} \right\} ,\quad \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\
+\omega_k = \max \left\{ \min \left\{ \operatorname{\textbf{atan2}}(g_y - p_y,\, g_x - p_x) - \theta,\, \; \omega_{max} \right\} ,\, \; \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\[1ex]
 \theta_0 = 0, \qquad \theta_k = \theta_{k-1} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
 \end{gather}
 where $p_x, p_y$ and $\theta$ are the pose of the humanoid at the start of the simulation time step, $T$ is the sampling time, and the goal position $(g_x, \ g_y)$ is expressed in local coordinates. With $\omega_{min}$ and $\omega_{max}$ we define the bounds on the robot turning rate, due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal. The initial value of the heading angle $\theta$ is set to zero since we are in a local frame, while for each step over the horizon is computed as the sum between the previous angle and the product between the current turning rate and the timestep.
@@ -28,36 +27,33 @@ where $p_x, p_y$ and $\theta$ are the pose of the humanoid at the start of the s
 The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, the authors of the paper decided to enforce the walking velocities, leg reachability, and maneuverability constraints as follows.
 
 \subsubsection{Walking Velocities Constraint}
+The velocity constraints, which limit the longitudinal and lateral velocities, are defined in the \textit{local coordinate frame} as follows:
 
-\todo[inline]{Change this constraint to adhere to Michele\&Andrew's suggestions.}
-
-\[
-\begin{pmatrix}
-v_{x_{\min}} \\
-v_{y_{\min}}
-\end{pmatrix}
-\le
-\begin{pmatrix}
-\cos \theta_k & \sin \theta_k \\
--\sin \theta_k & \cos \theta_k
-\end{pmatrix}
-\begin{pmatrix}
-v_{x_{k+1}} \\
-s_v v_{y_{k+1}}
-\end{pmatrix}
-\le
-\begin{pmatrix}
-v_{x_{\max}} \\
-v_{y_{\max}}
-\end{pmatrix}
-\qquad \forall k \in \left[ 0,\, N-1\right].
-\]\\
-
-
-The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to the orientation of $RF_{k}$. In the vector resulting from the transformation, the first component is the forward velocity, while the second is the lateral velocity, both in $RF_k$. At this point, the constraint imposes that the velocity is within the lateral and longitudinal limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
-$s_v$ is $1$ if stance foot is the right one, $-1$ otherwise. It is meant to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side but the humanoid does not lose balance.
-%% TODO: decide whether the text below should be removed
-For instance, \todo{decide whether this text should be removed} if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
+\begin{align}
+    \begin{bmatrix}
+        v_{x_{\min}} \\[1ex]
+        v_{y_{\min}}
+    \end{bmatrix}
+    \le
+    \begin{bmatrix}
+        \cos\theta_{k} & -\sin\theta_{k} \\[1ex]
+        \sin\theta_{k} & \cos\theta_{k}
+    \end{bmatrix}
+    \begin{bmatrix}
+        v_{x_{k+1}} \\[1ex]
+        s_{v} v_{y_{k+1}}
+    \end{bmatrix}
+    \le
+    \begin{bmatrix}
+        v_{x_{\max}} \\[1ex]
+        v_{y_{\max}}
+    \end{bmatrix}
+    , \qquad \forall k \in \left[ 0,\, N-1\right].
+\end{align}
+The pre-multiplying matrix rotates the velocities vector by an angle $-\theta_k$ around the $z$-axis: namely, it takes the velocity vector $\mathbf{v}_{k+1}$ back to the orientation of $RF_{k}$. In the vector resulting from the transformation, the first component is the longitudinal velocity, while the second is the lateral velocity, both in $RF_k$. At this point, the constraint imposes that the velocities are within the limits, $v_{y_{\{\min,\, \max\}}}$ and $v_{x_{\{\min,\, \max\}}}$ respectively.\\
+With the term $s_v$, we define the stance foot, which is $1$ if the foot is the right one, while it is $-1$ otherwise. This is used to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side but the humanoid does not lose balance.
+\todo[inline]{decide whether this text should be removed}
+For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
 
 \subsubsection{Leg Reachability Constraint}
 \[
