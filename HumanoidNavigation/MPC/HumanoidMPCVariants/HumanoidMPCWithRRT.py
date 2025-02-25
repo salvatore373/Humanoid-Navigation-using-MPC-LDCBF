@@ -124,7 +124,7 @@ class HumanoidMPCWithRRT(HumanoidMPC):
         # n: the maximum number of points that can be sampled in plan()
         # r_rewire: value of delta in RRT algorithm
         # pbar: whether to display a progress bar
-        rrts = RRTStar(og=occupancy_grid, n=1500, r_rewire=80, pbar=False, costfn=cost_fn, seed=1)
+        rrts = RRTStar(og=occupancy_grid, n=1500, r_rewire=80, pbar=False, costfn=cost_fn, seed=1) #, seed=1) comment this if needed
         T, gv = rrts.plan(start_og_coords, goal_og_coords)
         # From the RRT result, get the sequence of occupancy grid cells that must be reached in order to reach the goal
         tree_path_start2goal = rrts.route2gv(T, gv)

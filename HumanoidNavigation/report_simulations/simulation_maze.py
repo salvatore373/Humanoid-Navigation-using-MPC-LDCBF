@@ -30,7 +30,7 @@ def run_simulation_maze(start, goal, rrt=False):
 
     if not rrt:
         mpc = HumanoidMPC(
-            N_horizon=10,
+            N_horizon=3,
             N_mpc_timesteps=300,
             sampling_time=conf["DELTA_T"],
             goal=goal,
@@ -40,7 +40,7 @@ def run_simulation_maze(start, goal, rrt=False):
         )
 
         X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
-                                                     plot_animation=False, fill_animator=True)
+                                                     plot_animation=True, fill_animator=True)
         
     else:
         mpc = HumanoidMPCWithRRT(
@@ -54,7 +54,7 @@ def run_simulation_maze(start, goal, rrt=False):
         )
 
         X_pred_glob, U_pred_glob, anim = mpc.run_simulation(path_to_gif=f'{PLOTS_PATH}/animation.gif', make_fast_plot=True,
-                                                     visualize_rrt_path=True, plot_animation=False, fill_animator=True,
+                                                     visualize_rrt_path=True, plot_animation=False, fill_animator=False,
                                                      path_to_rrt_pdf=f'{PLOTS_PATH}/rrt_res.pdf')
 
     PlotUtils.plot_signals([
@@ -69,4 +69,5 @@ def run_simulation_maze(start, goal, rrt=False):
 
 
 if __name__ == "__main__":
-    run_simulation_maze(start=(0.5, 0, 0.5, 0, 0), goal=(0.5, 7.5), rrt=False)
+    # run_simulation_maze(start=(0.5, 0, 0.5, 0, 0), goal=(7.5, 7.5), rrt=False) # maze_1 without rrt
+    run_simulation_maze(start=(0, 0, 0, 0, 0), goal=(0.5, 7.5), rrt=True) # maze_2 with rrt
