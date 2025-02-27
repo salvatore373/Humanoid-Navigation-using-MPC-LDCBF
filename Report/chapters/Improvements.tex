@@ -104,12 +104,12 @@ The noisy measurements are then processed using the DBSCAN clustering algorithm 
 group nearby points into clusters that represent inferred obstacles (see Figure \ref{fig:dbscan_and_rangefinder}).
 With the integration of a LiDAR system, our framework is capable of replicating the previously described performance
 in real-word scenarios as well.
-The $\varepsilon$ parameter is needed by DBSCAN, it specifies the radius of the neighborhood of each point, that is
+The $\varepsilon$ parameter needed by DBSCAN specifies the radius of the neighborhood of each point, that is
 needed for correctly assign each point to a cluster. In other words,
 $\varepsilon$ is the maximum distance between two samples for
 one to be considered as in the neighborhood of the other.
-The other parameters are left as default, the Table \ref{tab:dbscan-params} summarize the additional parameters of the
-system, in unknown environment settings.
+The other parameters are left as default. Table \ref{tab:dbscan-params} summarizes the additional parameters of the
+system in unknown environment settings.
 
 \begin{figure}[H]
     \centering
@@ -136,23 +136,23 @@ system, in unknown environment settings.
     \label{tab:dbscan-params}
 \end{table}
 
-The additional parameters in Table \ref{tab:dbscan-params} lead to a further tuning of the system, in order to achieve desired
+The additional parameters in Table \ref{tab:dbscan-params} \todo{need? a further...} lead to a further tuning of the system, in order to achieve desired
 performance in real world scenarios. In fact, provided that every obstacle in the workspace is convex, and assuming
 that the obstacles are sufficiently distant, the LiDAR resolution is about 360°, and the
 DBSCAN $\varepsilon$ is small enough, the obstacles inferred by our system will
 be convex too.
 
-By considering only these clustered obstacles, rather than every single detected point, the MPC
-computes one LDCBF for each of those inferred obstacles. In this way, the navigation system can mirror
+By considering only these clustered obstacles rather than every single detected point, the MPC
+computes one LDCBF for each of these inferred obstacles. In this way, the navigation system can mirror
 the behavior of the base simulation while accounting for realistic environmental complexity; and the humanoid is
 able to navigate safely despite not knowing the environment a priori, relying solely on the obstacles inferred dynamically from its sensor data.
 
 The frames evolution in Figure \ref{fig:unk_env_frames} shows that using this approach, the robot is able to reach
-the goal also in highly packed environments. From the evolution of the state (see
+the goal also in highly packed environments. The evolution of the state (see
 Figure \ref{fig:unk_env_evol}) shows that there is almost no difference
-in terms of state variables with respect to the base simulation; the main difference occurs on the overall behaviour
+in terms of state variables with respect to the base simulation; \todo[inline]{shows almost no difference with respect to the base simulation?} the main difference occurs on the overall behaviour
 of the humanoid in the environment: its flexibility in handling only a subset of obstacles, allows the robot to
-navigate in challenging crowded environments easily; being those obstacles inferred, the robot relies only on its
+navigate in challenging crowded environments easily; \todo{"moreover" invece di "being those obstacles inferred"? } being those obstacles inferred, the robot relies only on its
 perception, allowing for a safe navigation in real-world scenarios.
 
 %emerges something never happened in previous scenarios: while approaching the goal the robot suddenly changes its
@@ -215,7 +215,7 @@ perception, allowing for a safe navigation in real-world scenarios.
         \centering
         \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_9.pdf}
     \end{subfigure}
-    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal inside an unknown environment and using the obstacles inferred dynamically. The small green dots are the 2D LiDAR readings, the red circle that surrounds the robot is the LiDAR range, while the blue convex polygons are the inferred obstacles.}
+    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal inside an unknown environment and using the obstacles inferred dynamically. \todo[inline]{Secondo me si può rimuovere "and using the obstacles inferred dynamically"} The small green dots are the 2D LiDAR readings, the red circle that surrounds the robot is the LiDAR range, while the blue convex polygons are the inferred obstacles.}
     \label{fig:unk_env_frames}
 \end{figure}
 

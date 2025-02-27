@@ -1,12 +1,14 @@
 \section{Conclusion}\label{sec:conclusions}
-In this project, we successfully reproduced the methodology presented in Peng et al. \cite{peng_main_paper}, implementing a real-time
+In this project, we successfully reproduced the methodology presented by Peng et al. \cite{peng_main_paper}, implementing a real-time
 safe navigation framework for bipedal robots using Linear Discrete Control Barrier Functions (LDCBFs).
-Our implementation validated the feasibility of using a Linear Inverted Pendulum (LIP) model combined with Model Predictive Control (MPC) to achieve stable and dynamically feasible locomotion in cluttered environments.
+We validated the feasibility of using a Linear Inverted Pendulum (LIP) model combined with Model Predictive Control (MPC) to achieve stable and dynamically feasible locomotion in cluttered environments.
 
-Minding about social robotics, beyond reproducing the original work, we introduced an additional
+Minding about real-world situations, beyond reproducing the original work, we introduced an additional
 \textit{safety margin} in the computation of LDCBF constraints.
-This modification aimed to enhance obstacle avoidance robustness, ensuring a more conservative approach to collision prevention while maintaining real-time performance.
-Our simulations demonstrated that this adjustment effectively increased the reliability of navigation without
+This modification aimed to enhance obstacle avoidance robustness,
+\todo[inline]{"robustness and to ensure the feasibility of the generated path, while maintaining real-time performance"}
+ensuring a more conservative approach to collision prevention while maintaining real-time performance.
+Our simulations proved that this adjustment effectively increased the reliability of navigation without
 introducing significant computational overhead; anyway this novelty results in additional system tweaking, so to
 obtain the best safety margin over the environment.
 
@@ -14,16 +16,16 @@ Further refinement of the safety margin parameter could provide an optimal trade
 maneuverability; an environment-based dynamic safety margin will be the best suited for that task.
 For example, someone can tweak it based on the number of obstacles inside the FOV, or based on the width of
 the available walking space.
+\todo[inline]{cancellerei "anyway this novelty results in ..." e paragrafo successivo}
 
 Moreover, for safe gait planning with limited FOV, we leveraged LiDAR scans of the surrounding scene and applied DBSCAN
-algorithm so to obtain a convex obstacle dynamically computed.
-In this way, due to the flexibility of our system, this can be deployed in dynamic environments with walking humans,
-enhancing its usage in social robotics environments.
+algorithm to obtain dynamically computed convex obstacles.
+Thanks to its flexibility, our system can be deployed in real-world environments (e.g., in a room with walking humans).
+However, the MPC alone is not enough to lead the robot to the goal in every situation. For this reason, we integrated in our framework an algorithm to reach the goal by travelling through a sequence of subgoals computed by RRT*.
 
 Despite these improvements, certain limitations remain.
-The precomputed turning rates, while simplifying real-time computation, may reduce flexibility in highly constrained environments.
+The precomputed turning rates, while simplifying real-time computation, reduce flexibility in highly constrained environments.
 Future work could explore adaptive strategies for obstacle avoidance, integrating learning-based methods to enhance decision-making in dynamic environments.
 
-Overall, this project provided valuable insights into safe gait planning for bipedal robots and reinforced the effectiveness of LDCBF-based navigation.
+Overall, this project provided valuable insights into safe gait planning for bipedal robots and proved the effectiveness of MPC-LDCBF based navigation.
 Our contributions offer a promising direction for improving safety-critical real-time locomotion, with potential applications in both simulation and real-world robotic deployments.
-\todo[inline]{Bisogna aggiungere la parte di RRT.}
