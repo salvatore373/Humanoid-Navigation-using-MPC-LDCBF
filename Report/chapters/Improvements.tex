@@ -96,12 +96,20 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
 
 
 
-\subsection{Unknown Environment}
+\subsection{Unknown Environments}
 In unknown environments, the robot navigation is not based on a pre-loaded map, but on real-time perceptions.
 To achieve this, a 2D LiDAR range finder is employed to capture real-time measurements of the surroundings.
 These LiDAR readings are affected by a zero-mean Gaussian noise to better simulate the uncertainty found in real-world sensor data.
-The noisy measurements are then processed using the DBSCAN clustering algorithm (with $\varepsilon = 0.3$) to group
-nearby points into clusters that represent inferred obstacles (see Figure \ref{fig:dbscan_and_rangefinder}).
+The noisy measurements are then processed using the DBSCAN clustering algorithm having $\varepsilon = 0.3$, to
+group nearby points into clusters that represent inferred obstacles (see Figure \ref{fig:dbscan_and_rangefinder}).
+With the integration of a LiDAR system, our framework is capable of replicating the previously described performance
+in real-word scenarios as well.
+The $\varepsilon$ parameter is needed by DBSCAN, it specifies the radius of the neighborhood of each point, that is
+needed for correctly assign each point to a cluster. In other words,
+$\varepsilon$ is the maximum distance between two samples for
+one to be considered as in the neighborhood of the other.
+The other parameters are left as default, the Table \ref{tab:dbscan-params} summarize the additional parameters of the
+system, in unknown environment settings.
 
 \begin{figure}[H]
     \centering
@@ -110,9 +118,27 @@ nearby points into clusters that represent inferred obstacles (see Figure \ref{f
     \label{fig:dbscan_and_rangefinder}
 \end{figure}
 
-This leads to a further tuning of the system, in order to achieve desired performance in real world scenarios; \todo[inline]{proposta cambiare con: "With the integration of a LiDAR system, our framework is capable of replicating the previously described performance in real-word scenarios as well."}
-In fact, provided that every obstacle in the workspace is convex, and assuming that the obstacles
-are sufficiently distant, the LiDAR resolution is about 360°, and the
+\begin{table}[h]
+        \begin{tabular}{ |p{4cm}||p{4cm}| }
+             \hline
+             \multicolumn{2}{|c|}{Unknown environments additional Parameters} \\
+             \hline
+             \textbf{Parameter} & \textbf{Value}\\
+             \hline
+             $\varepsilon$ & 0.3 \\
+             minPts & 5 (default) \\
+             Metric & Euclidean \\
+             \hline
+        \end{tabular}
+    \centering
+    \caption{The Unknown Environment additional parameters used for the following simulation. The \textit{minPts}
+        parameter is left as default, and in the library we are using for DBSCAN (i.e. Sklearn) is called \texttt{min\_samples}.}
+    \label{tab:dbscan-params}
+\end{table}
+
+The additional parameters in Table \ref{tab:dbscan-params} lead to a further tuning of the system, in order to achieve desired
+performance in real world scenarios. In fact, provided that every obstacle in the workspace is convex, and assuming
+that the obstacles are sufficiently distant, the LiDAR resolution is about 360°, and the
 DBSCAN $\varepsilon$ is small enough, the obstacles inferred by our system will
 be convex too.
 
