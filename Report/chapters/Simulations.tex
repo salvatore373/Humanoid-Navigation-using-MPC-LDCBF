@@ -16,7 +16,7 @@ The hyper-parameters used in the following simulations are summarized in Table \
              Step duration ($T$) & 0.4 \si{\second} \\
              $l_{\max}$ & $0.1 \sqrt{3} \;\si{\meter}$ \\
              $\left( v_{x_{max}},\, v_{y_{max}} \right)$ & $\left( -0.1,\, 0.1 \right)$ \si{\meter\per\second}\\
-             $\left( v_{y_{min}},\, v_{y_{min}} \right)$ & $\left( 0.8,\, 0.4 \right)$ \\
+             $\left( v_{y_{min}},\, v_{y_{min}} \right)$ & $\left( 0.8,\, 0.4 \right)$ \si{\meter\per\second}\\
              \hline
         \end{tabular}
     \centering
@@ -25,7 +25,8 @@ The hyper-parameters used in the following simulations are summarized in Table \
 \end{table}
 
 \subsection{Simple Environment}\label{subsec:sim_simple_env}
-The first simulation takes place in a basic environment: the humanoid is positioned at $(0,\,0)$ with orientation $\theta = 0$, and the goal position is $(5,\,5)$. In between, we placed 3 obstacles with a quasi-circular shape. The choice of approximating circles with polygons was made to comply with the CBF computation described in \ref{subsec:ldcbf}. The results are shown in Figures \ref{fig:sim1_evol} and \ref{fig:sim1_frames}. \\
+The first simulation takes place in a basic environment: the humanoid is positioned at $(0,\,0)$ with orientation $\theta = 0$, and the goal position is $(5,\,5)$. In between, we placed 3 obstacles with a quasi-circular shape. The choice of approximating circles with polygons was made to comply with the CBF computation described in \ref{subsec:ldcbf}. The results are shown in Figures \ref{fig:sim1_evol} and \ref{fig:sim1_frames}.
+
 By inspecting the plots, we see that, at the beginning of the simulation, a high turning velocity $\omega$ is commanded in order to make the robot point toward the goal. In the meantime, the MPC provides new footstep positions but, due to the maneuverability constraint, the high turning rate limits the velocity along the sagittal axis. Therefore, the robot is encouraged to move laterally, and the first inputs generate a large $v_y$ that induces a \textit{side-walking} motion.\\
 Then, there is an overshoot in the plots of $\theta$ and $\omega$. This behavior derives from the large sampling time of the robot. To lighten the computational load, in our simulations, we set equal sampling times for the MPC and the humanoid. This means that every $T$ seconds a new footstep position and angular velocity are computed, and they are provided as input to the robot until new inputs are available, even though it could have a lower sampling time and, then, several different inputs could be commanded during $T$. Therefore, the $\omega$ needed to point to the goal is provided as input and executed for $T$ seconds. But, during that interval, the robot misses the right orientation and continues rotating. Hence, a new turning velocity is commanded in the opposite direction, and the sagittal axis is successfully aligned with the goal.\\
 At this point, the robot moves forward to the goal, the orientation is kept constant, and the positional error decreases smoothly. Nevertheless, there is some chattering in the $v_y$ plot. This is a regular behavior: at the end of each step, the humanoid changes the stance foot by \textit{falling} on the opposite side, and it results in the lateral velocity changing sign.\\
@@ -112,88 +113,3 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
     \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal. Obstacles are represented with orange shapes. The humanoid is represented by an isosceles triangle whose sagittal axis is aligned with the robot's. Green rectangles mark right footsteps, while blue rectangles mark left ones. Each frame shows the vectors $\eta$ and $c$ along with the safe area associated with each obstacle. The darkest region represents the intersection of these semi-planes, which is the overall safe area.}
     \label{fig:sim1_frames}
 \end{figure}
-
-\subsection{Maze}
-In this simulation, the robot is moving inside a closed environment structured as a maze. The humanoid starts in position $(0.5,\ 0.5)$ with orientation $\theta = 0$, while the goal is located at $(7.5, \ 7.5)$. Each wall inside the maze is defined as a convex shape, for a total of 8 obstacles in the environment.
-
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_maze_1/evolution_0.pdf}
-    \end{subfigure}
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_maze_1/evolution_1.pdf}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_maze_1/evolution_2.pdf}
-    \end{subfigure}
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_maze_1/evolution_3.pdf}
-    \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the translational velocities along the x- and y-axis. The bottom left and right plots show the theta and omega evolution, respectively. All the quantities are expressed in the global RF.}
-    \label{fig:sim_maze_1_evol}
-\end{figure}
-
-% change here with the correct frames
-%\begin{figure}[H]
-%    \centering
-%    % First row
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_0.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_1.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_2.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_3.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_4.pdf}
-%    \end{subfigure}
-%    
-%    % Second row
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_5.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_6.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_7.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_8.pdf}
-%    \end{subfigure}%
-%    \hfill
-%    \begin{subfigure}{0.20\textwidth}
-%        \centering
-%        \includegraphics[width=\textwidth]{figures/Simulations/sim_maze_1/frame_9.pdf}
-%    \end{subfigure}
-%    
-%    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal. Obstacles are represented with orange shapes. The humanoid is represented by an isosceles triangle whose sagittal axis is aligned with the robot's. Green rectangles mark right footsteps, while blue rectangles mark left ones. Each frame shows the vectors $\eta$ and $c$ along with the safe area associated with each obstacle. The darkest region represents the intersection of these semi-planes, which is the overall safe area.}
-%    \label{fig:sim_maze_1_frames}
-%\end{figure}

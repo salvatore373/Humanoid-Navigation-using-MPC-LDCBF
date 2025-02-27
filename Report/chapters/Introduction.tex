@@ -4,10 +4,9 @@
 
 \section{Introduction}\label{sec:introduction}
 
-The term \textit{humanoid}, stands for a robot characterized by a structure and kinematics similar to the human body. These type of robots, which are inherently underactuated thanks to the unilateral ground contacts, are designed to navigate and interact in environments structured for humans.
-One of the most important task for humanoids is Real-time navigation, which represents how these robots should navigate an environment by planning a safe path. With this term, we refer to paths where the dynamics and physical limitation of the robot are respected and that do not involve any collision between the robot and the obstacles.  
-Due to the high complexity of this task, path planning is usually decoupled from gait control, resulting in a significant reduction of the computational load.
+The term \textit{humanoid}, indicates a robot characterized by a structure and kinematics similar to the human body. This type of robots, which are inherently underactuated due to the unilateral ground contacts, are designed to navigate and interact in environments structured for humans.
+Real-time safe navigation is a crucial task for humanoid robots in real-world applications. A path is considered safe if it does not collide with any obstacle while fulfilling the robot's dynamics and physical constraints. In order to carry out such complex task in real-time, path planning is usually decoupled from gait control, resulting in a significant reduction of the computational load.
 
-The aim of this work is to re-implement the solution proposed by Peng et al. in "\textit{Real-Time Safe Bipedal Robot Navigation using Linear Discrete Control Barrier Functions}", which consists in a unified safe path and gait planning framework that uses Linear Control Barrier Functions (LCBF) to avoid collision with obstacles.\\
+The aim of this work is to implement the solution proposed by Peng et al. in \textit{``Real-Time Safe Bipedal Robot Navigation using Linear Discrete Control Barrier Functions''}, which consists in a unified safe path and gait planning framework to be executed in real-time. It models the humanoid's walking dynamics by a Linear Inverted Pendulum, and leverages Model Predictive Control and Control Barrier Functions to deliver a collision-free path while satisfying specific constraints.\\
 In the following chapters, we will delve into the details of this approach, discuss the results, and propose some improvements.
 \end{document}
