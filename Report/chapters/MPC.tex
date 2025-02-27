@@ -1,5 +1,5 @@
 \section{LIP-MPC: Gait planning with Model Predictive Control}\label{sec:mpc}
-The LIP dynamics defined in (\ref{eq:lip_dyanmics}) is used as a model of the process inside a Model Predictive Control (MPC) scheme. The MPC controller uses that model to predict the future output along a \textit{prediction horizon} $N$, namely the predefined number of time steps to look out in the future. Based on those forecasts and the provided constraints, the MPC computes the sequence of control actions that optimize a given cost function during the prediction horizon. Then, only the first input of that sequence is taken and provided to the process. The real output will be used at the next time step to compute the new predictions and control actions.\\
+The LIP dynamics defined in (\ref{eq:lip_dyanmics}) is used as a model of the process inside a Model Predictive Control (MPC) scheme. The MPC controller uses that model to predict the future output along a \textit{prediction horizon} $N$, namely the predefined number of time steps to look out in the future. Based on those forecasts and the provided constraints, the MPC computes the sequence of control actions that optimize a given cost function during the prediction horizon. Then, only the first input of that sequence is taken and provided to the process. The real output will be used in the next time step to compute the new predictions and control actions.\\
 In our case, the LIP-MPC is used to respond instantaneously to the changes in the humanoid's state, while providing optimal stepping positions for stable locomotion and safe navigation. It is formulated as follows:
 \begin{align}
     J^* &= \min_{\mathbf{u}_{0:N-1}} \sum_{k=1}^{N} q(\mathbf{x}_k) \\
@@ -14,21 +14,16 @@ where $q(\mathbf{x}_k)$ is the cost function to minimize along the prediction ho
 $$
 q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^2 \qquad \forall k \in \left[1, N\right],
 $$
-where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$.
-They are originally non-linear due to the presence of $\theta$. However, by precomputing the heading angle and the turning rate, $\theta$ and $\omega$ become constant. Consequentially, the constraints become linear and the computational load is drastically reduced. $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$ includes the walking velocities, leg reachability, and maneuverability constraints, and the linear discrete control barrier function, which will be described in details in the following sections.
-\todo[inline]{
-    Ripetizione: in sezione subito successiva si parla nel dettaglio di non linearità delle constraints e di come è risolta. Sostituire con ...?\\
-    In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
-}
+where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
-\todo[inline]{not specified in paper}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, that are kept fixed during the MPC horizon.\\
-This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
+This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step. Since Peng et al. did not specify how $\theta$ and $\omega$ were computed, we devised our own approach. We aim to rotate the robot to align its sagittal axis with the goal as soon as possible, and it is achieved with the following formulae:
 \begin{gather}
 \omega_k = \max \left\{ \min \left\{ \operatorname{\textbf{atan2}}(g_y - p_y,\, g_x - p_x) - \theta_k,\, \; \omega_{max} \right\} ,\, \; \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\[1ex]
 \theta_0 = 0, \qquad \theta_{k+1} = \theta_{k} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
 \end{gather}
+
 where $p_x, p_y$ represent the position of the humanoid at the start of the simulation time step, $T$ is the robot's sampling time, and the goal position $(g_x, \ g_y)$ is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate, to consider due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. The initial value of $\theta$ is set to zero, which is the orientation of the robot's sagittal axis in the local frame at the beginning of the new timestep. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
 
 \subsection{Kinematic Constraints}
@@ -57,8 +52,8 @@ The stepping positions provided by the MPC solution must comply with specific ki
     , \qquad \forall k \in \left[ 0,\, N-1\right].
 \end{align}
 
-This constraint limits the longitudinal and the lateral velocities: the former is obtained by mutiplying the velocities vector by $\left(\cos{\theta_k} \sin{\theta_k}\right)$, and the latter by multiplying the same vector by $\left(-\sin{\theta_k} \cos{\theta_k}\right)$.
-The term $s_v$ defines which foot is the stance: it is $1$ for the right foot, and $-1$ otherwise. This is used to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side but the humanoid does not lose balance.
+This constraint limits the longitudinal and the lateral velocities: the former is obtained by multiplying the velocities vector by $\left(\cos{\theta_k} \sin{\theta_k}\right)$, and the latter by multiplying the same vector by $\left(-\sin{\theta_k} \cos{\theta_k}\right)$.
+The term $s_v$ defines which foot is the stance: it is $1$ for the right foot, and $-1$ otherwise. This is used to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side, but the humanoid does not lose balance.
 For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
 
 \subsubsection{Leg Reachability Constraint}
@@ -85,7 +80,7 @@ For instance, if the right foot is the stance, since the body tends to fall on t
 \end{align}
 
 This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from $(p_{x_{k-1}},\,p_{y_{k-1}})$.
-It does so by projecting the displacement of the the CoM position on the logitudinal and the lateral axis, and ensuring that its aboslute value is lower than $l_{\max}$, which is the maximum distance reachable by the swing foot in both directions.
+It does so by projecting the displacement of the CoM position on the longitudinal and lateral axes, and ensuring that its absolute value is lower than $l_{\max}$, which is the maximum distance reachable by the swing foot in both directions.
 
 \subsubsection{Maneuverability Constraint}
 \[
@@ -100,7 +95,7 @@ v_{y_k}
 \qquad \forall k \in \left[0,\, N-1 \right].
 \]
 
-This constraint is meant to reduce the humanoid's forward velocity while it is turning. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vectors projection on the left side) is lower than its bound $v_{x_{\max}}$ diminished by a quantity that depends on the turning rate. $\alpha$ is one of the simulation hyper-parameters.
+This constraint is meant to reduce the humanoid's forward velocity while it is turning. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vector projection on the left side) is lower than its bound $v_{x_{\max}}$ diminished by a quantity that depends on the turning rate. $\alpha$ is one of the simulation hyperparameters.
 
 \subsection{Control Barrier Functions}
 
@@ -128,13 +123,13 @@ and the following holds:
 \forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma(h(\mathbf{x}_k)). \label{eq:dcbf_def_constr}
 \end{gather}
 
-Then, $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take $\gamma$ as a scalar such that $0 < \gamma \leq 1$, and (\ref{eq:dcbf_def_constr}) becomes:
+Then $h(\cdot)$ is a discrete control barrier function (DCBF). We can also take $\gamma$ as a scalar such that $0 < \gamma \leq 1$, and (\ref{eq:dcbf_def_constr}) becomes:
 
 \begin{gather*}
     \forall \mathbf{x}_k \in S \qquad \exists \mathbf{u}_k \; \text{s.t.} \; \Delta h(\mathbf{x}_k,\, \mathbf{u}_k) \geq -\gamma * h(\mathbf{x}_k). 
 \end{gather*}
 
-It means that, if the state starts from the safety set $S$, there must exists an input that, when applied, produces a state which will still be in $S$: \todo{Not sure about it} namely, $S$ is invariant.
+This means that if the state starts from the safety set $S$, there must exist an input that, when applied, produces a state which will still be in $S$: namely, $S$ is invariant.
 
 \subsubsection{Linear Discrete Control Barrier Functions (LDCBF)}\label{subsec:ldcbf}
 Assume that for each obstacle there is a function of the robot's configuration such that $F(\mathbf{x})=0$ when the robot touches the boundary of the obstacle, $F(\mathbf{x})>0$ when it does not collide with the obstacle, and $F(\mathbf{x})<0$ if it is inside the obstacle. It is convenient to choose $h(\cdot)=F(\cdot)$. This is the case in our project, where the DCBF is a function of $\vec{x}$, the Cartesian position of the CoM: therefore, $h(\cdot)\colon \mathbb{R}^2 \rightarrow \mathbb{R}$. Moreover, we assume that either the obstacle associated with $F(\cdot)$ is convex or $F(\cdot)$ describes the convex shape that encloses the non-convex obstacle.
@@ -176,7 +171,7 @@ From Figure (\ref{fig:example_LDCBF}) it is evident that a such defined LDCBF co
 h\left(\vec{x}\right) = \eta^T \left(\vec{x} - c\right) - \delta \geq 0,
 \end{equation}
 
-where $c$ and $\eta$ are the previously defined vectors, while $\delta$ is the distance that the CoM must keep from $c$ (i.e., from the obstacle's boundary) to satisfy the constraint. The result is shown in Figure \ref{fig:example_LDCBF_variant}\\
+where $c$ and $\eta$ are the previously defined vectors, while $\delta$ is the distance the CoM must keep from $c$ (i.e., from the obstacle's boundary) to satisfy the constraint. The result is shown in Figure \ref{fig:example_LDCBF_variant}\\
 Forcing the control barrier function not to take values below a threshold allows us to take into account the footstep positions, and to generate trajectories that are not only feasible for the CoM, but for the motion of the whole humanoid.
 
 \begin{figure}[h]

@@ -7,7 +7,7 @@ $$ \mathbf{x} := \left( p_x,\; v_x,\; p_y,\; v_y,\; \theta \right)^T \in \mathca
 $$ \mathbf{u} := \left( f_x,\; f_y,\; \omega \right)^T \in \mathcal{U} \subset \mathbb{R}^3 , $$
 
 where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position, $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $\mathcal{X}$ is the set of the allowed states, while $\mathcal{U}$ is the set of the admissible inputs.\\
-Both the state and the input are expressed in the robot's local coordinates, which are time-related. It means that $(p_{x_k}, p_{y_k})$ represents the position of the CoM at simulation time step $k$ in the reference frame ($RF_k$) that originates from $(p_{x_{k-1}}, p_{y_{k-1}})$, and is rotated by an angle $\theta_k$ around the $z$-axis with respect to $RF_{k-1}$. The relation between the vectors in different reference frames is represented in Figure \ref{fig:loc_to_glob_tfm}.
+Both the state and the input are expressed in the robot's local coordinates, which are time-related. This means that $(p_{x_k}, p_{y_k})$ represents the position of the CoM at simulation time step $k$ in the reference frame ($RF_k$) that originates from $(p_{x_{k-1}}, p_{y_{k-1}})$, and is rotated by an angle $\theta_k$ around the $z$-axis with respect to $RF_{k-1}$. The relation between the vectors in different reference frames is represented in Figure \ref{fig:loc_to_glob_tfm}.
 The reference frame at time step 0 is considered the ``inertial'' or ``global'' frame. A transformation between the inertial and moving frames is necessary to obtain the position of the humanoid in the global map and to deal with obstacles.\\
 These transformations are defined by the following matrix:
 \begin{align}
@@ -111,15 +111,14 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \end{pmatrix} =
 \mathbf{A_C} \, \mathbf{x}(t) + \mathbf{B_C} \, \mathbf{u}(t) =
 \begin{pmatrix}
-    \todo[inline]{Bmatrix}
     \mathbf{A_h} & \mathbf{0} & \mathbf{0} \\
     \mathbf{0} & \mathbf{A_h} & \mathbf{0} \\
     \mathbf{0} & \mathbf{0} & \mathbf{0} \\
 \end{pmatrix} \, \mathbf{x}(t) +
 \begin{pmatrix}
-    \mathbf{B_h} & \mathbf{0} \\
-    \mathbf{0} & \mathbf{B_h} \\
-    0 & 0 \\
+    \mathbf{B_h} & \mathbf{0} & \mathbf{0} \\
+    \mathbf{0} & \mathbf{B_h} & \mathbf{0} \\
+    0 & 0 & 0\\
 \end{pmatrix} \, \mathbf{u}(t),
 \end{equation}
 \begin{equation} \notag
@@ -132,8 +131,8 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \quad
 \mathbf{B_h} \coloneq
 \begin{pmatrix}
-    0 & 0 \\
-    -\beta^2 & 0
+    0 \\
+    -\beta^2
 \end{pmatrix}, \quad
 \beta \coloneqq \sqrt{\frac{g}{H}}.
 \end{equation}
