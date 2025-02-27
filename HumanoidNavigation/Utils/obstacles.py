@@ -174,8 +174,8 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, 
 
         x_center = random.uniform(*x_range)
         y_center = random.uniform(*y_range)
-        # poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
-        poly = generate_random_convex_polygon(num_points, (x_center - 0.5, x_center + 0.5), (y_center - 0.5, y_center + 0.5))
+        poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+        # poly = generate_random_convex_polygon(num_points, (x_center - 0.5, x_center + 0.5), (y_center - 0.5, y_center + 0.5))
 
         if is_point_inside_polygon(start, poly):
             continue
@@ -195,9 +195,12 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, 
 
 
 # ===== PLOTTING OBSTACLES FROM OTHER FILES =====
-def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10), delta=1):
+def generate_obstacles(start, goal, num_obstacles=10, num_points=5, x_range=(-10, 10), y_range=(-10, 10), delta=1, ch=True):
     # generate the polygons
-    # polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range)
-    polygons = [ConvexHull(p) for p in generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, delta)]
+
+    if ch:
+        polygons = [ConvexHull(p) for p in generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, delta)]
+    else:
+        polygons = generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, delta=delta)
 
     return polygons

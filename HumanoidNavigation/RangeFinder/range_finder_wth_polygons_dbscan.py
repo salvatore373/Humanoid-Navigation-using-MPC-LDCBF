@@ -146,7 +146,7 @@ def display_lidar_readings(lidar_position, readings, with_range=True, with_grid=
         ax.add_patch(range)
 
     # utils
-    plt.scatter(xs, ys, color="green", label="Detected Points", s=1)
+    plt.scatter(xs, ys, color="green", label="Detected Points", s=1, zorder=3)
     plt.legend() # check if needed to remove
     plt.grid(with_grid)
     plt.axis("equal")
@@ -198,10 +198,12 @@ if __name__ == "__main__":
     obstacles = generate_obstacles(
         start=np.array(lidar_position),
         goal=np.array([1, 1]),
-        num_obstacles=10,
+        num_obstacles=15,
         num_points=10,
         x_range=(-5, 5),
-        y_range=(-5, 5)
+        y_range=(-5, 5),
+        delta=1,
+        ch=False
     )
 
     print(obstacles)
