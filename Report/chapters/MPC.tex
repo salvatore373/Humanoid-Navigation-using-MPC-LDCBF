@@ -14,21 +14,16 @@ where $q(\mathbf{x}_k)$ is the cost function to minimize along the prediction ho
 $$
 q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^2 \qquad \forall k \in \left[1, N\right],
 $$
-where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$.
-They are originally non-linear due to the presence of $\theta$. However, by precomputing the heading angle and the turning rate, $\theta$ and $\omega$ become constant. Consequentially, the constraints become linear and the computational load is drastically reduced. $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$ includes the walking velocities, leg reachability, and maneuverability constraints, and the linear discrete control barrier function, which will be described in details in the following sections.
-\todo[inline]{
-    Ripetizione: in sezione subito successiva si parla nel dettaglio di non linearità delle constraints e di come è risolta. Sostituire con ...?\\
-    In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
-}
+where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
-\todo[inline]{not specified in paper}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, that are kept fixed during the MPC horizon.\\
-This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step with the following formulae:
+This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step. Since Peng et al. did not specify how $\theta$ and $\omega$ were computed, we devised our own approach. We aim to rotate the robot to align its sagittal axis with the goal as soon as possible, and it is achieved with the following formulae:
 \begin{gather}
 \omega_k = \max \left\{ \min \left\{ \operatorname{\textbf{atan2}}(g_y - p_y,\, g_x - p_x) - \theta_k,\, \; \omega_{max} \right\} ,\, \; \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\[1ex]
 \theta_0 = 0, \qquad \theta_{k+1} = \theta_{k} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
 \end{gather}
+
 where $p_x, p_y$ represent the position of the humanoid at the start of the simulation time step, $T$ is the robot's sampling time, and the goal position $(g_x, \ g_y)$ is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate, to consider due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. The initial value of $\theta$ is set to zero, which is the orientation of the robot's sagittal axis in the local frame at the beginning of the new timestep. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
 
 \subsection{Kinematic Constraints}

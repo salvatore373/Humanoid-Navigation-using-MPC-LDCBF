@@ -111,15 +111,14 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \end{pmatrix} =
 \mathbf{A_C} \, \mathbf{x}(t) + \mathbf{B_C} \, \mathbf{u}(t) =
 \begin{pmatrix}
-    \todo[inline]{Bmatrix}
     \mathbf{A_h} & \mathbf{0} & \mathbf{0} \\
     \mathbf{0} & \mathbf{A_h} & \mathbf{0} \\
     \mathbf{0} & \mathbf{0} & \mathbf{0} \\
 \end{pmatrix} \, \mathbf{x}(t) +
 \begin{pmatrix}
-    \mathbf{B_h} & \mathbf{0} \\
-    \mathbf{0} & \mathbf{B_h} \\
-    0 & 0 \\
+    \mathbf{B_h} & \mathbf{0} & \mathbf{0} \\
+    \mathbf{0} & \mathbf{B_h} & \mathbf{0} \\
+    0 & 0 & 0\\
 \end{pmatrix} \, \mathbf{u}(t),
 \end{equation}
 \begin{equation} \notag
@@ -132,8 +131,8 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \quad
 \mathbf{B_h} \coloneq
 \begin{pmatrix}
-    0 & 0 \\
-    -\beta^2 & 0
+    0 \\
+    -\beta^2
 \end{pmatrix}, \quad
 \beta \coloneqq \sqrt{\frac{g}{H}}.
 \end{equation}
