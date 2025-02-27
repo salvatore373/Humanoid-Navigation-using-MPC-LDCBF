@@ -117,12 +117,12 @@ DBSCAN $\varepsilon$ is small enough, the obstacles inferred by our system will
 be convex too.
 
 By considering only these clustered obstacles, rather than every single detected point, the MPC
-computes one LDCBF for each of those inferred obstacles. In this way, the navigation system can mirrors
+computes one LDCBF for each of those inferred obstacles. In this way, the navigation system can mirror
 the behavior of the base simulation while accounting for realistic environmental complexity; and the humanoid is
 able to navigate safely despite not knowing the environment a priori, relying solely on the obstacles inferred dynamically from its sensor data.
 
 The frames evolution in Figure \ref{fig:unk_env_frames} shows that using this approach, the robot is able to reach
-the goal also in highly packed environments. From the evolution of tha state (see
+the goal also in highly packed environments. From the evolution of the state (see
 Figure \ref{fig:unk_env_evol}) shows that there is almost no difference
 in terms of state variables with respect to the base simulation; the main difference occurs on the overall behaviour
 of the humanoid in the environment: its flexibility in handling only a subset of obstacles, allows the robot to
