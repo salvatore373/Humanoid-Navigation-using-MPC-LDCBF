@@ -113,3 +113,91 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
     \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal. Obstacles are represented with orange shapes. The humanoid is represented by an isosceles triangle whose sagittal axis is aligned with the robot's. Green rectangles mark right footsteps, while blue rectangles mark left ones. Each frame shows the vectors $\eta$ and $c$ along with the safe area associated with each obstacle. The darkest region represents the intersection of these semi-planes, which is the overall safe area.}
     \label{fig:sim1_frames}
 \end{figure}
+
+\subsubsection{Simulation employing our LDCBF}
+From an accurate analysis of the previous simulation's frames, it can be observed that, despite the robot accomplishing the mission of reaching the goal while satisfying all the constraints, when it gets very close to the obstacles, its feet overlap with the obstacles. This occurs due to the LDCBF defined by Peng et al., which only ensures that the CoM never collides with the obstacles. However, this strategy produces a path that is impractical for the full-body motion of the humanoid (as already pointed out in \ref{subsec:ldcbf_variant}). Therefore, we proposed our variant of their LDCBF, and in Figures \ref{fig:sim1_delta_evol} and \ref{fig:sim1_delta_frames} we show the results of the simulation that constraints the MPC with the LDCBF defined at \ref{eq:ldcbf_variant}, setting $\delta=0.3$.
+
+From the plots, we notice that the robot reaches the boundary of the safe area -- no longer coincident with the obstacle's edge -- earlier than the previous simulation, and it reorients itself with the modality exposed before. The same situation arises around the second 70 of the simulation, when a turning velocity is commanded to keep a distance $\delta$ from the last obstacle.
+
+The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the humanoid's footsteps never intersect the obstacles. Subsequently, the LDCBF contributed to designing a motion plan suitable for the humanoid in real-world conditions.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim1circles_delta/evolution_0.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim1circles_delta/evolution_1.pdf}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim1circles_delta/evolution_2.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim1circles_delta/evolution_3.pdf}
+    \end{subfigure}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the translational velocities along the x- and y-axis. The bottom left and right plots show the theta and omega evolution, respectively. All the quantities are expressed in the global RF.}
+    \label{fig:sim1_delta_evol}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % First row
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_0.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_1.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_2.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_3.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_4.pdf}
+    \end{subfigure}
+    
+    % Second row
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_5.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_6.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_7.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_8.pdf}
+    \end{subfigure}%
+    \hfill
+    \begin{subfigure}{0.20\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_9.pdf}
+    \end{subfigure}
+    
+    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal for the simulation in the base environment employing our LDCBF. With this modification, the darkest region (i.e., the overall safe area) never touches the obstacles boundaries, but is always at a user-defined distance $\delta$.}
+    \label{fig:sim1_delta_frames}
+\end{figure}
