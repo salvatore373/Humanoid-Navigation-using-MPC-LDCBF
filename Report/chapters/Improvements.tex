@@ -132,13 +132,14 @@ system in unknown environment settings.
         \end{tabular}
     \centering
     \caption{The Unknown Environment additional parameters used for the following simulation. The \textit{minPts}
-        parameter is left as default, and in the library we are using for DBSCAN (i.e. Sklearn) is called \texttt{min\_samples}.}
+        parameter is left as default, and in the library we are using for DBSCAN (i.e. Sklearn) it is called
+    \texttt{min\_samples}.}
     \label{tab:dbscan-params}
 \end{table}
 
-The additional parameters in Table \ref{tab:dbscan-params} \todo{need? a further...} lead to a further tuning of the system, in order to achieve desired
-performance in real world scenarios. In fact, provided that every obstacle in the workspace is convex, and assuming
-that the obstacles are sufficiently distant, the LiDAR resolution is about 360°, and the
+The additional parameters in Table \ref{tab:dbscan-params} need a further tuning of the system, in order to achieve
+desired performance in real world scenarios. In fact, provided that every obstacle in the workspace is convex, and
+assuming that the obstacles are sufficiently distant, the LiDAR resolution is about 360°, and the
 DBSCAN $\varepsilon$ is small enough, the obstacles inferred by our system will
 be convex too.
 
@@ -148,17 +149,12 @@ the behavior of the base simulation while accounting for realistic environmental
 able to navigate safely despite not knowing the environment a priori, relying solely on the obstacles inferred dynamically from its sensor data.
 
 The frames evolution in Figure \ref{fig:unk_env_frames} shows that using this approach, the robot is able to reach
-the goal also in highly packed environments. The evolution of the state (see
-Figure \ref{fig:unk_env_evol}) shows that there is almost no difference
-in terms of state variables with respect to the base simulation; \todo[inline]{shows almost no difference with respect to the base simulation?} the main difference occurs on the overall behaviour
+the goal also in highly packed environments.
+The evolution of the state variables (see
+Figure \ref{fig:unk_env_evol}) shows almost no difference with respect to the base simulation; the main difference occurs on the overall behaviour
 of the humanoid in the environment: its flexibility in handling only a subset of obstacles, allows the robot to
-navigate in challenging crowded environments easily; \todo{"moreover" invece di "being those obstacles inferred"? } being those obstacles inferred, the robot relies only on its
-perception, allowing for a safe navigation in real-world scenarios.
-
-%emerges something never happened in previous scenarios: while approaching the goal the robot suddenly changes its
-%orientation, also if that choice will lead to a worsening of the error along the x axis (the overall error still
-%decreases).
-
+navigate in challenging crowded environments easily; moreover, the robot relies only on its perception, allowing
+for a safe navigation in real-world scenarios.
 
 
 
@@ -215,7 +211,7 @@ perception, allowing for a safe navigation in real-world scenarios.
         \centering
         \includegraphics[width=\textwidth]{../figures/Simulations/sim2unkenv/frame_9.pdf}
     \end{subfigure}
-    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal inside an unknown environment and using the obstacles inferred dynamically. \todo[inline]{Secondo me si può rimuovere "and using the obstacles inferred dynamically"} The small green dots are the 2D LiDAR readings, the red circle that surrounds the robot is the LiDAR range, while the blue convex polygons are the inferred obstacles.}
+    \caption[short]{This sequence of frames illustrates the robot's trajectory to the goal inside an unknown environment. The small green dots are the 2D LiDAR readings, the red circle that surrounds the robot is the LiDAR range, while the blue convex polygons are the inferred obstacles.}
     \label{fig:unk_env_frames}
 \end{figure}
 

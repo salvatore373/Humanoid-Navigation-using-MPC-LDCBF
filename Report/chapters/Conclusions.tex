@@ -5,18 +5,10 @@ We validated the feasibility of using a Linear Inverted Pendulum (LIP) model com
 
 Minding about real-world situations, beyond reproducing the original work, we introduced an additional
 \textit{safety margin} in the computation of LDCBF constraints.
-This modification aimed to enhance obstacle avoidance robustness,
-\todo[inline]{"robustness and to ensure the feasibility of the generated path, while maintaining real-time performance"}
-ensuring a more conservative approach to collision prevention while maintaining real-time performance.
+This modification aimed to enhance obstacle avoidance robustness and to ensure the feasibility of the generated path, while maintaining
+real-time performance, ensuring a more conservative approach to collision prevention while maintaining real-time performance.
 Our simulations proved that this adjustment effectively increased the reliability of navigation without
-introducing significant computational overhead; anyway this novelty results in additional system tweaking, so to
-obtain the best safety margin over the environment.
-
-Further refinement of the safety margin parameter could provide an optimal trade-off between conservatism and
-maneuverability; an environment-based dynamic safety margin will be the best suited for that task.
-For example, someone can tweak it based on the number of obstacles inside the FOV, or based on the width of
-the available walking space.
-\todo[inline]{cancellerei "anyway this novelty results in ..." e paragrafo successivo}
+introducing significant computational overhead.
 
 Moreover, for safe gait planning with limited FOV, we leveraged LiDAR scans of the surrounding scene and applied DBSCAN
 algorithm to obtain dynamically computed convex obstacles.
