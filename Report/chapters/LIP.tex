@@ -78,9 +78,7 @@ The global robot's orientation is obtained by summing the latest local variation
 
 An example of change of coordinates between the global and the local frame is illustrated in Figure \ref{fig:loc_to_glob_tfm}.
 
-\todo[inline]{
-    for simplicity, we used kept computations in local coordinates becuase the constraints are defined in local coordinates in original paper
-}
+For the ease of formulation and to reflect the original work by Peng et al., we specify the MPC constraints directly on the state and input vectors (defined in the body frame). More details will be provided in \ref{sec:mpc}.
 
 \begin{figure}[h]
     \centering
