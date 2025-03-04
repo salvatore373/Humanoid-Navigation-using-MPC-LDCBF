@@ -79,6 +79,10 @@ The global robot's orientation is obtained by summing the latest local variation
 
 An example of change of coordinates between the global and the local frame is illustrated in Figure \ref{fig:loc_to_glob_tfm}.
 
+\todo[inline]{
+    for simplicity, we used kept computations in local coordinates becuase the constraints are defined in local coordinates in original paper
+}
+
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.75\linewidth]{figures/LIP/loc_to_glob_tfm2.pdf}
@@ -100,6 +104,8 @@ According to \cite{peng_main_paper}, we can express the CoM acceleration as:
 with $g$ as the magnitude of the gravitational acceleration.
 Based on this expression and the previously defined state $\mathbf{x}$ and input $\mathbf{u}$, we can define the 3D-LIP dynamic model in the continuous time space as:
 
+\todo[inline]{add 0 dimension at subscript}
+
 \begin{equation} \notag
 \mathbf{\dot{x}}(t) = 
 \begin{pmatrix}
@@ -118,7 +124,7 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \begin{pmatrix}
     \mathbf{B_h} & \mathbf{0} & \mathbf{0} \\
     \mathbf{0} & \mathbf{B_h} & \mathbf{0} \\
-    0 & 0 & 0\\
+    0 & 0 & 1\\
 \end{pmatrix} \, \mathbf{u}(t),
 \end{equation}
 \begin{equation} \notag
