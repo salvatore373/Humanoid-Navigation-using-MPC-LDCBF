@@ -174,8 +174,8 @@ def generate_polygons(start, goal, num_obstacles, num_points, x_range, y_range, 
 
         x_center = random.uniform(*x_range)
         y_center = random.uniform(*y_range)
-        poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
-        # poly = generate_random_convex_polygon(num_points, (x_center - 0.5, x_center + 0.5), (y_center - 0.5, y_center + 0.5))
+        # poly = generate_random_convex_polygon(num_points, (x_center - 1, x_center + 1), (y_center - 1, y_center + 1))
+        poly = generate_random_convex_polygon(num_points, (x_center - 0.5, x_center + 0.5), (y_center - 0.5, y_center + 0.5))
 
         if is_point_inside_polygon(start, poly):
             continue

@@ -150,8 +150,10 @@ class HumanoidAnimationUtils:
         max_rob_goal = max(max(x_trajectory), max(y_trajectory), footsteps.max(), self.goal_position.max())
         # Compute the overall min and max coordinates
         min_coord, max_coord = min(min_rob_goal, min_obs), max(max_rob_goal, max_obs)
-        ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
-        ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
+        # ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
+        # ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
+        ax.set_xlim(min_coord + 1, max_coord - 1)  # Set x-axis limits
+        ax.set_ylim(min_coord + 1, max_coord - 1)  # Set y-axis limits
         ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
 
         # Compute the rectangle representing each footstep
@@ -308,6 +310,11 @@ class HumanoidAnimationUtils:
             for obs_ind, s in enumerate(segments_eta):
                 if obs_ind >= len(c_per_frame):
                     s.set_data([], [])
+                    hp = half_planes[obs_ind]
+                    if hp is not None:
+                        for coll in hp.collections:
+                            coll.remove()
+                    half_planes[obs_ind] = None
                 else:
                     c_x, c_y = c_per_frame[obs_ind]
                     com_x, com_y = barycenter_curr_pos.squeeze()
@@ -335,8 +342,12 @@ class HumanoidAnimationUtils:
 
             sampling_ind = np.where(frame == sampled_frames_ind)[0] if len(sampled_frames_ind)>0 else []
             if path_to_frames_folder is not None and len(sampling_ind) > 0:
+                # fig.tight_layout()
+                # plt.margins(0, 0)
+                plt.xticks(fontsize=20)
+                plt.yticks(fontsize=20)
                 # This frame has to be put in the frames grid, then save it
-                fig.savefig(pdf_frames[sampling_ind[0]], format="pdf")
+                fig.savefig(pdf_frames[sampling_ind[0]], format="pdf", bbox_inches="tight")
 
             return (triangle_patch, barycenter_point, trajectory_line, footsteps_rectangles[:frame],
                     points_c, segments_eta, half_planes, *update.current_inferred_outlines,
