@@ -146,7 +146,7 @@ where $c \in \mathbb{R}^2$ is the point on the obstacle's edge that is closest t
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.75\linewidth]{figures//MPC/example_lcbf.pdf}
+    \includegraphics[width=0.75\linewidth]{figures//MPC/example_lcbf2.pdf}
     \caption{In this figure, the CoM is represented as a green point, and the obstacle is a blue rectangle. The point on the obstacle's boundary that is closest to $\vec{x}$ is the red one, which represents $c$. The red vector connecting $c$ to $\vec{x}$ is $\eta$. The safe region defined by this LDCBF is the gray area. In that half-plane, the humanoid's CoM is free to move without hitting any obstacle.}
     \label{fig:example_LDCBF}
 \end{figure}
@@ -177,7 +177,7 @@ Forcing the control barrier function not to take values below a threshold allows
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.75\linewidth]{figures//MPC/example_ldcbf_variant.pdf}
+    \includegraphics[width=0.75\linewidth]{figures//MPC/example_lcbf_variant2.pdf}
     \caption{This plot shows the same environment of Figure \ref{fig:example_LDCBF}, but here expression (\ref{eq:ldcbf_variant}) with $\delta > 0$ was used as LDCBF. It is clear that the safe zone is not adjacent to the obstacle, and $\vec{x}$ maintains a distance $\delta$ from the obstacle.}
     \label{fig:example_LDCBF_variant}
 \end{figure}
