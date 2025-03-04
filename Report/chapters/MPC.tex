@@ -80,7 +80,7 @@ For instance, if the right foot is the stance, since the body tends to fall on t
     , \qquad \forall k \in \left[ 0,\, N-1\right].
 \end{align}
 
-This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from \todo{from the previous CoM position} $(p_{x_{k-1}},\,p_{y_{k-1}})$.
+This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from the previous position.
 It does so by projecting the displacement of the CoM position on the longitudinal and lateral axes, and ensuring that its absolute value is lower than $l_{\max}$, which is the maximum distance reachable by the swing foot in both directions.
 
 \subsubsection{Maneuverability Constraint}
