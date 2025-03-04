@@ -4,17 +4,18 @@ In our case, the LIP-MPC is used to respond instantaneously to the changes in th
 \begin{align}
     J^* &= \min_{\mathbf{u}_{0:N-1}} \sum_{k=1}^{N} q(\mathbf{x}_k) \\
     \text{s.t.} \quad
-    &\mathbf{x}_k \in \mathcal{X}, \quad k \in [1, N] \notag \\
+    &\mathbf{x}_k \in \mathcal{X}, \quad k \in [0, N] \notag \\
     &\mathbf{u}_k \in \mathcal{U}, \quad k \in [0, N-1] \notag \\
     &\mathbf{x}_{k+1} = \mathbf{A_L} \mathbf{x}_k + \mathbf{B_L} \mathbf{u}_k, \quad k \in [0, N-1] \notag \\
     &\mathbf{c}_l \leq \mathbf{c}(\mathbf{x}_k, \mathbf{u}_k) \leq \mathbf{c}_u, \quad k \in [0, N-1], \notag
     \label{eq:lip-mpc}
 \end{align}
+\todo[inline]{initialize x0}
 where $q(\mathbf{x}_k)$ is the cost function to minimize along the prediction horizon. It drives the humanoid toward the goal by minimizing the distance between its current position and the target position. It is defined as:
 $$
 q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^2 \qquad \forall k \in \left[1, N\right],
 $$
-where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. In order to reduce the computational load, they are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
+where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. They are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, that are kept fixed during the MPC horizon.\\
@@ -79,7 +80,7 @@ For instance, if the right foot is the stance, since the body tends to fall on t
     , \qquad \forall k \in \left[ 0,\, N-1\right].
 \end{align}
 
-This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from $(p_{x_{k-1}},\,p_{y_{k-1}})$.
+This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from \todo{from the previous CoM position} $(p_{x_{k-1}},\,p_{y_{k-1}})$.
 It does so by projecting the displacement of the CoM position on the longitudinal and lateral axes, and ensuring that its absolute value is lower than $l_{\max}$, which is the maximum distance reachable by the swing foot in both directions.
 
 \subsubsection{Maneuverability Constraint}
