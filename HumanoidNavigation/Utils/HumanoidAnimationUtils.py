@@ -95,7 +95,8 @@ class HumanoidAnimationUtils:
         ax.plot(polygon[:, 0], polygon[:, 1], '-', color=color, label=label)
         ax.fill(polygon[:, 0], polygon[:, 1], alpha=0.2, color=color)
 
-    def plot_animation(self, path_to_gif: str = None, path_to_frames_folder: str = None, num_sampled_frames: int = 10):
+    def plot_animation(self, path_to_gif: str = None, path_to_frames_folder: str = None, num_sampled_frames: int = 10,
+                       min_max_coords: tuple[tuple[float, float], tuple[float, float]] = None):
         """
         Shows the animation of the humanoid's motion.
 
@@ -103,6 +104,8 @@ class HumanoidAnimationUtils:
         :param path_to_frames_folder: The path to the folder where some frames sampled from the animation will be saved
         as PDF images. If this is provided, the legend will not be shown.
         :param num_sampled_frames: The number of frames to sample from the animation and put in path_to_frames_folder.
+        :param min_max_coords: The tuple of the minimum and maximum X and Y coordinates to show in the plot. If None,
+         it will be automatically inferred to show all the elements of the animation.
         """
         # Extract the x, y and theta trajectories of the triangle representing the CoM
         x_trajectory = np.zeros(len(self._frames_data))
@@ -140,20 +143,22 @@ class HumanoidAnimationUtils:
 
         # Set up the plot
         fig, ax = plt.subplots(dpi=100)
-        # Compute the min and max coordinates of the obstacles
-        min_obs, max_obs = float('inf'), float('-inf')
-        for o in self.obstacles:
-            vertices = o.points[o.vertices]
-            min_obs, max_obs = min(min_obs, vertices.min()), max(max_obs, vertices.max())
-        # Compute the min and max coordinates of the trajectory and goal
-        min_rob_goal = min(min(x_trajectory), min(y_trajectory), footsteps.min(), self.goal_position.min())
-        max_rob_goal = max(max(x_trajectory), max(y_trajectory), footsteps.max(), self.goal_position.max())
-        # Compute the overall min and max coordinates
-        min_coord, max_coord = min(min_rob_goal, min_obs), max(max_rob_goal, max_obs)
-        # ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
-        # ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
-        ax.set_xlim(min_coord + 1, max_coord - 1)  # Set x-axis limits
-        ax.set_ylim(min_coord + 1, max_coord - 1)  # Set y-axis limits
+        if min_max_coords is None:
+            # Compute the min and max coordinates of the obstacles
+            min_obs, max_obs = float('inf'), float('-inf')
+            for o in self.obstacles:
+                vertices = o.points[o.vertices]
+                min_obs, max_obs = min(min_obs, vertices.min()), max(max_obs, vertices.max())
+            # Compute the min and max coordinates of the trajectory and goal
+            min_rob_goal = min(min(x_trajectory), min(y_trajectory), footsteps.min(), self.goal_position.min())
+            max_rob_goal = max(max(x_trajectory), max(y_trajectory), footsteps.max(), self.goal_position.max())
+            # Compute the overall min and max coordinates
+            min_coord, max_coord = min(min_rob_goal, min_obs), max(max_rob_goal, max_obs)
+            ax.set_xlim(min_coord - 2, max_coord + 2)  # Set x-axis limits
+            ax.set_ylim(min_coord - 2, max_coord + 2)  # Set y-axis limits
+        else:
+            ax.set_xlim(*min_max_coords[0])
+            ax.set_ylim(*min_max_coords[1])
         ax.set_aspect('equal')  # Set equal aspect ratio for accurate proportions
 
         # Compute the rectangle representing each footstep
@@ -340,7 +345,7 @@ class HumanoidAnimationUtils:
             # Display the rectangles
             footsteps_rectangles[frame].set_visible(True)
 
-            sampling_ind = np.where(frame == sampled_frames_ind)[0] if len(sampled_frames_ind)>0 else []
+            sampling_ind = np.where(frame == sampled_frames_ind)[0] if len(sampled_frames_ind) > 0 else []
             if path_to_frames_folder is not None and len(sampling_ind) > 0:
                 # fig.tight_layout()
                 # plt.margins(0, 0)

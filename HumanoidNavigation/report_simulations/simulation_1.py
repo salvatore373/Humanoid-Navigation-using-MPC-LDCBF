@@ -103,7 +103,8 @@ def run_simulation_circles():
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif',
-                        path_to_frames_folder=f'{PLOTS_PATH_CIRCLES}/grid_frames')
+                        path_to_frames_folder=f'{PLOTS_PATH_CIRCLES}/grid_frames',
+                        min_max_coords=((-0.5, 6.25), (-3.25, 3.25)))
 
 
 def run_simulation_circles_custom_ldcbf():
@@ -148,7 +149,8 @@ def run_simulation_circles_custom_ldcbf():
     anim.delta = delta
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES_DELTA}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES_DELTA}/animation.gif',
-                        path_to_frames_folder=f'{PLOTS_PATH_CIRCLES_DELTA}/grid_frames')
+                        path_to_frames_folder=f'{PLOTS_PATH_CIRCLES_DELTA}/grid_frames',
+                        min_max_coords=((-0.5, 6.25), (-3.25, 3.25)))
 
 
 def run_simulation_unk_env():
@@ -206,11 +208,12 @@ def run_simulation_unk_env():
     ], path_to_pdf=f"{PLOTS_PATH_UNK_ENV4}/evolutions", samples_per_second=num_steps_per_second)
 
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_UNK_ENV4}/animation.gif',
-                        path_to_frames_folder=f'{PLOTS_PATH_UNK_ENV4}/grid_frames')
+                        path_to_frames_folder=f'{PLOTS_PATH_UNK_ENV4}/grid_frames',
+                        min_max_coords=((-0.25, 5.5), (-0.25, 5.5)))
 
 
 if __name__ == "__main__":
     # run_simulation_1()
-    # run_simulation_circles()
-    run_simulation_unk_env()
+    run_simulation_circles()
+    # run_simulation_unk_env()
     # run_simulation_circles_custom_ldcbf()
