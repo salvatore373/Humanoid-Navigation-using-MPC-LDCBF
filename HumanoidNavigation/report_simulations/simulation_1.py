@@ -64,6 +64,7 @@ def run_simulation_1():
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_BASE}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_BASE}/grid_frames')
 
+
 def run_simulation_circles():
     """
     It runs the circles simulation described in paragraph 1 of the Simulation chapter, and generates all the
@@ -96,12 +97,14 @@ def run_simulation_circles():
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
-        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
+        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
+        (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
     ], path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions", samples_per_second=num_steps_per_second)
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_CIRCLES}/grid_frames')
+
 
 def run_simulation_circles_custom_ldcbf():
     """
@@ -138,13 +141,15 @@ def run_simulation_circles_custom_ldcbf():
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
-        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
+        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
+        (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
     ], path_to_pdf=f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", samples_per_second=num_steps_per_second)
 
     anim.delta = delta
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES_DELTA}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES_DELTA}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_CIRCLES_DELTA}/grid_frames')
+
 
 def run_simulation_unk_env():
     """
@@ -172,7 +177,7 @@ def run_simulation_unk_env():
 
     # initial_state = (start[0], 0, start[1], 0, 0)
     # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
-    initial_state = (start[0], 0, start[1], 0, np.pi/4)
+    initial_state = (start[0], 0, start[1], 0, np.pi / 4)
 
     # mpc = HumanoidMPC(
     mpc = HumanoidMPCUnknownEnvironment(
@@ -196,11 +201,13 @@ def run_simulation_unk_env():
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
-        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$")
+        (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
+        (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
     ], path_to_pdf=f"{PLOTS_PATH_UNK_ENV4}/evolutions", samples_per_second=num_steps_per_second)
 
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_UNK_ENV4}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_UNK_ENV4}/grid_frames')
+
 
 if __name__ == "__main__":
     # run_simulation_1()
