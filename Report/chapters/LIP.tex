@@ -101,8 +101,6 @@ According to \cite{peng_main_paper}, we can express the CoM acceleration as:
 with $g$ as the magnitude of the gravitational acceleration.
 Based on this expression and the previously defined state $\mathbf{x}$ and input $\mathbf{u}$, we can define the 3D-LIP dynamic model in the continuous time space as:
 
-\todo[inline]{add 0 dimension at subscript}
-
 \begin{equation} \notag
 \mathbf{\dot{x}}(t) = 
 \begin{pmatrix}
@@ -114,13 +112,13 @@ Based on this expression and the previously defined state $\mathbf{x}$ and input
 \end{pmatrix} =
 \mathbf{A_C} \, \mathbf{x}(t) + \mathbf{B_C} \, \mathbf{u}(t) =
 \begin{pmatrix}
-    \mathbf{A_h} & \mathbf{0} & \mathbf{0} \\
-    \mathbf{0} & \mathbf{A_h} & \mathbf{0} \\
-    \mathbf{0} & \mathbf{0} & \mathbf{0} \\
+    \mathbf{A_h} & \mathbf{0}_{2 \times 2} & \mathbf{0}_{2 \times 1} \\
+    \mathbf{0}_{2 \times 2} & \mathbf{A_h} & \mathbf{0}_{2 \times 1} \\
+    \mathbf{0}_{1 \times 2} & \mathbf{0}_{1 \times 2} & 0 \\
 \end{pmatrix} \, \mathbf{x}(t) +
 \begin{pmatrix}
-    \mathbf{B_h} & \mathbf{0} & \mathbf{0} \\
-    \mathbf{0} & \mathbf{B_h} & \mathbf{0} \\
+    \mathbf{B_h} & \mathbf{0}_{2 \times 1} & \mathbf{0}_{2 \times 1} \\
+    \mathbf{0}_{2 \times 1} & \mathbf{B_h} & \mathbf{0}_{2 \times 1} \\
     0 & 0 & 1\\
 \end{pmatrix} \, \mathbf{u}(t),
 \end{equation}
