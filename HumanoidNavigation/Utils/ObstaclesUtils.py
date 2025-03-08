@@ -83,7 +83,7 @@ class ObstaclesUtils:
             projection_param = max(0, min(1, projection_param))
             # Compute the point C corresponding to the projection of AP on AB
             point_c = endpoint1 + projection_param * ep1ToEp2
-            point_c = point_c.reshape(2, 1)
+            # point_c = point_c.reshape(2, 1)
 
             # Compute the length of the segment from X to C
             dist = np.linalg.norm(point_c - x)
@@ -106,7 +106,7 @@ class ObstaclesUtils:
         if ObstaclesUtils.is_point_inside_polygon(x, polygon):
             normal_vector *= -1
 
-        return closest_point, normal_vector
+        return closest_point.reshape(2, 1), normal_vector
 
     @staticmethod
     def transform_obstacle_coords(obstacle: ConvexHull, transformation_matrix: np.ndarray) \
