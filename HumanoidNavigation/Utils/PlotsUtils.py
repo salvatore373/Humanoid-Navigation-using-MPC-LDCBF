@@ -39,3 +39,24 @@ class PlotUtils:
             plt.tight_layout()
             plt.savefig(f'{path_to_pdf}/evolution_{i}.pdf')
             plt.show()
+
+
+    @staticmethod
+    def plot_com_and_zmp(com_x, com_y, zmp_x, zmp_y):
+        plt.figure()
+        fig, ax = plt.subplots(figsize=(8, 4))
+
+        # Create a line graph
+        ax.plot(com_x, com_y, label='CoM')
+        ax.plot(zmp_x, zmp_y, label='ZMP')
+
+        # Adding titles and labels
+        ax.set_title('CoM and ZMP (foot stance)')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.grid(True)
+        ax.legend()
+
+        # Show the plot
+        plt.tight_layout()
+        plt.show()
