@@ -233,9 +233,9 @@ class HumanoidMPC:
             self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(conf["L_MAX"], conf["L_MAX"])))
             self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-conf["L_MAX"], -conf["L_MAX"])))
 
-        for k in range(1, self.N_horizon):
+        for k in range(self.N_horizon):
             # maneuverability constraint
-            velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k], self.X_mpc_theta[k],
+            velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k+1], self.X_mpc_theta[k+1],
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 
@@ -498,8 +498,7 @@ def main():
     start, goal = (0, 3), (6, -3)
 
     # _, _, obstacles = Scenario.load_scenario(Scenario.CIRCLE_OBSTACLES, start=(start[0], start[1]), goal=goal)
-    obstacles = [ConvexHull(np.array([
-        [0.5 - 4, 0], [2.5 - 4, 0], [2.5 - 4, -2], [0.5 - 4, -2]]))]
+    obstacles = [ConvexHull(np.array([[0.5 + 0, 0], [2.5 + 0, 0], [2.5 + 0, -2], [0.5 + 0, -2]]))]
 
     # start, goal, obstacles = Scenario.load_scenario(
     #     Scenario.CROWDED,
@@ -513,7 +512,6 @@ def main():
     initial_state = (start[0], 0, start[1], 0, 0)
     # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
 
-    # mpc = HumanoidMPC(
     mpc = HumanoidMPC(
         N_horizon=3,
         N_mpc_timesteps=300,
