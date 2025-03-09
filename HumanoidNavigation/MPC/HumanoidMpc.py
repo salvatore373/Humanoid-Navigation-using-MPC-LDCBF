@@ -235,7 +235,8 @@ class HumanoidMPC:
 
         for k in range(self.N_horizon):
             # maneuverability constraint
-            velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k+1], self.X_mpc_theta[k+1],
+            velocity_term, turning_term = self._compute_maneuverability_terms(self.X_mpc[:, k + 1],
+                                                                              self.X_mpc_theta[k + 1],
                                                                               self.U_mpc_omega[k])
             self.optim_prob.subject_to(velocity_term <= turning_term)
 

@@ -1,93 +1,13 @@
 \section{3D-LIP Model with Heading Angles}\label{sec:lip}
 If the full dynamic model of the humanoid is used to simulate its motion, it becomes computationally impossible to perform joint path and gait planning, due to its high dimensionality and non-linearity. Therefore, a simplifying model must be used. For this scope Peng et al. introduced the ``3D-LIP Model with Heading Angle'', which describes the discrete dynamics of the Center of Mass (CoM) similarly to the one of an inverted pendulum in three dimensions.
 
-\subsection{Local Robot Reference Frame}
+\subsection{Model Definition}
 The state $\mathbf{x}$ and the input $\mathbf{u}$ of the dynamic model are defined as:
 $$ \mathbf{x} := \left( p_x,\; v_x,\; p_y,\; v_y,\; \theta \right)^T \in \mathcal{X} \subset \mathbb{R}^5 , $$
 $$ \mathbf{u} := \left( f_x,\; f_y,\; \omega \right)^T \in \mathcal{U} \subset \mathbb{R}^3 , $$
 
-where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position, $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $\mathcal{X}$ is the set of the allowed states, while $\mathcal{U}$ is the set of the admissible inputs.\\
-Both the state and the input are expressed in the robot's local coordinates, which are time-related. This means that $(p_{x_k}, p_{y_k})$ represents the position of the CoM at simulation time step $k$ in the reference frame ($RF_k$) that originates from $(p_{x_{k-1}}, p_{y_{k-1}})$, and is rotated by an angle $\theta_k$ around the $z$-axis with respect to $RF_{k-1}$. The relation between the vectors in different reference frames is represented in Figure \ref{fig:loc_to_glob_tfm}.
-The reference frame at time step 0 is considered the ``inertial'' or ``global'' frame. We refer to the global frame and the robot's body frame (in general and not related to a specific time step) as $RF_W$ and $RF_B$. A transformation between the inertial and moving frames is necessary to obtain the position of the humanoid in the global map and to deal with obstacles. These transformations are defined by the following matrix:
-\begin{align}
-    \mathbf{T}_k = 
-    \begin{pmatrix}
-        \mathbf{R}_k & \mathbf{t} \\[1ex]
-        \ \mathbf{0} & 1
-    \end{pmatrix}
-    =
-    \begin{pmatrix}
-        \cos\theta_{k,\, \text{W}} & -\sin\theta_{k,\, \text{W}} & p_{x,\,k-1,\,\text{W}} \\
-        \sin\theta_{k,\, \text{W}} & \cos\theta_{k,\, \text{W}} &  p_{y,\,k-1,\,\text{W}} \\
-        0 & 0 & 1
-    \end{pmatrix},
-\end{align}
-Starting from this, we transform the local vectors to the \textit{global reference frame} as follows:
-\begin{align}
-    \begin{pmatrix} 
-        f_{x,\,k,\,\text{W} } \\
-        f_{y,\,k,\,\text{W}} \\ 
-        1 
-    \end{pmatrix} = \; 
-    \mathbf{T}_k \;
-    \begin{pmatrix}
-        f_{x,\,k,\,\text{B} } \\
-         f_{y,\,k,\,\text{B}} \\
-          1
-    \end{pmatrix},\qquad \qquad
-    \begin{pmatrix}
-        p_{x,\,k,\,\text{W} } \\
-        p_{y,\,k,\,\text{W}} \\[1ex]
-        1
-    \end{pmatrix}
-    = \mathbf{T}_k \;
-    \begin{pmatrix}
-        p_{x,\,k,\,\text{B} } \\
-        p_{y,\,k,\,\text{B}} \\[1ex]
-        1
-    \end{pmatrix},
-\end{align}
+where $(p_x, v_x)$ are the CoM position and translational velocity along the $x$-axis, $f_x$ is the $x$-coordinate of the stance foot position, $\theta$ and $\omega$ are the humanoid's orientation and turning rate, respectively. $\mathcal{X}$ is the set of the allowed states, while $\mathcal{U}$ is the set of the admissible inputs.
 
-\begin{align}
-    \begin{pmatrix}
-        v_{x,\,k,\,\text{W} } \\[1ex]
-        v_{y,\,k,\,\text{W}}
-    \end{pmatrix}
-    = \mathbf{R}_k 
-    \begin{pmatrix}
-        v_{x,\,k,\,\text{B} } \\[1ex]
-        v_{y,\,k,\,\text{B}}
-    \end{pmatrix}
-    =
-    \begin{pmatrix}
-        \cos\theta_{k,\, \text{W}} & -\sin\theta_{k,\, \text{W}} \\[1ex]
-        \sin\theta_{k,\, \text{W}} & \cos\theta_{k,\, \text{W}}
-    \end{pmatrix}
-    \begin{pmatrix}
-        v_{x,\,k,\,\text{B} } \\[1ex]
-        v_{y,\,k,\,\text{B}}
-    \end{pmatrix},
-\end{align}
-The positional vectors are roto-translated using a homogeneous matrix $ \mathbf{T}_k \in \mathbb{R}^{3\times3}$, while the velocity vectors are only rotated around the z-axis (indeed, a translation would change their magnitude) using a rotation matrix $\mathbf{R}_k \in \mathbb{R}^{2\times2}$.\\
-The global robot's orientation is obtained by summing the latest local variation to the previous global angle, and the angular velocity does not need to be transformed because it is along the $z$-axis, which is fixed. Formally, they are defined as:
-\begin{equation}
-    \theta_{k+1, \text{W}} \;=\; \theta_{k, \text{W}} \,+\, \theta_{k+1, \text{B}},
-    \qquad
-    \omega_{\text{W}} \;=\; \omega_{\text{B}}.
-\end{equation}
-
-An example of change of coordinates between the global and the local frame is illustrated in Figure \ref{fig:loc_to_glob_tfm}.
-
-For the ease of formulation and to reflect the original work by Peng et al., we specify the MPC constraints directly on the state and input vectors (defined in the body frame). More details will be provided in \ref{sec:mpc}.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.75\linewidth]{figures/LIP/loc_to_glob_tfm3.pdf}
-    \caption{An example of the evolution of the 3D-LIP model's state, highlighting the relationship between local and global coordinates. The initial state is $\mathbf{0}$ and the RF $(x_0,\, y_0)$ is the inertial frame. The local RF translates and rotates with the simulation time $k$: the position of $RF_2$ $(x_2,\, y_2)$ has its origin in $p_{1, \text{W}}$, while its orientation is given by $\theta_{2, W}$. The pose of the successive frames is computed analogously.}
-    \label{fig:loc_to_glob_tfm}
-\end{figure}
-
-\subsection{Model Definition}
 The Linear Inverted Pendulum formulation assumes that, the height $H$ of the CoM is constant during the motion.
 According to \cite{peng_main_paper}, we can express the CoM acceleration as:
 \begin{align}

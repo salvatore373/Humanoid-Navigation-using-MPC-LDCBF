@@ -14,18 +14,17 @@ where $q(\mathbf{x}_k)$ is the cost function to minimize along the prediction ho
 $$
 q(\mathbf{x}_k) = \left( p_{x_k} - g_x \right)^2 + \left( p_{y_k} - g_y \right)^2 \qquad \forall k \in \left[1, N\right],
 $$
-where the goal position $(g_x, g_y)$ is expressed in the humanoid's local RF. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. They are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
-\\Without loss of generalities, we set the initial state (i.e. the state at time step 0) to $\mathbf{0}$. Neverthless, our implementation supports any initial pose because a change of coordinates can always map it to the null state.
+where $(g_x, g_y)$ is the goal position. The LIP dynamics is included in the MPC definition to specify how the future states are predicted. Whereas, all the constraints that the optimization problem is subject to are captured by $\mathbf{c}(\mathbf{x}_k, \mathbf{u}_k)$. They are all expressed linearly, and they include the walking velocities, leg reachability, and maneuverability constraints, and the linear control barrier function, which will be described in details in the following sections.
 
 \subsection{Heading Angle Preprocessing}
 Many of the constraints imposed in the MPC make use of $\theta$ in a non-linear way: for example, the kinematic constraints often show sinusoidal terms having $\theta$ as argument. This hinders real-time computation. The solution proposed by Peng et al. in \cite{peng_main_paper} consists in using precomputed values for $\theta$ and $\omega$, that are kept fixed during the MPC horizon.\\
 This means that the values of $\theta$ and $\omega$ are not determined by the optimization of the previously defined cost function performed by the MPC, but their values throughout the prediction horizon are computed at the beginning of each time step. Since Peng et al. did not specify how $\theta$ and $\omega$ were computed, we devised our own approach. We aim to rotate the robot to align its sagittal axis with the goal as soon as possible, and it is achieved with the following formulae:
 \begin{gather}
 \omega_k = \max \left\{ \min \left\{ \operatorname{\textbf{atan2}}(g_y - p_y,\, g_x - p_x) - \theta_k,\, \; \omega_{max} \right\} ,\, \; \omega_{min} \right\} \qquad \forall k \in \left[0, N-1 \right], \notag \\[1ex]
-\theta_0 = 0, \qquad \theta_{k+1} = \theta_{k} + \omega_k\;T \qquad \forall k \in \left[1, N\right], \notag
+\theta_0 = \theta, \qquad \theta_{k+1} = \theta_{k} + \omega_k\;T \qquad \forall k \in \left[0, N\right], \notag
 \end{gather}
 
-where $p_x, p_y$ represent the position of the humanoid at the start of the simulation time step, $T$ is the robot's sampling time, and the goal position $(g_x, \ g_y)$ is expressed in local coordinates. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate, to consider due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. The initial value of $\theta$ is set to zero, which is the orientation of the robot's sagittal axis in the local frame at the beginning of the new timestep. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
+where and $\theta$ represent the position and orientation of the humanoid at the start of the simulation time step, and $T$ is the robot's sampling time. $\omega_{min}$ and $\omega_{max}$ are the bounds on the robot turning rate, to consider due to the actuation limits and to avoid sharp turns, which would threaten the stability of the humanoid. With the specified formulae, $\theta$ rotates with a velocity $\omega$ until the robot points to the goal.
 
 \subsection{Kinematic Constraints}
 The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, the authors of the paper decided to enforce the walking velocities, leg reachability, and maneuverability constraints as follows.
@@ -54,6 +53,7 @@ The stepping positions provided by the MPC solution must comply with specific ki
 \end{align}
 
 This constraint limits the longitudinal and the lateral velocities: the former is obtained by multiplying the velocities vector by $\left(\cos{\theta_k} \sin{\theta_k}\right)$, and the latter by multiplying the same vector by $\left(-\sin{\theta_k} \cos{\theta_k}\right)$.
+We can also think about this multiplication as the transformation of the velocities from the global to the robot's local reference frame (which is aligned with the current orientation).
 The term $s_v$ defines which foot is the stance: it is $1$ for the right foot, and $-1$ otherwise. This is used to limit the lateral velocity in such a way that, at the end of each step, the stance foot is on the opposite side, but the humanoid does not lose balance.
 For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
 
@@ -69,8 +69,8 @@ For instance, if the right foot is the stance, since the body tends to fall on t
         -\sin\theta_{k} & \cos\theta_{k}
     \end{pmatrix}
     \begin{pmatrix}
-        p_{x_{k}} \\[1ex]
-        p_{y_{k}}
+        p_{x_{k+1}} - p_{x_{k}} \\[1ex]
+        p_{y_{k+1}} - p_{y_{k}}
     \end{pmatrix}
     \le
     \begin{pmatrix}
@@ -86,17 +86,17 @@ It does so by projecting the displacement of the CoM position on the longitudina
 \subsubsection{Maneuverability Constraint}
 \[
 \begin{pmatrix}
-\cos \theta_k & \sin \theta_k
+\cos \theta_{k+1} & \sin \theta_{k+1}
 \end{pmatrix}
 \begin{pmatrix}
-v_{x_k} \\
-v_{y_k}
+v_{x_{k+1}} \\
+v_{y_{k+1}}
 \end{pmatrix}
 \leq v_{x_{\max}} - \frac{\alpha}{\pi} |\omega_k|
 \qquad \forall k \in \left[0,\, N-1 \right].
 \]
 
-This constraint is meant to reduce the humanoid's forward velocity while it is turning. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vector projection on the left side) is lower than its bound $v_{x_{\max}}$ diminished by a quantity that depends on the turning rate. $\alpha$ is one of the simulation hyperparameters.
+This constraint is meant to reduce the humanoid's forward velocity while it is turning. It ensures that the component of the CoM velocity in the robot's heading direction (given by the vector projection on the left side) in the next time step will be lower than its bound $v_{x_{\max}}$ diminished by a quantity that depends on the turning rate commanded at the current time step. $\alpha$ is one of the simulation hyperparameters.
 
 \subsection{Control Barrier Functions}
 
