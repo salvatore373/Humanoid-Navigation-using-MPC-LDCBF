@@ -15,7 +15,7 @@ The hyperparameters used in the following simulations are summarized in Table \r
              CoM height & 1 \si{\meter} \\
              Step duration ($T$) & 0.4 \si{\second} \\
              $l_{\max}$ & $0.1 \sqrt{3} \;\si{\meter}$ \\
-             $\left( v_{x_{min}},\, v_{y_{min}} \right)$ & $\left( -0.1,\, 0.1 \right)$ \si{\meter\per\second}\\
+             $\left( v_{x_{min}},\, v_{y_{min}} \right)$ & $\left( -0.1,\, -0.1 \right)$ \si{\meter\per\second}\\
              $\left( v_{x_{max}},\, v_{y_{max}} \right)$ & $\left( 0.8,\, 0.4 \right)$ \si{\meter\per\second}\\
              \hline
         \end{tabular}
@@ -61,6 +61,7 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
     \label{fig:sim1_evol}
 \end{figure}
 
+\newpage
 \begin{figure}[H]
     \centering
     % First row
@@ -68,17 +69,17 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_0.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_1.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_2.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_3.pdf}
@@ -88,7 +89,7 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_4.pdf}
     \end{subfigure}
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_5.pdf}
@@ -98,7 +99,7 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_6.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_7.pdf}
@@ -108,15 +109,16 @@ The humanoid can, then, realign itself (producing a minimal oscillation in the $
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_8.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles/frame_9.pdf}
     \end{subfigure}
-    \caption[short]{Simulation with LDBCF ($\delta$ = 0) circular obstacles}
+    \caption[short]{Simulation with circular obstacles.}
     %\caption[short]{This sequence of frames illustrates the robot's trajectory to the goal. Obstacles are represented with orange shapes. The humanoid is represented by an isosceles triangle whose sagittal axis is aligned with the robot's. Green rectangles mark right footsteps, while blue rectangles mark left ones. Each frame shows the vectors $\eta$ and $c$ along with the safe area associated with each obstacle. The darkest region represents the intersection of these semi-planes, which is the overall safe area.}
     \label{fig:sim1_frames}
 \end{figure}
+\thispagestyle{empty}
 
 \subsubsection{Simulation employing our LDCBF}
 From an accurate analysis of the previous simulation's frames, it can be observed that, despite the robot accomplishing the mission of reaching the goal while satisfying all the constraints, when it gets very close to the obstacles, its feet overlap with the obstacles. This occurs due to the LDCBF defined by Peng et al., which only ensures that the CoM never collides with the obstacles. However, this strategy produces a path that is impractical for the full-body motion of the humanoid (as already pointed out in \ref{subsec:ldcbf_variant}). Therefore, we proposed our variant of their LDCBF, and in Figures \ref{fig:sim1_delta_evol} and \ref{fig:sim1_delta_frames} we show the results of the simulation that constraints the MPC with the LDCBF defined at \ref{eq:ldcbf_variant}, setting $\delta=0.3$.
@@ -153,6 +155,7 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
     \label{fig:sim1_delta_evol}
 \end{figure}
 
+\newpage
 \begin{figure}[H]
     \centering
     % First row
@@ -160,7 +163,7 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_0.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_1.pdf}
@@ -170,7 +173,7 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_2.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_3.pdf}
@@ -180,7 +183,7 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_4.pdf}
     \end{subfigure}
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_5.pdf}
@@ -190,7 +193,7 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_6.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_7.pdf}
@@ -200,13 +203,14 @@ The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the huma
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_8.pdf}
     \end{subfigure}%
-    \hspace{1em}
+    \hfil
     \begin{subfigure}{0.35\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/Simulations/sim1circles_delta/frame_9.pdf}
     \end{subfigure}
     
-    \caption[short]{Simulation with LDBCF (custom $\delta$) and circular obstacles}
+    \caption[short]{Simulation with circular obstacles employing our LDCBF (with $\delta$ = 0.3).}
     %\caption[short]{This sequence of frames illustrates the robot's trajectory to the goal for the simulation in the base environment employing our LDCBF. With this modification, the darkest region (i.e., the overall safe area) never touches the obstacles boundaries, but is always at a user-defined distance $\delta$.}
     \label{fig:sim1_delta_frames}
 \end{figure}
+\thispagestyle{empty}

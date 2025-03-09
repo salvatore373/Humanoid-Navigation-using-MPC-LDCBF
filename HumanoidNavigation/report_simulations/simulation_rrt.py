@@ -23,7 +23,7 @@ def full_simulation():
 
     obstacles = [ConvexHull(np.array([[2, -3], [2, 3], [3, -3], [3, 3]]))]
 
-    run_simulation_no_rrt(start, goal_pos, sampling_time, num_steps_per_second, obstacles)
+    # run_simulation_no_rrt(start, goal_pos, sampling_time, num_steps_per_second, obstacles)
     run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obstacles)
 
 
