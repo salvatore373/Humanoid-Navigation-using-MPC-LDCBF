@@ -32,6 +32,9 @@ class PlotUtils:
             # Plot each row as a separate signal.
             for j in range(matrix.shape[0]):
                 ax.plot(steps, matrix[j, :], label=None if len(tpl) == 2 else tpl[2][j])
+            # Plot only an interval of the whole simulation, if that interval is provided
+            if len(tpl) == 4:
+                ax.set_xlim(tpl[3][0], tpl[3][1])
             ax.set_ylabel(ylabel_str)
             ax.set_xlabel("Simulation Step k" if samples_per_second is None else "Time (s)")
             ax.legend()
