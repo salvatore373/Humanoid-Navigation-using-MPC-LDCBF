@@ -42,8 +42,8 @@ class PlotUtils:
 
 
     @staticmethod
-    def plot_com_and_zmp(com_x, com_y, zmp_x, zmp_y):
-        plt.figure()
+    def plot_com_and_zmp(path_to_pdf, com_x, com_y, zmp_x, zmp_y):
+        # plt.figure()
         fig, ax = plt.subplots(figsize=(8, 4))
 
         # Create a line graph
@@ -59,4 +59,5 @@ class PlotUtils:
 
         # Show the plot
         plt.tight_layout()
+        plt.savefig(f'{path_to_pdf}/evolution_5.pdf')
         plt.show()

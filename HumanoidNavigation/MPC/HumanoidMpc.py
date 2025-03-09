@@ -498,7 +498,8 @@ def main():
     start, goal = (0, 3), (6, -3)
 
     # _, _, obstacles = Scenario.load_scenario(Scenario.CIRCLE_OBSTACLES, start=(start[0], start[1]), goal=goal)
-    obstacles = [ConvexHull(np.array([[0.5 + 4, 0], [2.5 + 4, 0], [2.5 + 4, -2], [0.5 + 4, -2]]))]
+    obstacles = [ConvexHull(np.array([
+        [0.5 - 4, 0], [2.5 - 4, 0], [2.5 - 4, -2], [0.5 - 4, -2]]))]
 
     # start, goal, obstacles = Scenario.load_scenario(
     #     Scenario.CROWDED,

@@ -7,7 +7,7 @@ GRAVITY_CONST : 9.81
 COM_HEIGHT : 1
 ALPHA : 1.44  # (1.44 or 3.6)
 L_MAX : 0.17320508075  # 0.1*sqrt(3)
-V_MIN : [-0.1, 0.1]
+V_MIN : [-0.1, -0.1]
 V_MAX : [0.8, 0.4]
 
 # ============| SIMULATION |============ 

@@ -288,9 +288,10 @@ class HumanoidAnimationUtils:
             for obs in curr_inferred_obstacles:
                 # ax = fig.gca()
                 # Transform the obstacle’s points from its local frame to global coordinates.
-                local_points = np.array(obs.points)  # shape: (N,2)
-                global_points = (rotation_matrix[frame] @ local_points.T).T + np.array(
-                    [x_trajectory[frame], y_trajectory[frame]])
+                # local_points = np.array(obs.points)  # shape: (N,2)
+                # global_points = (rotation_matrix[frame] @ local_points.T).T + np.array(
+                #     [x_trajectory[frame], y_trajectory[frame]])
+                global_points = np.array(obs.points)
                 # Plot the outline
                 outline, = ax.plot(global_points[:, 0], global_points[:, 1], '-', color='blue')
                 # Plot the filled polygon (ax.fill returns a list; take its first element)
@@ -300,10 +301,11 @@ class HumanoidAnimationUtils:
 
             curr_lidar_reading = np.array(lidar_readings_per_frame[frame]).T
             if len(curr_lidar_reading) > 0:
-                corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
-                corrected_lidar_reading = corrected_lidar_reading + np.array(
-                    [[x_trajectory[frame], y_trajectory[frame]]]).T
-                lidar_readings.set_offsets(corrected_lidar_reading.T)
+                # corrected_lidar_reading = rotation_matrix[frame] @ curr_lidar_reading
+                # corrected_lidar_reading = corrected_lidar_reading + np.array(
+                #     [[x_trajectory[frame], y_trajectory[frame]]]).T
+                # lidar_readings.set_offsets(corrected_lidar_reading.T)
+                lidar_readings.set_offsets(curr_lidar_reading.T)
 
             # Update the position of points c on the obstacles' edges
             # points_c.set_offsets(point_c_per_frame[frame, :])
