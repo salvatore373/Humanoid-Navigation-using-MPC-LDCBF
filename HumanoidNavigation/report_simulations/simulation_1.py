@@ -114,7 +114,7 @@ def run_simulation_circles():
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (np.concatenate((X_pred_glob[[0], :-1], U_pred_glob[[0]]), axis=0),
-         "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ],)  # (5, 10)),
+         "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (2.5, 9), (0.5, 3.5)),
     ], path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
@@ -170,9 +170,8 @@ def run_simulation_circles_custom_ldcbf():
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
-        (np.concatenate([np.array(X_pred_glob[[0, 2], 10:20]), np.array(U_pred_glob[[0, 1], 9:19])]),
-         "CoM and ZMP (foot stance)", ['CoM X', 'CoM Y', 'ZMP X', 'ZMP Y']),
-        # (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
+        (np.concatenate((X_pred_glob[[0], :-1], U_pred_glob[[0]]), axis=0),
+         "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (2.5, 9), (0.5, 3.5)),
     ], path_to_pdf=f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
@@ -270,6 +269,6 @@ def run_simulation_unk_env():
 
 if __name__ == "__main__":
     # run_simulation_1()
-    run_simulation_circles()
+    # run_simulation_circles()
     # run_simulation_unk_env()
-    # run_simulation_circles_custom_ldcbf()
+    run_simulation_circles_custom_ldcbf()
