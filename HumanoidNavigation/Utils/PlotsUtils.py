@@ -10,6 +10,14 @@ class PlotUtils:
     """
 
     @staticmethod
+    def compute_local_velocities(theta_evol, global_velocities):
+        rotation_matrix = np.array([
+            [np.cos(theta_evol), np.sin(theta_evol)],
+            [-np.sin(theta_evol), np.cos(theta_evol)]
+        ]).squeeze().transpose(2, 0, 1)
+        return np.einsum('ijk,ik->ji', rotation_matrix, global_velocities.T)
+
+    @staticmethod
     def plot_signals(data_tuples: list[tuple], path_to_pdf: str, samples_per_second: float = None):
         """
         Prints a vertical stack of plots. The i-th plot contains the data at position i in data_tuples.
@@ -35,6 +43,7 @@ class PlotUtils:
             # Plot only an interval of the whole simulation, if that interval is provided
             if len(tpl) == 4:
                 ax.set_xlim(tpl[3][0], tpl[3][1])
+                ax.set_ylim(1, 3.5)
             ax.set_ylabel(ylabel_str)
             ax.set_xlabel("Simulation Step k" if samples_per_second is None else "Time (s)")
             ax.legend()
@@ -42,7 +51,6 @@ class PlotUtils:
             plt.tight_layout()
             plt.savefig(f'{path_to_pdf}/evolution_{i}.pdf')
             plt.show()
-
 
     @staticmethod
     def plot_com_and_zmp(path_to_pdf, com_x, com_y, zmp_x, zmp_y):

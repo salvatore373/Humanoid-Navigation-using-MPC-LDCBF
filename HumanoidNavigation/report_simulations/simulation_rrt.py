@@ -46,9 +46,13 @@ def run_simulation_no_rrt(start, goal_pos, sampling_time, num_steps_per_second, 
                                                         make_fast_plot=True, plot_animation=False,
                                                         fill_animator=True)
 
+    # Compute the longitudinal and lateral velocities
+    local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
+
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
-        (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
+        # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
+        (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
@@ -80,9 +84,13 @@ def run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obs
                                                         plot_animation=False, fill_animator=True,
                                                         path_to_rrt_pdf=f'{PLOTS_PATH_RRT}/rrt_res.pdf')
 
+    # Compute the longitudinal and lateral velocities
+    local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
+
     PlotUtils.plot_signals([
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
-        (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
+        # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
+        (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
