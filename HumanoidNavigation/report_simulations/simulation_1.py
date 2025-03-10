@@ -53,7 +53,7 @@ def run_simulation_1():
                                                         make_fast_plot=True,
                                                         plot_animation=False, fill_animator=True)
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
@@ -61,7 +61,8 @@ def run_simulation_1():
         (np.concatenate([np.array(X_pred_glob[[0, 2], 10:20]), np.array(U_pred_glob[[0, 1], 9:19])]),
          "CoM and ZMP (foot stance)", ['CoM X', 'CoM Y', 'ZMP X', 'ZMP Y']),
         # (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
-    ], path_to_pdf=f"{PLOTS_PATH_BASE}/evolutions", samples_per_second=num_steps_per_second)
+    ]
+    PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_BASE}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
     com_x = np.array(X_pred_glob[[0], 10:20]).squeeze()
@@ -69,7 +70,7 @@ def run_simulation_1():
     zmp_x = np.array(U_pred_glob[[0], 9:19]).squeeze()
     zmp_y = np.array(U_pred_glob[[1], 9:19]).squeeze()
 
-    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_BASE}/evolutions", com_x, com_y, zmp_x, zmp_y)
+    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_BASE}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_BASE}/animation.gif',
@@ -107,7 +108,7 @@ def run_simulation_circles():
     # Compute the longitudinal and lateral velocities
     local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
@@ -115,7 +116,8 @@ def run_simulation_circles():
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (np.concatenate((X_pred_glob[[0], :-1], U_pred_glob[[0]]), axis=0),
          "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (2.5, 9), (0.5, 3.5)),
-    ], path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions", samples_per_second=num_steps_per_second)
+    ]
+    PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
     com_x = np.array(X_pred_glob[[0], 10:20]).squeeze()
@@ -123,7 +125,7 @@ def run_simulation_circles():
     zmp_x = np.array(U_pred_glob[[0], 9:19]).squeeze()
     zmp_y = np.array(U_pred_glob[[1], 9:19]).squeeze()
 
-    # PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES}/evolutions", com_x, com_y, zmp_x, zmp_y)
+    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_CIRCLES}/grid_frames',
@@ -164,7 +166,7 @@ def run_simulation_circles_custom_ldcbf():
     # Compute the longitudinal and lateral velocities
     local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
@@ -172,7 +174,8 @@ def run_simulation_circles_custom_ldcbf():
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (np.concatenate((X_pred_glob[[0], :-1], U_pred_glob[[0]]), axis=0),
          "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (2.5, 9), (0.5, 3.5)),
-    ], path_to_pdf=f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", samples_per_second=num_steps_per_second)
+    ]
+    PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
     com_x = np.array(X_pred_glob[[0], 10:20]).squeeze()
@@ -180,7 +183,7 @@ def run_simulation_circles_custom_ldcbf():
     zmp_x = np.array(U_pred_glob[[0], 9:19]).squeeze()
     zmp_y = np.array(U_pred_glob[[1], 9:19]).squeeze()
 
-    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", com_x, com_y, zmp_x, zmp_y)
+    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
     anim.delta = delta
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_CIRCLES_DELTA}/animation.gif')
@@ -214,11 +217,8 @@ def run_simulation_unk_env():
         range_y=(-1, 6)
     )
 
-    # initial_state = (start[0], 0, start[1], 0, 0)
-    # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
     initial_state = (start[0], 0, start[1], 0, np.pi / 4)
 
-    # mpc = HumanoidMPC(
     mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,
         N_mpc_timesteps=300,
@@ -242,17 +242,18 @@ def run_simulation_unk_env():
     # Compute the longitudinal and lateral velocities
     local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
-        # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
-        (np.concatenate([np.array(X_pred_glob[[0, 2], min_range:max_range]),
-                         np.array(U_pred_glob[[0, 1], min_range - 1:max_range - 1])]),
-         "CoM and ZMP (foot stance)", ['CoM X', 'CoM Y', 'ZMP X', 'ZMP Y']),
-        # (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
-    ], path_to_pdf=f"{PLOTS_PATH_UNK_ENV4}/evolutions", samples_per_second=num_steps_per_second)
+        # (np.concatenate([np.array(X_pred_glob[[0, 2], min_range:max_range]),
+        #                  np.array(U_pred_glob[[0, 1], min_range - 1:max_range - 1])]),
+        #  "CoM and ZMP (foot stance)", ['CoM X', 'CoM Y', 'ZMP X', 'ZMP Y']),
+        (np.concatenate((X_pred_glob[[0], :-1], U_pred_glob[[0]]), axis=0),
+         "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X'], (2.5, 9), (0.5, 3.5)),
+    ]
+    PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_UNK_ENV4}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinate
     com_x = np.array(X_pred_glob[[0], min_range:max_range]).squeeze()
@@ -260,7 +261,7 @@ def run_simulation_unk_env():
     zmp_x = np.array(U_pred_glob[[0], min_range - 1:max_range - 1]).squeeze()
     zmp_y = np.array(U_pred_glob[[1], min_range - 1:max_range - 1]).squeeze()
 
-    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_UNK_ENV4}/evolutions", com_x, com_y, zmp_x, zmp_y)
+    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_UNK_ENV4}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_UNK_ENV4}/animation.gif',
                         path_to_frames_folder=f'{PLOTS_PATH_UNK_ENV4}/grid_frames',
@@ -270,5 +271,5 @@ def run_simulation_unk_env():
 if __name__ == "__main__":
     # run_simulation_1()
     # run_simulation_circles()
-    # run_simulation_unk_env()
-    run_simulation_circles_custom_ldcbf()
+    run_simulation_unk_env()
+    # run_simulation_circles_custom_ldcbf()

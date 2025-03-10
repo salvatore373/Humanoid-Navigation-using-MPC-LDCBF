@@ -94,6 +94,11 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_3.pdf}
     \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_1.pdf}
+    \end{subfigure}
     \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation with RRT*-defined subgoals. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the trajectory of the ZMP and the CoM along the x-axis. The bottom left and right plots show the theta and omega evolution, respectively.}
     \label{fig:sim_rrt_evol}
 \end{figure}
@@ -161,6 +166,40 @@ of the humanoid in a different environment: its flexibility in handling only a s
 navigate in challenging crowded environments easily; moreover, the robot relies only on its perception, allowing
 for a safe navigation in real-world scenarios.
 
+Although the evolution of the variables $\theta$ and
+$\omega$ is clearly visible, it is worth providing a brief commentary, especially given the densely packed environment.
+Their trajectories exhibit distinct peaks, which can be directly linked to the robot's path; in fact, the first and
+second main peaks correspond to the robot encountering obstacles. As the robot detects obstacles at different points
+along its path, it must execute rapid lateral movements to avoid collisions while simultaneously minimizing the
+error relative to its goal.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_0.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_4.pdf}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_2.pdf}
+    \end{subfigure}
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_3.pdf}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_1.pdf}
+    \end{subfigure}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents how the CoM evolves along the x- and y-axis. The middle left and right plots show the theta and omega evolution, respectively. The bottom plot represents the translational velocities along the x- and y-axis.}
+    \label{fig:unk_env_evol}
+\end{figure}
 
 \newpage
 \begin{figure}[H]
@@ -221,30 +260,3 @@ for a safe navigation in real-world scenarios.
 \end{figure}
 \thispagestyle{empty}
 
-\begin{figure}[H]
-    \centering
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_0.pdf}
-    \end{subfigure}
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_4.pdf}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_2.pdf}
-    \end{subfigure}
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_3.pdf}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_1.pdf}
-    \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents how the CoM evolves along the x- and y-axis. The middle left and right plots show the theta and omega evolution, respectively. The bottom plot represents the translational velocities along the x- and y-axis.}
-    \label{fig:unk_env_evol}
-\end{figure}
