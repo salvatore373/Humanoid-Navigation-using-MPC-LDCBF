@@ -262,5 +262,5 @@ def run_simulation_unk_env():
 if __name__ == "__main__":
     # run_simulation_1()
     # run_simulation_circles()
-    run_simulation_unk_env()
-    # run_simulation_circles_custom_ldcbf()
+    # run_simulation_unk_env()
+    run_simulation_circles_custom_ldcbf()
