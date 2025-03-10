@@ -13,13 +13,13 @@ Figures \ref{fig:sim_rrt_env-red-star} and \ref{fig:sim_rrt_no_rrt_end} show the
 Following the approach that integrates RRT*, the robot is able to reach the goal (Figure \ref{fig:sim_rrt_frames}). The MPC is requested to provide the inputs that drive the humanoid through the sequence of subgoals. In this way, the robot can pass by the red star, overcome the obstacle, and finally reach the goal.
 
 From the evolution of the state (illustrated in Figure \ref{fig:sim_rrt_evol}) emerges something that never occurred in the previous simulations. When the robot relies only on the MPC solutions to approach the goal, the error curves monotonically decrease (except for minimal variations). On the other hand, as described at the beginning of this section, in this case, it is necessary to overcome the obstacle, and hence increase the error. When the approach integrating RRT* is used, the humanoid moves toward the first subgoal, and initially increases the magnitude of the error with the final goal. By traveling through the RRT*-defined subgoals, the error is progressively reduced until the goal is reached.\\
-The \textit{step line} in the orientation plot indicates that, whenever a subgoal is reached, a turning rate is commanded to point toward the next subgoal. This behavior explains the peaks in the $\omega$ plot. The high lateral velocity generated while turning arises for the same reason outlined in Section \ref{subsec:sim_simple_env}.
+The \textit{step line} in the orientation plot indicates that, whenever a subgoal is reached, a turning rate is commanded to point toward the next subgoal. This explains the peaks in the $\omega$ plot. The ZMP and CoM behave as outlined in Section \ref{subsec:sim_simple_env}.
 
 
 \begin{figure}[H]
 \begin{subfigure}{0.49\textwidth}
     \includegraphics[width=\linewidth]{figures//Simulations//sim_rrt/env_redstar.pdf}
-        \caption{This figure illustrates an environment where the humanoid cannot reach the goal unless it employs the framework integrating RRT*. The robot starts from position $(0,0)$ with orientation $\theta=0$, and the goal is at $(5,5)$. The red star represents an ideal via-point to arrive at the goal.}
+        \caption{This figure illustrates an environment where the humanoid cannot reach the goal unless it employs the framework integrating RRT*. The robot starts from position $(0,0)$ with orientation $\theta=0$, and the goal is at $(5,0)$. The red star represents an ideal via-point to arrive at the goal.}
     \label{fig:sim_rrt_env-red-star}
 \end{subfigure}
 \hfill
@@ -94,12 +94,7 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_3.pdf}
     \end{subfigure}
-    \hfill
-    \begin{subfigure}{0.45\linewidth}
-        \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_1.pdf}
-    \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents how the CoM evolves along the x- and y-axis. The middle left and right plots show the theta and omega evolution, respectively. The bottom plot represents the translational velocities along the x- and y-axis.}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation with RRT*-defined subgoals. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the trajectory of the ZMP and the CoM along the x-axis. The bottom left and right plots show the theta and omega evolution, respectively.}
     \label{fig:sim_rrt_evol}
 \end{figure}
 

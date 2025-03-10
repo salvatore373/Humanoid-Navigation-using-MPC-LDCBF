@@ -93,7 +93,8 @@ def run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obs
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
-        (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
+        (np.concatenate((X_pred_glob[[0], :U_pred_glob.shape[1]], U_pred_glob[[0]]), axis=0),
+         "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (10, 20), (-3, 0)),
     ], path_to_pdf=f"{PLOTS_PATH_RRT}/evolutions", samples_per_second=num_steps_per_second)
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_RRT}/animation.gif')
