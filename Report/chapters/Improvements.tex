@@ -166,12 +166,9 @@ of the humanoid in a different environment: its flexibility in handling only a s
 navigate in challenging crowded environments easily; moreover, the robot relies only on its perception, allowing
 for a safe navigation in real-world scenarios.
 
-Although the evolution of the variables $\theta$ and
-$\omega$ is clearly visible, it is worth providing a brief commentary, especially given the densely packed environment.
+Given the densely packed environment, it is worth providing a brief commentary on the evolution of the variables $\theta$ and $\omega$
 Their trajectories exhibit distinct peaks, which can be directly linked to the robot's path; in fact, the first and
-second main peaks correspond to the robot encountering obstacles. As the robot detects obstacles at different points
-along its path, it must execute rapid lateral movements to avoid collisions while simultaneously minimizing the
-error relative to its goal.
+second main peaks correspond to the robot encountering obstacles. When the robot approaches obstacles along its path, it must execute rapid lateral movements to avoid collisions while simultaneously minimizing the error relative to its goal.
 
 \begin{figure}[H]
     \centering
@@ -197,7 +194,7 @@ error relative to its goal.
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_1.pdf}
     \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents how the CoM evolves along the x- and y-axis. The middle left and right plots show the theta and omega evolution, respectively. The bottom plot represents the translational velocities along the x- and y-axis.}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in an unknown environment employing a LiDAR system.}
     \label{fig:unk_env_evol}
 \end{figure}
 

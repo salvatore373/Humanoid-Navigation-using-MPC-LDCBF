@@ -57,7 +57,7 @@ The humanoid's Zero Moment Point (ZMP) is evaluated only at the end of each step
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim1circles/evolution_1.pdf}
     \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the trajectory of the ZMP and the CoM along the x-axis, while the top-right represents the CoM longitudinal and lateral velocities. The bottom left and right plots show the theta and omega evolution, respectively.}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation in the base environment employing our LDCBF. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the trajectory of the ZMP and the CoM along the x-axis. The middle left and right plots show the theta and omega evolution, respectively. The bottom plot shows the CoM longitudinal and lateral velocities.}
     \label{fig:sim1_evol}
 \end{figure}
 
@@ -124,7 +124,9 @@ The humanoid's Zero Moment Point (ZMP) is evaluated only at the end of each step
 From an accurate analysis of the previous simulation's frames, it can be observed that, despite the robot accomplishing the mission of reaching the goal while satisfying all the constraints, when it gets very close to the obstacles, its feet overlap with the obstacles. This occurs due to the LDCBF defined by Peng et al., which only ensures that the CoM never collides with the obstacles. However, this strategy produces a path that is impractical for the full-body motion of the humanoid (as already pointed out in \ref{subsec:ldcbf_variant}). Therefore, we proposed our variant of their LDCBF, and in Figures \ref{fig:sim1_delta_evol} and \ref{fig:sim1_delta_frames} we show the results of the simulation that constraints the MPC with the LDCBF defined at \ref{eq:ldcbf_variant}, setting $\delta=0.3$.
 
 From the plots, we notice that the robot reaches the boundary of the safe area -- no longer coincident with the obstacle's edge -- earlier than the previous simulation, and it reorients itself with the modality exposed before. The same situation arises around the second 15 of the simulation, when the robot moves from its trajectory to keep a distance $\delta$ from the last obstacle.
-In that case, the humanoid reaches the border of the safe area, and the longitudinal velocity is drastically reduced to stay inside the boundary. The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the humanoid's footsteps never intersect the obstacles. Subsequently, the LDCBF contributed to designing a motion plan suitable for the humanoid in real-world conditions.
+In that case, the humanoid reaches the border of the safe area, and the longitudinal velocity is drastically reduced to stay inside the boundary.
+
+The simulation frames in Figure \ref{fig:sim1_delta_frames} reveal that the humanoid's footsteps never intersect the obstacles. Subsequently, the LDCBF contributed to designing a motion plan suitable for the humanoid in real-world conditions.
 
 \begin{figure}[H]
     \centering
