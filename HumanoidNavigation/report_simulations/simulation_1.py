@@ -143,7 +143,7 @@ def run_simulation_circles_custom_ldcbf():
     sampling_time = conf['DELTA_T']  # 1e-1
     num_steps_per_second = 1 / sampling_time
 
-    delta = 0.2
+    delta = 0.3
 
     _, _, obstacles = Scenario.load_scenario(Scenario.CIRCLE_OBSTACLES, start=(initial_state[0], initial_state[2]),
                                              goal=goal_pos)
@@ -270,6 +270,6 @@ def run_simulation_unk_env():
 
 if __name__ == "__main__":
     # run_simulation_1()
-    # run_simulation_circles()
+    run_simulation_circles()
     run_simulation_unk_env()
     run_simulation_circles_custom_ldcbf()

@@ -203,7 +203,7 @@ class Scenario(Enum):
             obstacles = [
                 ObstaclesUtils.generate_circle_like_polygon(10, 0.5, (5.5, -1.2)),
                 ObstaclesUtils.generate_circle_like_polygon(20, 1, (4, 2)),
-                ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (2, 0)),
+                ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (1.7, 0)),
                 # ObstaclesUtils.generate_circle_like_polygon(10, 0.5, (5, -1)),
                 # ObstaclesUtils.generate_circle_like_polygon(20, 1, (4, 2)),
                 # ObstaclesUtils.generate_circle_like_polygon(25, 1.2, (1.5, -1)),
