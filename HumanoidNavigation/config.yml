@@ -1,22 +1,25 @@
 # Definition of some constants related to the humanoid's motion
-DELTA_T : 0.4
-GRAVITY_CONST : 9.81
-COM_HEIGHT : 1
-ALPHA : 1.44  # (1.44 or 3.6)
-L_MAX : 0.17320508075  # 0.1*sqrt(3)
-V_MIN : [-0.1, -0.1]
-V_MAX : [0.8, 0.4]
+DELTA_T: 0.4
+GRAVITY_CONST: 9.81
+COM_HEIGHT: 1
+ALPHA: 3.6  # (1.44 or 3.6)
+L_MAX_X: 0.17320508075 # 0.17320508075  # 0.1*sqrt(3)
+L_MAX_Y: 0.17320508075 # 0.17320508075  # 0.1*sqrt(3)
+L_MIN_X: -0.17320508075 # -0.17320508075
+L_MIN_Y: -0.17320508075 # -0.17320508075
+V_MIN: [-0.1, 0.1]
+V_MAX: [0.8, 0.4]
 
 # ============| SIMULATION |============ 
 
 # The constants used to represent the left and right feet
-RIGHT_FOOT : 1
-LEFT_FOOT : -1
+RIGHT_FOOT: 1
+LEFT_FOOT: -1
 
 # The width and height of the triangle representing the pose of the CoM in the animation
-TRIANGLE_HEIGHT : 0.45
-TRIANGLE_WIDTH : 0.35
+TRIANGLE_HEIGHT: 0.45
+TRIANGLE_WIDTH: 0.35
 
 # The height and the width of the rectangle that represents the stance foot in the animation plot
-FOOT_RECTANGLE_WIDTH : 0.07
-FOOT_RECTANGLE_HEIGHT : 0.07
+FOOT_RECTANGLE_WIDTH: 0.05
+FOOT_RECTANGLE_HEIGHT: 0.05

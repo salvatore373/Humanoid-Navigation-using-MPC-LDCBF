@@ -10,6 +10,7 @@ from yaml import safe_load
 
 from HumanoidNavigation.Utils.HumanoidAnimationUtils import HumanoidAnimationUtils
 from HumanoidNavigation.Utils.ObstaclesUtils import ObstaclesUtils
+from HumanoidNavigation.Utils.PlotsUtils import PlotUtils
 from HumanoidNavigation.Utils.obstacles import set_seed
 
 this_dir = os.path.dirname(os.path.realpath(__file__))
@@ -173,13 +174,13 @@ class HumanoidMPC:
         s_v = self.s_v_param[k]
 
         local_velocities = cs.vertcat(
-            cs.cos(theta_k) * x_k_next[1] + cs.sin(theta_k) * s_v * x_k_next[3],
+            cs.cos(theta_k) * x_k_next[1] + cs.sin(theta_k) * 1 * x_k_next[3],
             -cs.sin(theta_k) * x_k_next[1] + cs.cos(theta_k) * s_v * x_k_next[3]
         )
 
         return local_velocities
 
-    def _compute_leg_reachability_matrix(self, x_next, x_k, theta_k):
+    def _compute_leg_reachability_matrix(self, x_next, x_k, theta_k, k):
         """
         It computes the result of the matrix multiplication in the "Leg Reachability" constraint defined in the paper
         as the below expression (formula 9).
@@ -191,7 +192,8 @@ class HumanoidMPC:
         :param x_next: The state of the humanoid's system at time K+1.
         :param theta_k: The orientation of the humanoid at time K.
         """
-        p_diff = (x_next[0] - x_k[0], x_next[2] - x_k[2])
+        p_diff = [x_next[0] - x_k[0], x_next[2] - x_k[2]]
+        p_diff[1] += self.s_v_param[k] * 0
         local_positions = cs.vertcat(
             cs.cos(theta_k) * p_diff[0] + cs.sin(theta_k) * p_diff[1],
             -cs.sin(theta_k) * p_diff[0] + cs.cos(theta_k) * p_diff[1]
@@ -229,9 +231,9 @@ class HumanoidMPC:
 
             # leg reachability
             reachability = self._compute_leg_reachability_matrix(x_k=self.X_mpc[:, k], x_next=self.X_mpc[:, k + 1],
-                                                                 theta_k=self.X_mpc_theta[k])
-            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(conf["L_MAX"], conf["L_MAX"])))
-            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(-conf["L_MAX"], -conf["L_MAX"])))
+                                                                 theta_k=self.X_mpc_theta[k], k=k)
+            self.optim_prob.subject_to(cs.le(reachability, cs.vertcat(conf['L_MAX_X'], conf['L_MAX_Y'])))
+            self.optim_prob.subject_to(cs.ge(reachability, cs.vertcat(conf['L_MIN_X'], conf['L_MIN_Y'])))
 
         for k in range(self.N_horizon):
             # maneuverability constraint
@@ -496,36 +498,25 @@ def main():
     ObstaclesUtils.set_random_seed(4)
     set_seed(4)
 
-    start, goal = (0, 3), (6, -3)
-
-    # _, _, obstacles = Scenario.load_scenario(Scenario.CIRCLE_OBSTACLES, start=(start[0], start[1]), goal=goal)
-    obstacles = [ConvexHull(np.array([[0.5 + 0, 0], [2.5 + 0, 0], [2.5 + 0, -2], [0.5 + 0, -2]]))]
-
-    # start, goal, obstacles = Scenario.load_scenario(
-    #     Scenario.CROWDED,
-    #     start,
-    #     goal,
-    #     20,
-    #     range_x=(-1, 6),
-    #     range_y=(-1, 6)
-    # )
-
-    initial_state = (start[0], 0, start[1], 0, 0)
-    # initial_state = (start[0], 0, start[1], 0, np.pi * 3 / 2)
+    initial_state = (0, 0, 3, 0, 0)
+    goal_pos = (6, -3)
 
     mpc = HumanoidMPC(
         N_horizon=3,
         N_mpc_timesteps=300,
         sampling_time=conf["DELTA_T"],
         # sampling_time=1e-2,
-        goal=goal,
+        goal=goal_pos,
         init_state=initial_state,
-        obstacles=obstacles,
-        # obstacles=[],
+        obstacles=[],
         verbosity=0,
     )
 
-    mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=True)
+    X_pred_glob, U_pred_glob, _ = mpc.run_simulation(path_to_gif=ASSETS_PATH, make_fast_plot=True, plot_animation=True)
+
+    diff = X_pred_glob[[0, 2], 1:] - X_pred_glob[[0, 2], :-1]
+    rot_diff = PlotUtils.compute_local_velocities(X_pred_glob[4, :-1], diff).T
+    print(rot_diff)
 
 
 if __name__ == "__main__":
