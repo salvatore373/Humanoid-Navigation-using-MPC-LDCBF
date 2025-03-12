@@ -62,6 +62,7 @@ class PlotUtils:
         ax.plot(zmp_x, zmp_y, label='ZMP')
 
         # Adding titles and labels
+        ax.set_aspect('equal')
         ax.set_title('CoM and ZMP (foot stance)')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
