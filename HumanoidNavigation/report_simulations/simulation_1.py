@@ -217,7 +217,7 @@ def run_simulation_unk_env():
         range_y=(-1, 6)
     )
 
-    initial_state = (start[0], 0, start[1], 0, np.pi / 4)
+    initial_state = (start[0], 0, start[1], 0, np.pi/4)
 
     mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,

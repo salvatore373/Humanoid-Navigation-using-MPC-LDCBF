@@ -18,5 +18,5 @@ TRIANGLE_HEIGHT : 0.45
 TRIANGLE_WIDTH : 0.35
 
 # The height and the width of the rectangle that represents the stance foot in the animation plot
-FOOT_RECTANGLE_WIDTH : 0.3
-FOOT_RECTANGLE_HEIGHT : 0.15
+FOOT_RECTANGLE_WIDTH : 0.07
+FOOT_RECTANGLE_HEIGHT : 0.07
