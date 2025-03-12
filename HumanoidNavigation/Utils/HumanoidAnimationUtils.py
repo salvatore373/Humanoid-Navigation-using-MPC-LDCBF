@@ -390,7 +390,7 @@ class HumanoidAnimationUtils:
         :param obstacles: The ConvexHulls representing the obstacles in the map, in global coordinates
         :param s_v: The evolution of the s_v parameter of the humanoid.
         """
-        fix, ax = plt.subplots()
+        fix, ax = plt.subplots(dpi=500)
 
         # Plot the start position
         plt.plot(state_glob[0, 0], state_glob[2, 0], marker='o', color="cornflowerblue", label="Start")
@@ -415,7 +415,8 @@ class HumanoidAnimationUtils:
                              conf["FOOT_RECTANGLE_WIDTH"],
                              conf["FOOT_RECTANGLE_HEIGHT"],
                              color='blue' if s_v[time_instant] == conf["RIGHT_FOOT"] else 'green',
-                             alpha=0.7)
+                             alpha=0.7,
+                             zorder=10)
             # Apply rotation
             t = (matplotlib.transforms.Affine2D().rotate(foot_orient) +
                  matplotlib.transforms.Affine2D().translate(step_x, step_y) + ax.transData)

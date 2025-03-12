@@ -105,7 +105,7 @@ class HumanoidMPC:
         # Define which step should be right and which left
         self.s_v_param = self.optim_prob.parameter(1, self.N_horizon + 1)
         for i in range(self.num_inputs + self.N_horizon + 1):
-            self.s_v.append(conf["RIGHT_FOOT"] if i % 2 == (0 if start_with_right_foot else 1) else conf["LEFT_FOOT"])
+            self.s_v.append(conf["LEFT_FOOT"] if i % 2 == (0 if start_with_right_foot else 1) else conf["RIGHT_FOOT"])
 
         # Define the state and the control variables (without theta and omega)
         self.X_mpc = self.optim_prob.variable(self.state_dim, self.N_horizon + 1)
@@ -193,7 +193,7 @@ class HumanoidMPC:
         :param theta_k: The orientation of the humanoid at time K.
         """
         p_diff = [x_next[0] - x_k[0], x_next[2] - x_k[2]]
-        p_diff[1] += self.s_v_param[k] * 0
+        p_diff[1] += self.s_v_param[k] * 0.01
         local_positions = cs.vertcat(
             cs.cos(theta_k) * p_diff[0] + cs.sin(theta_k) * p_diff[1],
             -cs.sin(theta_k) * p_diff[0] + cs.cos(theta_k) * p_diff[1]

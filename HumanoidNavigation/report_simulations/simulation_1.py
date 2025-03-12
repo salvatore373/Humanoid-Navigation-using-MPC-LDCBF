@@ -143,7 +143,7 @@ def run_simulation_circles_custom_ldcbf():
     sampling_time = conf['DELTA_T']  # 1e-1
     num_steps_per_second = 1 / sampling_time
 
-    delta = 0.3
+    delta = 0.2
 
     _, _, obstacles = Scenario.load_scenario(Scenario.CIRCLE_OBSTACLES, start=(initial_state[0], initial_state[2]),
                                              goal=goal_pos)
@@ -217,7 +217,7 @@ def run_simulation_unk_env():
         range_y=(-1, 6)
     )
 
-    initial_state = (start[0], 0, start[1], 0, np.pi/4)
+    initial_state = (start[0], 0, start[1], 0, np.pi/2)
 
     mpc = HumanoidMPCUnknownEnvironment(
         N_horizon=3,
@@ -272,4 +272,4 @@ if __name__ == "__main__":
     # run_simulation_1()
     # run_simulation_circles()
     run_simulation_unk_env()
-    # run_simulation_circles_custom_ldcbf()
+    run_simulation_circles_custom_ldcbf()
