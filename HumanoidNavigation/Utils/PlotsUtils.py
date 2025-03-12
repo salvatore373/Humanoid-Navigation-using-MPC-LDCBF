@@ -53,7 +53,7 @@ class PlotUtils:
             plt.show()
 
     @staticmethod
-    def plot_com_and_zmp(path_to_pdf, index, com_x, com_y, zmp_x, zmp_y):
+    def plot_com_and_zmp(path_to_pdf, index, com_x, com_y, zmp_x, zmp_y, lim = None):
         # plt.figure()
         fig, ax = plt.subplots(figsize=(8, 4))
 
@@ -61,9 +61,13 @@ class PlotUtils:
         ax.plot(com_x, com_y, label='CoM')
         ax.plot(zmp_x, zmp_y, label='ZMP')
 
+        if lim is not None:
+            ax.set_xlim(lim[0][0], lim[0][1])
+            ax.set_ylim(lim[1][0], lim[1][1])
+
         # Adding titles and labels
         ax.set_aspect('equal')
-        ax.set_title('CoM and ZMP (foot stance)')
+        # ax.set_title('CoM and ZMP (foot stance)')
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.grid(True)

@@ -25,7 +25,7 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
 \hfill
 \begin{subfigure}{0.49\textwidth}
     \includegraphics[width=\linewidth]{figures//Simulations//sim_rrt/no_rrt_end.pdf}
-        \caption{This figure shows what happens when the robot tries to reach the goal in a tricky environment with the base framework.}
+        \caption{This figure shows what happens when the robot tries to reach the goal in a tricky environment with the base framework.\\\\\\}
     \label{fig:sim_rrt_no_rrt_end}
 \end{subfigure}
 \caption{}
@@ -83,7 +83,7 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
     \end{subfigure}
     \begin{subfigure}{0.45\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_4.pdf}
+        \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_5.pdf}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.45\linewidth}
@@ -99,7 +99,7 @@ The \textit{step line} in the orientation plot indicates that, whenever a subgoa
         \centering
         \includegraphics[width=\linewidth]{figures/Simulations/sim_rrt/evolution_1.pdf}
     \end{subfigure}
-    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation with RRT*-defined subgoals. The top-left plot shows the error between the CoM and the goal position, while the top-right represents the trajectory of the ZMP and the CoM along the x-axis. The bottom left and right plots show the theta and omega evolution, respectively.}
+    \caption{These figures depict the evolution of the humanoid's state and the input throughout the simulation with RRT*-defined subgoals.}
     \label{fig:sim_rrt_evol}
 \end{figure}
 
@@ -167,8 +167,7 @@ navigate in challenging crowded environments easily; moreover, the robot relies 
 for a safe navigation in real-world scenarios.
 
 Given the densely packed environment, it is worth providing a brief commentary on the evolution of the variables $\theta$ and $\omega$
-Their trajectories exhibit distinct peaks, which can be directly linked to the robot's path; in fact, the first and
-second main peaks correspond to the robot encountering obstacles. When the robot approaches obstacles along its path, it must execute rapid lateral movements to avoid collisions while simultaneously minimizing the error relative to its goal.
+By the end of the simulation, their trajectories exhibit distinct peaks, which are directly linked to the robot's path; in fact, they correspond to the robot encountering obstacles. When the robot approaches obstacles along its path, it must execute rapid lateral movements to avoid collisions while simultaneously minimizing the error relative to its goal.
 
 \begin{figure}[H]
     \centering
@@ -178,7 +177,7 @@ second main peaks correspond to the robot encountering obstacles. When the robot
     \end{subfigure}
     \begin{subfigure}{0.45\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_4.pdf}
+        \includegraphics[width=\linewidth]{figures/Simulations/sim2unkenv/evolution_5.pdf}
     \end{subfigure}
     \hfill
     \begin{subfigure}{0.45\linewidth}

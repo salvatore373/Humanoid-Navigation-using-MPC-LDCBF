@@ -49,14 +49,15 @@ def run_simulation_no_rrt(start, goal_pos, sampling_time, num_steps_per_second, 
     # Compute the longitudinal and lateral velocities
     local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
         (np.expand_dims(X_pred_glob[4, :], axis=0), "Orientation $\\theta$"),
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (X_pred_glob[[0, 2], :], "CoM position", ['X', 'Y']),
-    ], path_to_pdf=f"{PLOTS_PATH_NO_RRT}/evolutions", samples_per_second=num_steps_per_second)
+    ]
+    PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_NO_RRT}/evolutions", samples_per_second=num_steps_per_second)
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_NO_RRT}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_NO_RRT}/animation.gif',
@@ -87,7 +88,7 @@ def run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obs
     # Compute the longitudinal and lateral velocities
     local_vel = PlotUtils.compute_local_velocities(X_pred_glob[4, :], X_pred_glob[[1, 3], :])
 
-    PlotUtils.plot_signals([
+    signals = [
         (X_pred_glob[[0, 2], :] - np.array([[goal_pos[0]], [goal_pos[1]]]), "Position error", ['X error', 'Y error']),
         # (X_pred_glob[[1, 3], :], "Translational velocity", ['X velocity', 'Y velocity']),
         (local_vel, "Translational velocity", ['Longitudinal velocity', 'Lateral velocity']),
@@ -95,7 +96,15 @@ def run_simulation_rrt(start, goal_pos, sampling_time, num_steps_per_second, obs
         (np.expand_dims(U_pred_glob[2, :], axis=0), "Turning rate $\\omega$"),
         (np.concatenate((X_pred_glob[[0], :U_pred_glob.shape[1]], U_pred_glob[[0]]), axis=0),
          "CoM and ZMP (foot stance)", ['CoM X', 'ZMP X', ], (10, 20), (-3, 0)),
-    ], path_to_pdf=f"{PLOTS_PATH_RRT}/evolutions", samples_per_second=num_steps_per_second)
+    ]
+    # PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_RRT}/evolutions", samples_per_second=num_steps_per_second)
+
+    # CoM and ZMP coordinates
+    com_x = np.array(X_pred_glob[[0], 55:70]).squeeze()
+    com_y = np.array(X_pred_glob[[2], 55:70]).squeeze()
+    zmp_x = np.array(U_pred_glob[[0], 54:69]).squeeze()
+    zmp_y = np.array(U_pred_glob[[1], 54:69]).squeeze()
+    PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_RRT}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
     # anim.plot_animation(path_to_gif=f'{PLOTS_PATH_RRT}/animation.gif')
     anim.plot_animation(path_to_gif=f'{PLOTS_PATH_RRT}/animation.gif',

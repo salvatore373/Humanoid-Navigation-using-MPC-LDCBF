@@ -120,10 +120,10 @@ def run_simulation_circles():
     PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_CIRCLES}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
-    com_x = np.array(X_pred_glob[[0], 10:20]).squeeze()
-    com_y = np.array(X_pred_glob[[2], 10:20]).squeeze()
-    zmp_x = np.array(U_pred_glob[[0], 9:19]).squeeze()
-    zmp_y = np.array(U_pred_glob[[1], 9:19]).squeeze()
+    com_x = np.array(X_pred_glob[[0], 18:31]).squeeze()
+    com_y = np.array(X_pred_glob[[2], 18:31]).squeeze()
+    zmp_x = np.array(U_pred_glob[[0], 17:30]).squeeze()
+    zmp_y = np.array(U_pred_glob[[1], 17:30]).squeeze()
 
     PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
@@ -178,10 +178,10 @@ def run_simulation_circles_custom_ldcbf():
     PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinates
-    com_x = np.array(X_pred_glob[[0], 10:20]).squeeze()
-    com_y = np.array(X_pred_glob[[2], 10:20]).squeeze()
-    zmp_x = np.array(U_pred_glob[[0], 9:19]).squeeze()
-    zmp_y = np.array(U_pred_glob[[1], 9:19]).squeeze()
+    com_x = np.array(X_pred_glob[[0], 10:21]).squeeze()
+    com_y = np.array(X_pred_glob[[2], 10:21]).squeeze()
+    zmp_x = np.array(U_pred_glob[[0], 9:20]).squeeze()
+    zmp_y = np.array(U_pred_glob[[1], 9:20]).squeeze()
 
     PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_CIRCLES_DELTA}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
