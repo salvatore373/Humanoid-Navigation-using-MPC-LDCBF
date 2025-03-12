@@ -185,8 +185,8 @@ class HumanoidMPC:
         It computes the result of the matrix multiplication in the "Leg Reachability" constraint defined in the paper
         as the below expression (formula 9).
 
-          | l_min | <= | cos(theta_k)     sin(theta_k) |  |  p_x_{k+1} - p_x_{k}  |  <= | l_max |
-          | l_max |    | -sin(theta_k)    cos(theta_k) |  |  p_y_{k+1} - p_y_{k}  |     | l_max |
+          | l_x,min | <= | cos(theta_k)     sin(theta_k) |  |  p_x_{k+1} - p_x_{k}  |  <= | l_max |
+          | l_y,min |    | -sin(theta_k)    cos(theta_k) |  |  p_y_{k+1} - p_y_{k}  |     | l_max |
 
         :param x_k: The state of the humanoid's system at time K.
         :param x_next: The state of the humanoid's system at time K+1.

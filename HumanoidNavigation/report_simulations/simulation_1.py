@@ -256,10 +256,10 @@ def run_simulation_unk_env():
     PlotUtils.plot_signals(signals, path_to_pdf=f"{PLOTS_PATH_UNK_ENV4}/evolutions", samples_per_second=num_steps_per_second)
 
     # CoM and ZMP coordinate
-    com_x = np.array(X_pred_glob[[0], min_range:max_range]).squeeze()
-    com_y = np.array(X_pred_glob[[2], min_range:max_range]).squeeze()
-    zmp_x = np.array(U_pred_glob[[0], min_range - 1:max_range - 1]).squeeze()
-    zmp_y = np.array(U_pred_glob[[1], min_range - 1:max_range - 1]).squeeze()
+    com_x = np.array(X_pred_glob[[0], min_range:max_range+1]).squeeze()
+    com_y = np.array(X_pred_glob[[2], min_range:max_range+1]).squeeze()
+    zmp_x = np.array(U_pred_glob[[0], min_range - 1:max_range]).squeeze()
+    zmp_y = np.array(U_pred_glob[[1], min_range - 1:max_range]).squeeze()
 
     PlotUtils.plot_com_and_zmp(f"{PLOTS_PATH_UNK_ENV4}/evolutions", len(signals), com_x, com_y, zmp_x, zmp_y)
 
@@ -270,6 +270,6 @@ def run_simulation_unk_env():
 
 if __name__ == "__main__":
     # run_simulation_1()
-    run_simulation_circles()
+    # run_simulation_circles()
     run_simulation_unk_env()
-    run_simulation_circles_custom_ldcbf()
+    # run_simulation_circles_custom_ldcbf()
