@@ -29,7 +29,7 @@ where and $\theta$ represent the position and orientation of the humanoid at the
 \subsection{Kinematic Constraints}
 The stepping positions provided by the MPC solution must comply with specific kinematic constraints in order to be physically feasible. In this work, the authors of the paper decided to enforce the walking velocities, leg reachability, and maneuverability constraints as follows.
 
-\subsubsection{Walking Velocities Constraint}
+\subsubsection{Walking Velocities Constraint}\label{subsec:walk_vel_constr}
 \begin{align}
     \begin{pmatrix}
         v_{x_{\min}} \\[1ex]
@@ -58,6 +58,7 @@ The term $s_v$ defines which foot is the stance: it is $1$ for the right foot, a
 For instance, if the right foot is the stance, since the body tends to fall on the left side, we want the lateral velocity not to increase too much toward the direction of the positive $y$. Therefore, we set $s_v=1$, pushing the MPC to find a solution which is closer to $v_{y_{\min}}$.
 
 \subsubsection{Leg Reachability Constraint}
+\begin{small}
 \begin{align}
     \begin{pmatrix}
         l_{x,\min} \\[1ex]
@@ -75,7 +76,7 @@ For instance, if the right foot is the stance, since the body tends to fall on t
     +
     \begin{pmatrix}
         0 \\[1ex]
-        s_v*l
+        s_v * \ell
     \end{pmatrix}
     \le
     \begin{pmatrix}
@@ -84,18 +85,16 @@ For instance, if the right foot is the stance, since the body tends to fall on t
     \end{pmatrix}
     , \qquad \forall k \in \left[ 0,\, N-1\right].
 \end{align}
+\end{small}
 
 This constraint prevents the inputs computed at time $k$ from moving the CoM too far away from the previous position.
-It does so by projecting the displacement of the CoM position on the longitudinal and lateral axes, and ensuring that its value lies between tuned upper and lower bounds, indicating the maximum distance reachable by the swing foot in both directions.
-From the constraint described in the reference paper~\cite{peng_main_paper}, we did some modifications; in
-particular we adopted a better tailored version from Cipriano et al.~\cite{CIPRIANO2023104495}.
-The differences between the implemented constraint and the one proposed by Peng et al. relies in:
+It does so by ensuring that the swing foot lands in the admissible region, which is a rectangle with sides $(l_{x,\min} + l_{x,\max}, \; l_{y,\min} + l_{y,\max})$, aligned with the humanoid's longitudianl and lateral axis, and displaced from the previous stance foot by $\ell$. The admissible region will either be on the left or on the right of the previous stance foot based on the value of $s_v$, which is defined as in \ref{subsec:walk_vel_constr}.
+The constraint described by Peng et al. in ~\cite{peng_main_paper} was infeasible: therefore, we used an adapted version of the ``Footstep feasibility'' constraint defined by Cipriano et al. in ~\cite{CIPRIANO2023104495}.
+The differences between the implemented constraint and the one proposed by Peng et al. lie on the following aspects:
 \begin{itemize}
-    \item asymmetric upper and lower bounds: $l_{x,\min},l_{y,\min},l_{x,\max},l_{y,\max}$
-    \item a vector controlling the minimum distance from the previous foot: $(0,\;\; s_v*l)$
+    \item asymmetric upper and lower bounds on the lateral and sagittal axis;
+    \item the vector controlling the minimum distance from the previous foot: $(0\;\; s_v * l)^\top$.
 \end{itemize}
-where, as mentioned in previous sections, $s_v$ defines which foot is the stance; while the term $l$ controls the
-minimum distance from the previous step; in our work we have $l=0.05$.
 
 
 
