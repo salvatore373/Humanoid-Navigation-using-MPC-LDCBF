@@ -178,7 +178,7 @@ class Scenario(Enum):
                                      
                 ConvexHull(np.array([[1, 2.5], [3.5, 3.5], 
                                      [3, 5], [1, 4],
-                                     [7, 4]])),  # mid_left_block_2
+                                     [6, 3.5], [6,4]])),  # mid_left_block_2
 
                 ConvexHull(np.array([[-0.5, 6.5], [3.5, 6.5],
                                      [-0.5, 5.5], [3.5, 6]])),  # upper_left_block
