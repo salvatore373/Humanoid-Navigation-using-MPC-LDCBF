@@ -174,7 +174,7 @@ Vectors $\eta$ and $c$ are computed as follows. Indicating with $A$ and $B$ the 
     \overrightarrow{AX} \coloneqq \vec{x} - A, \qquad \overrightarrow{AB} \coloneqq B - A, \\
     t \coloneqq \frac{\overrightarrow{AX} \cdot \overrightarrow{AB}}{\left\lVert \overrightarrow{AB} \right\rVert ^2}, \qquad \tilde{t} = \max \left\{0,\; \min \left\{ 1,\; t\right\}\right\}, \\
     c \coloneqq A\, +\, \tilde{t}*\overrightarrow{AB}, \\
-    \eta \coloneqq \left(-1\right)^{\xi} * \left( \vec{x} - c \right),
+    \eta \coloneqq \left(-1\right)^{\xi} * \frac{\vec{x} - c}{\left\lVert \vec{x} - c \right\rVert},
 \end{gather*}
 
 where $\xi=1$ if $\vec{x}$ is inside the obstacle, otherwise it is $0$.
