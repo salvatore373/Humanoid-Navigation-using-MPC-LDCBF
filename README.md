@@ -1,6 +1,6 @@
 
 # Humanoid Navigation using Control Barrier Functions
-Authors: Salvatore Michele Rago
+Authors: [Salvatore Michele Rago](https://github.com/salvatore373), [Damiano Imola](https://github.com/damianoimola), [Eugenio Bugli](https://github.com/EugenioBugli).
 
 Humanoids are robots designed to navigate in environments structured for humans. Their dynamics is very complex and has to be taken into account for path planning and gait control, which in turn must be carried out in real time. Hence, they are usually decoupled to reduce the computational load. The novelty of this project consists in describing the problem in an efficient way that allows to solve simultaneously path and gait planning.
 This project is based on "[Real-Time Safe Bipedal Robot Navigation using Linear Discrete Control Barrier Functions](https://arxiv.org/abs/2411.03619)" by Peng et al. However, the proposed solution is unfeasible with the specified constraints, it does not take into account for stability and equilibrium constraints, and it does not provide infomration on how the orientation and turning rate are precomputed. In our implementation, we provide our solution to those problems.
