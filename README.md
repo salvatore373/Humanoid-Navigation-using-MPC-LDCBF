@@ -1,56 +1,32 @@
+
 # Humanoid Navigation using Control Barrier Functions
+Authors: Salvatore Michele Rago
 
-# Installation/Quick start
-First you need to create your python environment with <code style="color : GreenYellow">conda</code> and install <code style="color : GreenYellow">pip</code> for the packages:
-```
-conda create -n amr_mpc
-conda install pip
-```
-Then you need to activate your environment as follows:
-```
-conda activate amr_mpc
-```
-In order to install everything you just need to execute the following command inside the repository:
-```
-python -m pip install -e .
-```
-Or you can directly use the standard virtual environment <code style="color : GreenYellow">.venv</code> as follows:
+Humanoids are robots designed to navigate in environments structured for humans. Their dynamics is very complex and has to be taken into account for path planning and gait control, which in turn must be carried out in real time. Hence, they are usually decoupled to reduce the computational load. The novelty of this project consists in describing the problem in an efficient way that allows to solve simultaneously path and gait planning.
+This project is based on "[Real-Time Safe Bipedal Robot Navigation using Linear Discrete Control Barrier Functions](https://arxiv.org/abs/2411.03619)" by Peng et al. However, the proposed solution is unfeasible with the specified constraints, it does not take into account for stability and equilibrium constraints, and it does not provide infomration on how the orientation and turning rate are precomputed. In our implementation, we provide our solution to those problems.
 
-```
-python3 -m venv .venv
+A complete description of the framework can be found in the [Report](https://github.com/salvatore373/Humanoid-Navigation-using-MPC-LDCBF/blob/main/Report/main.pdf).
 
-source .venv/bin/activate
+## 3D-LIP model with Heading Angles
+If the full dynamic model of the humanoid is used to simulate its motion, it becomes computationally impossible to perform joint path and gait planning, due to its high dimensionality and non-linearity. Therefore, a simplifying model must be used. For this scope the "3D-LIP Model with Heading Angle", which describes the discrete dynamics of the Center of Mass (CoM) similarly to the one of an inverted pendulum in three dimensions.
 
-pip install -e .
-```
+## LIP-MPC: Gait planning with Model Predictive Control
+The LIP dynamics is used as a model of the process inside a Model Predictive Control (MPC) scheme. Since the imposed constraints are non-linear, a non-linear MPC scheme would be required to solve the optimization problem. It is very expensive from a computational point of view and would compromise real-time performance. To overcome this non-linear representation, the values of $\theta$ and $\omega$ are not determined by the MPC optimization, but they are precomputed. In this way, all the constraints imposed in the MPC become linear, and a linear MPC can be used.
 
-## CONTAINER INSTRUCTIONS
+## Simulations
+The humanoid is represented as an isoscele triangle, whose barycenter is coincident with the robot's CoM, and their sagittal axis are aligned. The humanoid is always required to go from the input initial pose to the user-defined goal position while avoiding all the obstacles populating the environment.
 
-- Open **Docker** 
+### Basic simulation
+In this scenario, the robot has to avoid collisions with the 3 quasi-circular obstacles in the environment.
 
-- Enter the folder where you have cloned the repository:
-    ```cd AMRProject```
+![simulation with custom LDCBF with circular obstacles](https://github.com/salvatore373/Humanoid-Navigation-using-MPC-LDCBF/blob/main/Assets/ReportResults/Simulation1CirclesDelta/animation.gif)
 
-- Build the Container, with arm64 for Mac ARM Processor:
+### Unknown environment
+In this simulation, the robot moves in the environment without having an a-priori knowledge of the workspace geometry: the obstacles are sensed in real-time using LiDAR scans.
 
-    ```docker build --platform linux/arm64 -t amr_project .```
-    
-- To run the Container without re-building it every time. It saves the changes instantaneously.
+![simulation in an unknown environment](https://github.com/salvatore373/Humanoid-Navigation-using-MPC-LDCBF/blob/main/Assets/ReportResults/Simulation4UnkEnv/animation.gif)
 
-    ```docker run --platform linux/arm64 -it --name amr_project -v "$(pwd):/amr_prj" amr_project```
+### RRT* variation
+The standard framework would not be able to reach the goal in this scenario, as the MPC gets stuck in a local minimum. Our extension of the original framework achieves goal attainment by following a sequence of sub-goals defined by RRT*.
 
-    With this command you are inside the Container and you are able to Run the files.
-    
-- To Re-Start the Container (when closing and opening the pc, for example):
-
-    ```docker run -it --name amr_project```
-
-#### Other useful commands
-- Stop the Container (from an external terminal): 
-    ```docker stop amr_project```
-
-- Stop the Container (from the internal terminal):
-    **ctrl + D**
-
-- Remove the Container (from an external terminal): 
-    ```docker rm amr_project```
+![simulation with RRT extended framework](https://github.com/salvatore373/Humanoid-Navigation-using-MPC-LDCBF/blob/main/Assets/ReportResults/SimulationRRT/animation.gif)
